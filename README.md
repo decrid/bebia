@@ -1,17 +1,24 @@
-# bebia
+# Bebia
 
-A new Flutter project.
+Smart baby tracking app for feeding, sleep, and daily routines.
 
-## Getting Started
+## Overview
 
-This project is a starting point for a Flutter application.
+Bebia is a simple and intuitive mobile app designed to help parents track their baby's daily activities and understand patterns over time.
 
-A few resources to get you started if this is your first Flutter project:
+## Features (MVP)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+* Feeding tracking
+* Sleep tracking
+* Diaper tracking
+* Timeline overview
+* Basic insights and recommendations
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Tech Stack
+
+* Flutter
+* Isar (local database)
+
+## Status
+
+🚧 In development
