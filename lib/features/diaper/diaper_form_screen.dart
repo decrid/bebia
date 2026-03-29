@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/app_memory_store.dart';
+import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'diaper_model.dart';
 
@@ -14,36 +14,35 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   String _type = 'wet';
   final TextEditingController _noteController = TextEditingController();
 
-  void _save() {
+  Future<void> _save() async {
     final now = DateTime.now();
+    final note = _noteController.text.trim().isEmpty
+        ? null
+        : _noteController.text.trim();
 
     final record = DiaperRecord(
       id: now.millisecondsSinceEpoch.toString(),
       time: now,
       type: _type,
-      note: _noteController.text.trim().isEmpty
-          ? null
-          : _noteController.text.trim(),
+      note: note,
     );
 
-    final current = List<TimelineItem>.from(AppMemoryStore.timelineItems.value);
+    final diaperLabel = _type == 'wet'
+        ? 'Mokrá'
+        : _type == 'poop'
+            ? 'Stolice'
+            : 'Oboje';
 
     final item = TimelineItem()
       ..type = EventType.diaper
       ..time = record.time
       ..title = 'Přebalení'
-      ..subtitle = [
-        _type == 'wet'
-            ? 'Mokrá'
-            : _type == 'poop'
-                ? 'Stolice'
-                : 'Oboje',
-        if (record.note != null) record.note!,
-      ].join(' • ');
+      ..subtitle = diaperLabel
+      ..note = note;
 
-    current.add(item);
-    AppMemoryStore.timelineItems.value = current;
+    await AppServices.timelineController.add(item);
 
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
@@ -75,6 +74,10 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                   _type = value!;
                 });
               },
+              decoration: const InputDecoration(
+                labelText: 'Typ přebalení',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(

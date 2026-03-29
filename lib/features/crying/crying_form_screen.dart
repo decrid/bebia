@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/app_memory_store.dart';
+import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 
 class CryingFormScreen extends StatefulWidget {
@@ -12,10 +12,8 @@ class CryingFormScreen extends StatefulWidget {
 class _CryingFormScreenState extends State<CryingFormScreen> {
   double _intensity = 3;
 
-  void _save() {
+  Future<void> _save() async {
     final now = DateTime.now();
-
-    final current = List<TimelineItem>.from(AppMemoryStore.timelineItems.value);
 
     final item = TimelineItem()
       ..type = EventType.crying
@@ -23,9 +21,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       ..title = 'Pláč'
       ..subtitle = 'Intenzita: ${_intensity.toInt()}';
 
-    current.add(item);
-    AppMemoryStore.timelineItems.value = current;
+    await AppServices.timelineController.add(item);
 
+    if (!mounted) return;
     Navigator.pop(context);
   }
 

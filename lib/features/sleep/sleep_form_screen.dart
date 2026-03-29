@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/app_memory_store.dart';
+import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'sleep_model.dart';
 
@@ -13,32 +13,29 @@ class SleepFormScreen extends StatefulWidget {
 class _SleepFormScreenState extends State<SleepFormScreen> {
   final TextEditingController _noteController = TextEditingController();
 
-  void _save() {
+  Future<void> _save() async {
     final now = DateTime.now();
+    final note = _noteController.text.trim().isEmpty
+        ? null
+        : _noteController.text.trim();
 
     final record = SleepRecord(
       id: now.millisecondsSinceEpoch.toString(),
       startTime: now.subtract(const Duration(hours: 1)),
       endTime: now,
-      note: _noteController.text.trim().isEmpty
-          ? null
-          : _noteController.text.trim(),
+      note: note,
     );
-
-    final current = List<TimelineItem>.from(AppMemoryStore.timelineItems.value);
 
     final item = TimelineItem()
       ..type = EventType.sleep
       ..time = record.endTime
       ..title = 'Spánek'
-      ..subtitle = [
-        '1 hodina',
-        if (record.note != null) record.note!,
-      ].join(' • ');
+      ..subtitle = '1 hodina'
+      ..note = note;
 
-    current.add(item);
-    AppMemoryStore.timelineItems.value = current;
+    await AppServices.timelineController.add(item);
 
+    if (!mounted) return;
     Navigator.pop(context);
   }
 

@@ -1,10 +1,14 @@
-import '../../data/app_memory_store.dart';
+import '../../data/repositories/timeline_repository.dart';
 import '../timeline/timeline_item.dart';
 import 'recommendation_model.dart';
 
 class RecommendationService {
-  static List<Recommendation> getRecommendations() {
-    final items = AppMemoryStore.timelineItems.value;
+  RecommendationService(this._repository);
+
+  final TimelineRepository _repository;
+
+  Future<List<Recommendation>> getRecommendations() async {
+    final items = await _repository.getAll();
 
     if (items.isEmpty) return [];
 
@@ -12,85 +16,180 @@ class RecommendationService {
 
     TimelineItem? lastFeeding;
     TimelineItem? lastSleep;
-    TimelineItem? lastCrying;
+    TimelineItem? lastDiaper;
 
-    for (final item in items.reversed) {
+    final recentCryings = <TimelineItem>[];
+
+    for (final item in items) {
       if (lastFeeding == null && item.type == EventType.feeding) {
         lastFeeding = item;
       }
       if (lastSleep == null && item.type == EventType.sleep) {
         lastSleep = item;
       }
-      if (lastCrying == null && item.type == EventType.crying) {
-        lastCrying = item;
+      if (lastDiaper == null && item.type == EventType.diaper) {
+        lastDiaper = item;
       }
+      if (item.type == EventType.crying &&
+          now.difference(item.time).inMinutes <= 30) {
+        recentCryings.add(item);
+      }
+    }
+
+    int hungerScore = 0;
+    int tiredScore = 0;
+    int diaperScore = 0;
+    int soothingScore = 0;
+
+    final reasonsHunger = <String>[];
+    final reasonsTired = <String>[];
+    final reasonsDiaper = <String>[];
+    final reasonsSoothing = <String>[];
+
+    final hasRecentCrying = recentCryings.isNotEmpty;
+    final cryingCount = recentCryings.length;
+
+    if (lastFeeding != null) {
+      final feedingDiff = now.difference(lastFeeding.time).inMinutes;
+
+      if (feedingDiff >= 120) {
+        hungerScore += 30;
+        reasonsHunger.add('od posledního krmení uplynuly více než 2 hodiny');
+      }
+      if (feedingDiff >= 150) {
+        hungerScore += 20;
+      }
+      if (feedingDiff >= 180) {
+        hungerScore += 20;
+      }
+
+      if (hasRecentCrying) {
+        hungerScore += 20;
+        reasonsHunger.add('dítě nedávno plakalo');
+      }
+    }
+
+    if (lastSleep != null) {
+      final sleepDiff = now.difference(lastSleep.time).inMinutes;
+
+      if (sleepDiff >= 75) {
+        tiredScore += 25;
+        reasonsTired.add('dítě je delší dobu vzhůru');
+      }
+      if (sleepDiff >= 90) {
+        tiredScore += 20;
+      }
+      if (sleepDiff >= 120) {
+        tiredScore += 25;
+      }
+
+      if (hasRecentCrying) {
+        tiredScore += 15;
+        reasonsTired.add('pláč může souviset s únavou');
+      }
+    }
+
+    if (lastDiaper != null) {
+      final diaperDiff = now.difference(lastDiaper.time).inMinutes;
+
+      if (diaperDiff >= 120) {
+        diaperScore += 20;
+        reasonsDiaper.add('od posledního přebalení uplynula delší doba');
+      }
+      if (diaperDiff >= 180) {
+        diaperScore += 20;
+      }
+      if (diaperDiff >= 240) {
+        diaperScore += 20;
+      }
+
+      if (hasRecentCrying) {
+        diaperScore += 15;
+        reasonsDiaper.add('pláč může souviset s diskomfortem');
+      }
+    } else if (hasRecentCrying) {
+      diaperScore += 20;
+      reasonsDiaper.add('není evidované žádné přebalení a dítě plakalo');
+    }
+
+    if (hasRecentCrying) {
+      soothingScore += 25;
+      reasonsSoothing.add('dítě nedávno plakalo');
+    }
+
+    if (cryingCount >= 2) {
+      soothingScore += 20;
+      reasonsSoothing.add('pláč se opakoval vícekrát za krátkou dobu');
+    }
+
+    if (cryingCount >= 3) {
+      soothingScore += 20;
     }
 
     final recommendations = <Recommendation>[];
 
-    // 🍼 HLAD
-    if (lastFeeding != null) {
-      final diff = now.difference(lastFeeding.time);
-
-      if (diff.inMinutes > 150) {
-        recommendations.add(
-          Recommendation(
-            title: 'Možná hlad',
-            description: 'Od posledního krmení uplynulo více než 2.5 hodiny.',
+    if (hungerScore >= 40) {
+      recommendations.add(
+        Recommendation(
+          title: 'Možný hlad',
+          description: _buildDescription(
+            fallback: 'Zkus zkontrolovat, zda není čas na další krmení.',
+            reasons: reasonsHunger,
           ),
-        );
-      }
+          score: hungerScore,
+        ),
+      );
     }
 
-    // 😴 ÚNAVA
-    if (lastSleep != null) {
-      final diff = now.difference(lastSleep.time);
-
-      if (diff.inMinutes > 90) {
-        recommendations.add(
-          Recommendation(
-            title: 'Možná únava',
-            description: 'Dítě je dlouho vzhůru.',
+    if (tiredScore >= 40) {
+      recommendations.add(
+        Recommendation(
+          title: 'Možná únava',
+          description: _buildDescription(
+            fallback: 'Zkus klidový režim, uspávání nebo ztišení podnětů.',
+            reasons: reasonsTired,
           ),
-        );
-      }
+          score: tiredScore,
+        ),
+      );
     }
 
-    // 😢 PLÁČ ANALÝZA
-    if (lastCrying != null) {
-      final cryingDiff = now.difference(lastCrying.time);
-
-      if (cryingDiff.inMinutes < 10) {
-        if (lastFeeding != null &&
-            now.difference(lastFeeding.time).inMinutes > 120) {
-          recommendations.add(
-            Recommendation(
-              title: 'Pláč → hlad',
-              description: 'Pláč může souviset s hladem.',
-            ),
-          );
-        } else if (lastSleep != null &&
-            now.difference(lastSleep.time).inMinutes > 90) {
-          recommendations.add(
-            Recommendation(
-              title: 'Pláč → únava',
-              description: 'Dítě může být přetažené.',
-            ),
-          );
-        }
-      }
+    if (diaperScore >= 35) {
+      recommendations.add(
+        Recommendation(
+          title: 'Možný diskomfort',
+          description: _buildDescription(
+            fallback: 'Zkontroluj plenku nebo celkový komfort dítěte.',
+            reasons: reasonsDiaper,
+          ),
+          score: diaperScore,
+        ),
+      );
     }
 
-    // pokud máme specifické doporučení (pláč), filtruj obecné
-    final hasCryingSpecific = recommendations.any((r) =>
-        r.title.contains('Pláč'));
-
-    if (hasCryingSpecific) {
-      return recommendations
-          .where((r) => r.title.contains('Pláč'))
-          .toList();
+    if (soothingScore >= 35) {
+      recommendations.add(
+        Recommendation(
+          title: 'Potřeba uklidnění',
+          description: _buildDescription(
+            fallback: 'Zkus chování, kontakt, houpání nebo klidné prostředí.',
+            reasons: reasonsSoothing,
+          ),
+          score: soothingScore,
+        ),
+      );
     }
 
-    return recommendations;
+    recommendations.sort((a, b) => b.score.compareTo(a.score));
+
+    return recommendations.take(3).toList();
+  }
+
+  String _buildDescription({
+    required String fallback,
+    required List<String> reasons,
+  }) {
+    if (reasons.isEmpty) return fallback;
+    return '$fallback Důvod: ${reasons.join(', ')}.';
   }
 }

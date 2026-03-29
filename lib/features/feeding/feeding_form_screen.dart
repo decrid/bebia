@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
-import '../../data/app_memory_store.dart';
 import 'feeding_model.dart';
 import '../timeline/timeline_item.dart';
 
@@ -30,8 +29,6 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       amountMl: parsedAmount,
       note: note,
     );
-
-    AppMemoryStore.feedingRecords.add(record);
 
     final item = TimelineItem()
       ..type = EventType.feeding
