@@ -19,4 +19,5 @@ class TimelineItem {
   late DateTime time;
   late String title;
   late String subtitle;
+  String? note;
 }

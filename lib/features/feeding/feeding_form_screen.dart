@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_services.dart';
 import '../../data/app_memory_store.dart';
 import 'feeding_model.dart';
 import '../timeline/timeline_item.dart';
@@ -15,22 +16,22 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  void _save() {
+  Future<void> _save() async {
     final amountText = _amountController.text.trim();
+    final parsedAmount = amountText.isEmpty ? null : int.tryParse(amountText);
+    final note = _noteController.text.trim().isEmpty
+        ? null
+        : _noteController.text.trim();
 
     final record = FeedingRecord(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       time: DateTime.now(),
       type: _type,
-      amountMl: amountText.isEmpty ? null : int.tryParse(amountText),
-      note: _noteController.text.trim().isEmpty
-          ? null
-          : _noteController.text.trim(),
+      amountMl: parsedAmount,
+      note: note,
     );
 
     AppMemoryStore.feedingRecords.add(record);
-
-    final current = List<TimelineItem>.from(AppMemoryStore.timelineItems.value);
 
     final item = TimelineItem()
       ..type = EventType.feeding
@@ -38,13 +39,12 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       ..title = _type == 'breast' ? 'Kojení' : 'Lahvička'
       ..subtitle = [
         if (record.amountMl != null) '${record.amountMl} ml',
-        if (record.note != null) record.note!,
-      ].join(' • ');
+      ].join(' • ')
+      ..note = note;
 
-    current.add(item);
+    await AppServices.timelineController.add(item);
 
-    AppMemoryStore.timelineItems.value = current;
-
+    if (!mounted) return;
     Navigator.pop(context);
   }
 

@@ -17,15 +17,16 @@ const TimelineItemSchema = CollectionSchema(
   name: r'TimelineItem',
   id: 7897128962366655622,
   properties: {
+    r'note': PropertySchema(id: 0, name: r'note', type: IsarType.string),
     r'subtitle': PropertySchema(
-      id: 0,
+      id: 1,
       name: r'subtitle',
       type: IsarType.string,
     ),
-    r'time': PropertySchema(id: 1, name: r'time', type: IsarType.dateTime),
-    r'title': PropertySchema(id: 2, name: r'title', type: IsarType.string),
+    r'time': PropertySchema(id: 2, name: r'time', type: IsarType.dateTime),
+    r'title': PropertySchema(id: 3, name: r'title', type: IsarType.string),
     r'type': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TimelineItemtypeEnumValueMap,
@@ -53,6 +54,12 @@ int _timelineItemEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.note;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.subtitle.length * 3;
   bytesCount += 3 + object.title.length * 3;
   return bytesCount;
@@ -64,10 +71,11 @@ void _timelineItemSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.subtitle);
-  writer.writeDateTime(offsets[1], object.time);
-  writer.writeString(offsets[2], object.title);
-  writer.writeByte(offsets[3], object.type.index);
+  writer.writeString(offsets[0], object.note);
+  writer.writeString(offsets[1], object.subtitle);
+  writer.writeDateTime(offsets[2], object.time);
+  writer.writeString(offsets[3], object.title);
+  writer.writeByte(offsets[4], object.type.index);
 }
 
 TimelineItem _timelineItemDeserialize(
@@ -78,11 +86,12 @@ TimelineItem _timelineItemDeserialize(
 ) {
   final object = TimelineItem();
   object.id = id;
-  object.subtitle = reader.readString(offsets[0]);
-  object.time = reader.readDateTime(offsets[1]);
-  object.title = reader.readString(offsets[2]);
+  object.note = reader.readStringOrNull(offsets[0]);
+  object.subtitle = reader.readString(offsets[1]);
+  object.time = reader.readDateTime(offsets[2]);
+  object.title = reader.readString(offsets[3]);
   object.type =
-      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[3])] ??
+      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[4])] ??
       EventType.feeding;
   return object;
 }
@@ -95,12 +104,14 @@ P _timelineItemDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 1:
-      return (reader.readDateTime(offset)) as P;
-    case 2:
       return (reader.readString(offset)) as P;
+    case 2:
+      return (reader.readDateTime(offset)) as P;
     case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
       return (_TimelineItemtypeValueEnumMap[reader.readByteOrNull(offset)] ??
               EventType.feeding)
           as P;
@@ -277,6 +288,170 @@ extension TimelineItemQueryFilter
           upper: upper,
           includeUpper: includeUpper,
         ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'note'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  noteIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'note'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  noteGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'note',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  noteStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition> noteMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'note',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  noteIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'note', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  noteIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'note', value: ''),
       );
     });
   }
@@ -692,6 +867,18 @@ extension TimelineItemQueryLinks
 
 extension TimelineItemQuerySortBy
     on QueryBuilder<TimelineItem, TimelineItem, QSortBy> {
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortByNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'note', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortByNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'note', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortBySubtitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subtitle', Sort.asc);
@@ -755,6 +942,18 @@ extension TimelineItemQuerySortThenBy
     });
   }
 
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenByNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'note', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenByNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'note', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenBySubtitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subtitle', Sort.asc);
@@ -806,6 +1005,14 @@ extension TimelineItemQuerySortThenBy
 
 extension TimelineItemQueryWhereDistinct
     on QueryBuilder<TimelineItem, TimelineItem, QDistinct> {
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctByNote({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'note', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctBySubtitle({
     bool caseSensitive = true,
   }) {
@@ -840,6 +1047,12 @@ extension TimelineItemQueryProperty
   QueryBuilder<TimelineItem, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations> noteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'note');
     });
   }
 

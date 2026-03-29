@@ -1,73 +1,76 @@
 import 'package:flutter/material.dart';
-import '../../data/app_memory_store.dart';
+import '../../core/app_services.dart';
 import 'timeline_item.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
+
+  static const routeName = '/timeline';
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    final day = time.day.toString().padLeft(2, '0');
-    final month = time.month.toString().padLeft(2, '0');
-
-    return '$day.$month. $hour:$minute';
-  }
-
-  IconData _getIcon(EventType type) {
-    switch (type) {
-      case EventType.feeding:
-        return Icons.local_drink_outlined;
-      case EventType.sleep:
-        return Icons.bedtime_outlined;
-      case EventType.diaper:
-        return Icons.baby_changing_station_outlined;
-      case EventType.crying:
-        return Icons.campaign_outlined;
-    }
+  @override
+  void initState() {
+    super.initState();
+    AppServices.timelineController.load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Časová osa'),
+        title: const Text('Timeline'),
       ),
-      body: ValueListenableBuilder<List<TimelineItem>>(
-        valueListenable: AppMemoryStore.timelineItems,
-        builder: (context, items, _) {
-          final reversed = items.reversed.toList();
-
-          if (reversed.isEmpty) {
+      body: ValueListenableBuilder<bool>(
+        valueListenable: AppServices.timelineController.isLoading,
+        builder: (context, isLoading, child) {
+          if (isLoading) {
             return const Center(
-              child: Text('Zatím nejsou žádné záznamy.'),
+              child: CircularProgressIndicator(),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: reversed.length,
-            itemBuilder: (context, index) {
-              final item = reversed[index];
+          return ValueListenableBuilder<String?>(
+            valueListenable: AppServices.timelineController.error,
+            builder: (context, error, child) {
+              if (error != null) {
+                return Center(
+                  child: Text(error),
+                );
+              }
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: Icon(_getIcon(item.type)),
-                  title: Text(item.title),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_formatTime(item.time)),
-                      Text(item.subtitle),
-                    ],
-                  ),
-                ),
+              return ValueListenableBuilder<List<TimelineItem>>(
+                valueListenable: AppServices.timelineController.items,
+                builder: (context, items, child) {
+                  if (items.isEmpty) {
+                    return const Center(
+                      child: Text('Zatím žádné záznamy'),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+
+                      final subtitleParts = <String>[
+                        if (item.subtitle.isNotEmpty) item.subtitle,
+                        if (item.note != null && item.note!.isNotEmpty) item.note!,
+                      ];
+
+                      return ListTile(
+                        title: Text(item.title),
+                        subtitle: Text(subtitleParts.join(' • ')),
+                        trailing: Text(
+                          '${item.time.hour.toString().padLeft(2, '0')}:${item.time.minute.toString().padLeft(2, '0')}',
+                        ),
+                      );
+                    },
+                  );
+                },
               );
             },
           );
