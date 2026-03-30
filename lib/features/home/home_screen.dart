@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
+import '../feeding/feeding_form_screen.dart';
+import '../sleep/sleep_form_screen.dart';
+import '../diaper/diaper_form_screen.dart';
+import '../crying/crying_form_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -35,6 +39,57 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     await _futureRecommendations;
+  }
+
+  Future<void> _openQuickAction(Widget screen) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => screen,
+      ),
+    );
+
+    if (!mounted) return;
+
+    await AppServices.timelineController.load();
+
+    setState(() {
+      _loadRecommendations();
+    });
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: SizedBox(
+        height: 96,
+        child: Card(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 28),
+                  const SizedBox(height: 8),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Color _scoreColor(double score) {
@@ -74,6 +129,44 @@ class _HomeScreenState extends State<HomeScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
+
+            Text(
+              'Rychlé akce',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildQuickActionButton(
+                  icon: Icons.local_drink_outlined,
+                  label: 'Krmení',
+                  onTap: () => _openQuickAction(const FeedingFormScreen()),
+                ),
+                const SizedBox(width: 12),
+                _buildQuickActionButton(
+                  icon: Icons.bedtime_outlined,
+                  label: 'Spánek',
+                  onTap: () => _openQuickAction(const SleepFormScreen()),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildQuickActionButton(
+                  icon: Icons.baby_changing_station_outlined,
+                  label: 'Přebalení',
+                  onTap: () => _openQuickAction(const DiaperFormScreen()),
+                ),
+                const SizedBox(width: 12),
+                _buildQuickActionButton(
+                  icon: Icons.campaign_outlined,
+                  label: 'Pláč',
+                  onTap: () => _openQuickAction(const CryingFormScreen()),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
 
             Row(
               children: [
