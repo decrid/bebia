@@ -12,8 +12,47 @@ class FeedingFormScreen extends StatefulWidget {
 
 class _FeedingFormScreenState extends State<FeedingFormScreen> {
   String _type = 'breast';
+  DateTime _selectedTime = DateTime.now();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+
+  String _formatDateTime(DateTime value) {
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final year = value.year.toString();
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+
+    return '$day.$month.$year $hour:$minute';
+  }
+
+  Future<void> _pickDateTime() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedTime,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_selectedTime),
+    );
+
+    if (pickedTime == null) return;
+
+    setState(() {
+      _selectedTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
 
   Future<void> _save() async {
     final amountText = _amountController.text.trim();
@@ -23,8 +62,8 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
         : _noteController.text.trim();
 
     final record = FeedingRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      time: DateTime.now(),
+      id: _selectedTime.millisecondsSinceEpoch.toString(),
+      time: _selectedTime,
       type: _type,
       amountMl: parsedAmount,
       note: note,
@@ -62,6 +101,17 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            Card(
+              child: ListTile(
+                title: const Text('Čas události'),
+                subtitle: Text(_formatDateTime(_selectedTime)),
+                trailing: TextButton(
+                  onPressed: _pickDateTime,
+                  child: const Text('Změnit'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _type,
               items: const [

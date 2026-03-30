@@ -11,18 +11,56 @@ class SleepFormScreen extends StatefulWidget {
 }
 
 class _SleepFormScreenState extends State<SleepFormScreen> {
+  DateTime _selectedTime = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
 
+  String _formatDateTime(DateTime value) {
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final year = value.year.toString();
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+
+    return '$day.$month.$year $hour:$minute';
+  }
+
+  Future<void> _pickDateTime() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedTime,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_selectedTime),
+    );
+
+    if (pickedTime == null) return;
+
+    setState(() {
+      _selectedTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
+
   Future<void> _save() async {
-    final now = DateTime.now();
     final note = _noteController.text.trim().isEmpty
         ? null
         : _noteController.text.trim();
 
     final record = SleepRecord(
-      id: now.millisecondsSinceEpoch.toString(),
-      startTime: now.subtract(const Duration(hours: 1)),
-      endTime: now,
+      id: _selectedTime.millisecondsSinceEpoch.toString(),
+      startTime: _selectedTime.subtract(const Duration(hours: 1)),
+      endTime: _selectedTime,
       note: note,
     );
 
@@ -55,6 +93,17 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            Card(
+              child: ListTile(
+                title: const Text('Konec spánku'),
+                subtitle: Text(_formatDateTime(_selectedTime)),
+                trailing: TextButton(
+                  onPressed: _pickDateTime,
+                  child: const Text('Změnit'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             const Text('Pro MVP: uloží se spánek 1 hodina zpět'),
             const SizedBox(height: 12),
             TextField(
