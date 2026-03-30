@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
+import '../crying/crying_form_screen.dart';
+import '../diaper/diaper_form_screen.dart';
+import '../feeding/feeding_form_screen.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
-import '../feeding/feeding_form_screen.dart';
 import '../sleep/sleep_form_screen.dart';
-import '../diaper/diaper_form_screen.dart';
-import '../crying/crying_form_screen.dart';
 import '../timeline/timeline_item.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,8 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
     await _futureRecommendations;
   }
 
-  Future<void> _openQuickAction(Widget screen) async {
-    await Navigator.of(context).push(
+  Future<void> _openForm(Widget screen) async {
+    await Navigator.push(
+      context,
       MaterialPageRoute(
         builder: (_) => screen,
       ),
@@ -51,72 +52,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
 
-    await AppServices.timelineController.load();
-
-    setState(() {
-      _loadRecommendations();
-    });
-  }
-
-  Widget _buildQuickActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: SizedBox(
-        height: 96,
-        child: Card(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 28),
-                  const SizedBox(height: 8),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _scoreColor(double score) {
-    if (score >= 0.8) return Colors.red;
-    if (score >= 0.5) return Colors.orange;
-    return Colors.blue;
-  }
-
-  String _scoreLabel(double score) {
-    if (score >= 0.8) return 'Vysoká priorita';
-    if (score >= 0.5) return 'Střední priorita';
-    return 'Informace';
-  }
-
-  Color _withAlpha(Color color, double opacity) {
-    return Color.fromARGB(
-      (opacity * 255).round(),
-      (color.r * 255).round().clamp(0, 255),
-      (color.g * 255).round().clamp(0, 255),
-      (color.b * 255).round().clamp(0, 255),
-    );
+    await _refresh();
   }
 
   String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:'
-        '${time.minute.toString().padLeft(2, '0')}';
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   IconData _eventIcon(EventType type) {
@@ -143,61 +85,60 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(
+            const Text(
               'Dashboard',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 20),
-
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Rychlé akce',
-              style: Theme.of(context).textTheme.titleLarge,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 12),
-            Row(
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 2.2,
               children: [
-                _buildQuickActionButton(
+                _QuickActionCard(
+                  title: 'Krmení',
                   icon: Icons.local_drink_outlined,
-                  label: 'Krmení',
-                  onTap: () => _openQuickAction(const FeedingFormScreen()),
+                  onTap: () => _openForm(const FeedingFormScreen()),
                 ),
-                const SizedBox(width: 12),
-                _buildQuickActionButton(
+                _QuickActionCard(
+                  title: 'Spánek',
                   icon: Icons.bedtime_outlined,
-                  label: 'Spánek',
-                  onTap: () => _openQuickAction(const SleepFormScreen()),
+                  onTap: () => _openForm(const SleepFormScreen()),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildQuickActionButton(
+                _QuickActionCard(
+                  title: 'Přebalení',
                   icon: Icons.baby_changing_station_outlined,
-                  label: 'Přebalení',
-                  onTap: () => _openQuickAction(const DiaperFormScreen()),
+                  onTap: () => _openForm(const DiaperFormScreen()),
                 ),
-                const SizedBox(width: 12),
-                _buildQuickActionButton(
+                _QuickActionCard(
+                  title: 'Pláč',
                   icon: Icons.campaign_outlined,
-                  label: 'Pláč',
-                  onTap: () => _openQuickAction(const CryingFormScreen()),
+                  onTap: () => _openForm(const CryingFormScreen()),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Poslední události',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-              ],
+            const Text(
+              'Poslední události',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 8),
             ValueListenableBuilder<bool>(
               valueListenable: AppServices.timelineController.isLoading,
               builder: (context, isLoading, child) {
@@ -214,23 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   valueListenable: AppServices.timelineController.error,
                   builder: (context, error, child) {
                     if (error != null) {
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: Colors.redAccent,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(error),
-                              ),
-                            ],
-                          ),
-                        ),
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(error),
                       );
                     }
 
@@ -238,23 +165,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       valueListenable: AppServices.timelineController.items,
                       builder: (context, items, child) {
                         if (items.isEmpty) {
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.access_time_outlined,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Text(
-                                      'Zatím nejsou k dispozici žádné události.',
-                                    ),
-                                  ),
-                                ],
+                          return const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Text('Zatím žádné události'),
                               ),
                             ),
                           );
@@ -262,36 +178,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         final recentItems = items.take(3).toList();
 
-                        return Card(
-                          child: Column(
-                            children: [
-                              ...recentItems.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final item = entry.value;
+                        return Column(
+                          children: recentItems.map((item) {
+                            final subtitleParts = <String>[
+                              if (item.subtitle.isNotEmpty) item.subtitle,
+                              if (item.note != null && item.note!.isNotEmpty)
+                                item.note!,
+                            ];
 
-                                final subtitleParts = <String>[
-                                  if (item.subtitle.isNotEmpty) item.subtitle,
-                                  if (item.note != null && item.note!.isNotEmpty)
-                                    item.note!,
-                                ];
-
-                                return Column(
-                                  children: [
-                                    ListTile(
-                                      leading: Icon(_eventIcon(item.type)),
-                                      title: Text(item.title),
-                                      subtitle: subtitleParts.isEmpty
-                                          ? null
-                                          : Text(subtitleParts.join(' • ')),
-                                      trailing: Text(_formatTime(item.time)),
-                                    ),
-                                    if (index < recentItems.length - 1)
-                                      const Divider(height: 1),
-                                  ],
-                                );
-                              }),
-                            ],
-                          ),
+                            return Card(
+                              margin: const EdgeInsets.only(top: 8),
+                              child: ListTile(
+                                leading: Icon(_eventIcon(item.type)),
+                                title: Text(item.title),
+                                subtitle: subtitleParts.isEmpty
+                                    ? null
+                                    : Text(subtitleParts.join(' • ')),
+                                trailing: Text(_formatTime(item.time)),
+                              ),
+                            );
+                          }).toList(),
                         );
                       },
                     );
@@ -300,41 +206,35 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             const SizedBox(height: 24),
-
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    'Doporučení',
-                    style: Theme.of(context).textTheme.titleLarge,
+                const Text(
+                  'Doporučení',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 TextButton(
-                  onPressed: () async {
-                    await Navigator.of(context).push(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
                       MaterialPageRoute(
                         builder: (_) => const RecommendationsScreen(),
                       ),
                     );
-
-                    if (!mounted) return;
-
-                    setState(() {
-                      _loadRecommendations();
-                    });
                   },
-                  child: const Text('Zobrazit vše'),
+                  child: const Text('Všechna'),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-
             FutureBuilder<List<Recommendation>>(
               future: _futureRecommendations,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
+                    padding: EdgeInsets.only(top: 16),
                     child: Center(
                       child: CircularProgressIndicator(),
                     ),
@@ -342,24 +242,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: Colors.redAccent,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Chyba při načítání doporučení:\n${snapshot.error}',
-                            ),
-                          ),
-                        ],
-                      ),
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Chyba při načítání doporučení: ${snapshot.error}',
                     ),
                   );
                 }
@@ -367,86 +253,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 final recommendations = snapshot.data ?? [];
 
                 if (recommendations.isEmpty) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              'Zatím nejsou k dispozici žádná doporučení.',
-                            ),
-                          ),
-                        ],
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Žádná doporučení'),
                       ),
                     ),
                   );
                 }
 
-                final topRecommendations = recommendations.take(2).toList();
+                final previewRecommendations = recommendations.take(3).toList();
 
                 return Column(
-                  children: topRecommendations.map((item) {
-                    final color = _scoreColor(item.score);
-
+                  children: previewRecommendations.map((rec) {
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: _withAlpha(color, 0.12),
-                                  foregroundColor: color,
-                                  child: const Icon(
-                                    Icons.tips_and_updates_outlined,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    item.title,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleMedium,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(item.description),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                Chip(
-                                  label: Text(_scoreLabel(item.score)),
-                                  avatar: Icon(
-                                    Icons.flag_outlined,
-                                    size: 18,
-                                    color: color,
-                                  ),
-                                ),
-                                Chip(
-                                  label: Text(
-                                    'Skóre: ${item.score.toStringAsFixed(2)}',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                      margin: const EdgeInsets.only(top: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.lightbulb_outline),
+                        title: Text(rec.title),
+                        subtitle: Text(rec.description),
                       ),
                     );
                   }).toList(),
@@ -454,6 +281,45 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Icon(icon),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
