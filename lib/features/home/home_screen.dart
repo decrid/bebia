@@ -6,6 +6,7 @@ import '../feeding/feeding_form_screen.dart';
 import '../sleep/sleep_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../crying/crying_form_screen.dart';
+import '../timeline/timeline_item.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -113,6 +114,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _formatTime(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:'
+        '${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  IconData _eventIcon(EventType type) {
+    switch (type) {
+      case EventType.feeding:
+        return Icons.local_drink_outlined;
+      case EventType.sleep:
+        return Icons.bedtime_outlined;
+      case EventType.diaper:
+        return Icons.baby_changing_station_outlined;
+      case EventType.crying:
+        return Icons.campaign_outlined;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,6 +184,120 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => _openQuickAction(const CryingFormScreen()),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Poslední události',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<bool>(
+              valueListenable: AppServices.timelineController.isLoading,
+              builder: (context, isLoading, child) {
+                if (isLoading) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                return ValueListenableBuilder<String?>(
+                  valueListenable: AppServices.timelineController.error,
+                  builder: (context, error, child) {
+                    if (error != null) {
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.redAccent,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(error),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ValueListenableBuilder<List<TimelineItem>>(
+                      valueListenable: AppServices.timelineController.items,
+                      builder: (context, items, child) {
+                        if (items.isEmpty) {
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.access_time_outlined,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      'Zatím nejsou k dispozici žádné události.',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        final recentItems = items.take(3).toList();
+
+                        return Card(
+                          child: Column(
+                            children: [
+                              ...recentItems.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final item = entry.value;
+
+                                final subtitleParts = <String>[
+                                  if (item.subtitle.isNotEmpty) item.subtitle,
+                                  if (item.note != null && item.note!.isNotEmpty)
+                                    item.note!,
+                                ];
+
+                                return Column(
+                                  children: [
+                                    ListTile(
+                                      leading: Icon(_eventIcon(item.type)),
+                                      title: Text(item.title),
+                                      subtitle: subtitleParts.isEmpty
+                                          ? null
+                                          : Text(subtitleParts.join(' • ')),
+                                      trailing: Text(_formatTime(item.time)),
+                                    ),
+                                    if (index < recentItems.length - 1)
+                                      const Divider(height: 1),
+                                  ],
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: 24),
 
