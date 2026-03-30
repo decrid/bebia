@@ -36,10 +36,10 @@ class RecommendationService {
       }
     }
 
-    int hungerScore = 0;
-    int tiredScore = 0;
-    int diaperScore = 0;
-    int soothingScore = 0;
+    double hungerScore = 0.0;
+    double tiredScore = 0.0;
+    double diaperScore = 0.0;
+    double soothingScore = 0.0;
 
     final reasonsHunger = <String>[];
     final reasonsTired = <String>[];
@@ -53,18 +53,18 @@ class RecommendationService {
       final feedingDiff = now.difference(lastFeeding.time).inMinutes;
 
       if (feedingDiff >= 120) {
-        hungerScore += 30;
+        hungerScore += 0.30;
         reasonsHunger.add('od posledního krmení uplynuly více než 2 hodiny');
       }
       if (feedingDiff >= 150) {
-        hungerScore += 20;
+        hungerScore += 0.20;
       }
       if (feedingDiff >= 180) {
-        hungerScore += 20;
+        hungerScore += 0.20;
       }
 
       if (hasRecentCrying) {
-        hungerScore += 20;
+        hungerScore += 0.20;
         reasonsHunger.add('dítě nedávno plakalo');
       }
     }
@@ -73,18 +73,18 @@ class RecommendationService {
       final sleepDiff = now.difference(lastSleep.time).inMinutes;
 
       if (sleepDiff >= 75) {
-        tiredScore += 25;
+        tiredScore += 0.25;
         reasonsTired.add('dítě je delší dobu vzhůru');
       }
       if (sleepDiff >= 90) {
-        tiredScore += 20;
+        tiredScore += 0.20;
       }
       if (sleepDiff >= 120) {
-        tiredScore += 25;
+        tiredScore += 0.25;
       }
 
       if (hasRecentCrying) {
-        tiredScore += 15;
+        tiredScore += 0.15;
         reasonsTired.add('pláč může souviset s únavou');
       }
     }
@@ -93,42 +93,42 @@ class RecommendationService {
       final diaperDiff = now.difference(lastDiaper.time).inMinutes;
 
       if (diaperDiff >= 120) {
-        diaperScore += 20;
+        diaperScore += 0.20;
         reasonsDiaper.add('od posledního přebalení uplynula delší doba');
       }
       if (diaperDiff >= 180) {
-        diaperScore += 20;
+        diaperScore += 0.20;
       }
       if (diaperDiff >= 240) {
-        diaperScore += 20;
+        diaperScore += 0.20;
       }
 
       if (hasRecentCrying) {
-        diaperScore += 15;
+        diaperScore += 0.15;
         reasonsDiaper.add('pláč může souviset s diskomfortem');
       }
     } else if (hasRecentCrying) {
-      diaperScore += 20;
+      diaperScore += 0.20;
       reasonsDiaper.add('není evidované žádné přebalení a dítě plakalo');
     }
 
     if (hasRecentCrying) {
-      soothingScore += 25;
+      soothingScore += 0.25;
       reasonsSoothing.add('dítě nedávno plakalo');
     }
 
     if (cryingCount >= 2) {
-      soothingScore += 20;
+      soothingScore += 0.20;
       reasonsSoothing.add('pláč se opakoval vícekrát za krátkou dobu');
     }
 
     if (cryingCount >= 3) {
-      soothingScore += 20;
+      soothingScore += 0.20;
     }
 
     final recommendations = <Recommendation>[];
 
-    if (hungerScore >= 40) {
+    if (hungerScore >= 0.40) {
       recommendations.add(
         Recommendation(
           title: 'Možný hlad',
@@ -136,12 +136,12 @@ class RecommendationService {
             fallback: 'Zkus zkontrolovat, zda není čas na další krmení.',
             reasons: reasonsHunger,
           ),
-          score: hungerScore,
+          score: hungerScore.clamp(0.0, 1.0),
         ),
       );
     }
 
-    if (tiredScore >= 40) {
+    if (tiredScore >= 0.40) {
       recommendations.add(
         Recommendation(
           title: 'Možná únava',
@@ -149,12 +149,12 @@ class RecommendationService {
             fallback: 'Zkus klidový režim, uspávání nebo ztišení podnětů.',
             reasons: reasonsTired,
           ),
-          score: tiredScore,
+          score: tiredScore.clamp(0.0, 1.0),
         ),
       );
     }
 
-    if (diaperScore >= 35) {
+    if (diaperScore >= 0.35) {
       recommendations.add(
         Recommendation(
           title: 'Možný diskomfort',
@@ -162,12 +162,12 @@ class RecommendationService {
             fallback: 'Zkontroluj plenku nebo celkový komfort dítěte.',
             reasons: reasonsDiaper,
           ),
-          score: diaperScore,
+          score: diaperScore.clamp(0.0, 1.0),
         ),
       );
     }
 
-    if (soothingScore >= 35) {
+    if (soothingScore >= 0.35) {
       recommendations.add(
         Recommendation(
           title: 'Potřeba uklidnění',
@@ -175,7 +175,7 @@ class RecommendationService {
             fallback: 'Zkus chování, kontakt, houpání nebo klidné prostředí.',
             reasons: reasonsSoothing,
           ),
-          score: soothingScore,
+          score: soothingScore.clamp(0.0, 1.0),
         ),
       );
     }

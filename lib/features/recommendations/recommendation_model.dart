@@ -1,7 +1,7 @@
 class Recommendation {
   final String title;
   final String description;
-  final int score;
+  final double score;
 
   Recommendation({
     required this.title,
