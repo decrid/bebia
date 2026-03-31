@@ -143,9 +143,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Timeline'),
-      ),
+      appBar: AppBar(),
       body: Column(
         children: [
           ValueListenableBuilder<EventType?>(

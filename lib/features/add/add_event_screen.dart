@@ -12,9 +12,7 @@ class AddEventScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Přidat událost'),
-      ),
+      appBar: AppBar(),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
