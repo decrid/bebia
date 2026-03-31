@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:isar_community/isar.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'diaper_model.dart';
-import 'package:isar_community/isar.dart';
 
 class DiaperFormScreen extends StatefulWidget {
   const DiaperFormScreen({
@@ -32,15 +32,19 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
       _selectedTime = existingItem.time;
       _noteController.text = existingItem.note ?? '';
 
-      switch (existingItem.subtitle) {
-        case 'Stolice':
-          _type = 'poop';
-          break;
-        case 'Oboje':
-          _type = 'both';
-          break;
-        default:
-          _type = 'wet';
+      if (existingItem.diaperType != null) {
+        _type = existingItem.diaperType!;
+      } else {
+        switch (existingItem.subtitle) {
+          case 'Stolice':
+            _type = 'poop';
+            break;
+          case 'Oboje':
+            _type = 'both';
+            break;
+          default:
+            _type = 'wet';
+        }
       }
     }
   }
@@ -107,7 +111,8 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
       ..time = record.time
       ..title = 'Přebalení'
       ..subtitle = diaperLabel
-      ..note = note;
+      ..note = note
+      ..diaperType = record.type;
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);

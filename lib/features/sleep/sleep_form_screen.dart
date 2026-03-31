@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:isar_community/isar.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'sleep_model.dart';
-import 'package:isar_community/isar.dart';
 
 class SleepFormScreen extends StatefulWidget {
   const SleepFormScreen({
@@ -28,7 +28,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
 
     final existingItem = widget.existingItem;
     if (existingItem != null) {
-      _selectedTime = existingItem.time;
+      _selectedTime = existingItem.sleepEnd ?? existingItem.time;
       _noteController.text = existingItem.note ?? '';
     }
   }
@@ -89,7 +89,11 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
       ..time = record.endTime
       ..title = 'Spánek'
       ..subtitle = '1 hodina'
-      ..note = note;
+      ..note = note
+      ..sleepStart = record.startTime
+      ..sleepEnd = record.endTime
+      ..sleepDurationMinutes =
+          record.endTime.difference(record.startTime).inMinutes;
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);

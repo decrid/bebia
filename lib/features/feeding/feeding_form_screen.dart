@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:isar_community/isar.dart';
 import '../../core/app_services.dart';
 import 'feeding_model.dart';
 import '../timeline/timeline_item.dart';
-import 'package:isar_community/isar.dart';
 
 class FeedingFormScreen extends StatefulWidget {
   const FeedingFormScreen({
@@ -33,15 +33,21 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       _selectedTime = existingItem.time;
       _noteController.text = existingItem.note ?? '';
 
-      if (existingItem.title == 'Lahvička') {
+      if (existingItem.feedingType != null) {
+        _type = existingItem.feedingType!;
+      } else if (existingItem.title == 'Lahvička') {
         _type = 'bottle';
       } else {
         _type = 'breast';
       }
 
-      final subtitle = existingItem.subtitle.trim();
-      if (subtitle.endsWith(' ml')) {
-        _amountController.text = subtitle.replaceAll(' ml', '').trim();
+      if (existingItem.feedingAmountMl != null) {
+        _amountController.text = existingItem.feedingAmountMl.toString();
+      } else {
+        final subtitle = existingItem.subtitle.trim();
+        if (subtitle.endsWith(' ml')) {
+          _amountController.text = subtitle.replaceAll(' ml', '').trim();
+        }
       }
     }
   }
@@ -107,7 +113,9 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       ..subtitle = [
         if (record.amountMl != null) '${record.amountMl} ml',
       ].join(' • ')
-      ..note = note;
+      ..note = note
+      ..feedingType = record.type
+      ..feedingAmountMl = record.amountMl;
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:isar_community/isar.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
-import 'package:isar_community/isar.dart';
 
 class CryingFormScreen extends StatefulWidget {
   const CryingFormScreen({
@@ -29,13 +29,17 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     if (existingItem != null) {
       _selectedTime = existingItem.time;
 
-      final prefix = 'Intenzita: ';
-      if (existingItem.subtitle.startsWith(prefix)) {
-        final value = int.tryParse(
-          existingItem.subtitle.replaceFirst(prefix, '').trim(),
-        );
-        if (value != null && value >= 1 && value <= 5) {
-          _intensity = value.toDouble();
+      if (existingItem.cryingIntensity != null) {
+        _intensity = existingItem.cryingIntensity!.toDouble();
+      } else {
+        final prefix = 'Intenzita: ';
+        if (existingItem.subtitle.startsWith(prefix)) {
+          final value = int.tryParse(
+            existingItem.subtitle.replaceFirst(prefix, '').trim(),
+          );
+          if (value != null && value >= 1 && value <= 5) {
+            _intensity = value.toDouble();
+          }
         }
       }
     }
@@ -85,7 +89,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       ..type = EventType.crying
       ..time = _selectedTime
       ..title = 'Pláč'
-      ..subtitle = 'Intenzita: ${_intensity.toInt()}';
+      ..subtitle = 'Intenzita: ${_intensity.toInt()}'
+      ..cryingIntensity = _intensity.toInt();
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);

@@ -20,4 +20,19 @@ class TimelineItem {
   late String title;
   late String subtitle;
   String? note;
+
+  // Feeding
+  String? feedingType; // breast, bottle
+  int? feedingAmountMl;
+
+  // Sleep
+  DateTime? sleepStart;
+  DateTime? sleepEnd;
+  int? sleepDurationMinutes;
+
+  // Diaper
+  String? diaperType; // wet, poop, both
+
+  // Crying
+  int? cryingIntensity; // 1-5
 }
