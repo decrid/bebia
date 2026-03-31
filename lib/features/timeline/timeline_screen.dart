@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
+import '../crying/crying_form_screen.dart';
+import '../diaper/diaper_form_screen.dart';
+import '../feeding/feeding_form_screen.dart';
+import '../sleep/sleep_form_screen.dart';
 import 'timeline_item.dart';
 
 class TimelineScreen extends StatefulWidget {
@@ -16,6 +20,35 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void initState() {
     super.initState();
     AppServices.timelineController.load();
+  }
+
+  Future<void> _openEditForm(TimelineItem item) async {
+    Widget screen;
+
+    switch (item.type) {
+      case EventType.feeding:
+        screen = FeedingFormScreen(existingItem: item);
+        break;
+      case EventType.sleep:
+        screen = SleepFormScreen(existingItem: item);
+        break;
+      case EventType.diaper:
+        screen = DiaperFormScreen(existingItem: item);
+        break;
+      case EventType.crying:
+        screen = CryingFormScreen(existingItem: item);
+        break;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => screen,
+      ),
+    );
+
+    if (!mounted) return;
+    await AppServices.timelineController.load();
   }
 
   @override
@@ -58,7 +91,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
                       final subtitleParts = <String>[
                         if (item.subtitle.isNotEmpty) item.subtitle,
-                        if (item.note != null && item.note!.isNotEmpty) item.note!,
+                        if (item.note != null && item.note!.isNotEmpty)
+                          item.note!,
                       ];
 
                       return Dismissible(
@@ -93,6 +127,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                           AppServices.timelineController.delete(item.id);
                         },
                         child: ListTile(
+                          onTap: () => _openEditForm(item),
                           title: Text(item.title),
                           subtitle: Text(subtitleParts.join(' • ')),
                           trailing: Text(

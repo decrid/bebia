@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'sleep_model.dart';
+import 'package:isar_community/isar.dart';
 
 class SleepFormScreen extends StatefulWidget {
-  const SleepFormScreen({super.key});
+  const SleepFormScreen({
+    super.key,
+    this.existingItem,
+  });
+
+  final TimelineItem? existingItem;
 
   @override
   State<SleepFormScreen> createState() => _SleepFormScreenState();
@@ -13,6 +19,19 @@ class SleepFormScreen extends StatefulWidget {
 class _SleepFormScreenState extends State<SleepFormScreen> {
   DateTime _selectedTime = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
+
+  bool get _isEdit => widget.existingItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final existingItem = widget.existingItem;
+    if (existingItem != null) {
+      _selectedTime = existingItem.time;
+      _noteController.text = existingItem.note ?? '';
+    }
+  }
 
   String _formatDateTime(DateTime value) {
     final day = value.day.toString().padLeft(2, '0');
@@ -65,13 +84,18 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
     );
 
     final item = TimelineItem()
+      ..id = widget.existingItem?.id ?? Isar.autoIncrement
       ..type = EventType.sleep
       ..time = record.endTime
       ..title = 'Spánek'
       ..subtitle = '1 hodina'
       ..note = note;
 
-    await AppServices.timelineController.add(item);
+    if (_isEdit) {
+      await AppServices.timelineController.update(item);
+    } else {
+      await AppServices.timelineController.add(item);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -87,7 +111,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Spánek'),
+        title: Text(_isEdit ? 'Upravit spánek' : 'Spánek'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -118,7 +142,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _save,
-                child: const Text('Uložit'),
+                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
               ),
             ),
           ],

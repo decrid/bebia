@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'diaper_model.dart';
+import 'package:isar_community/isar.dart';
 
 class DiaperFormScreen extends StatefulWidget {
-  const DiaperFormScreen({super.key});
+  const DiaperFormScreen({
+    super.key,
+    this.existingItem,
+  });
+
+  final TimelineItem? existingItem;
 
   @override
   State<DiaperFormScreen> createState() => _DiaperFormScreenState();
@@ -14,6 +20,30 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   String _type = 'wet';
   DateTime _selectedTime = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
+
+  bool get _isEdit => widget.existingItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final existingItem = widget.existingItem;
+    if (existingItem != null) {
+      _selectedTime = existingItem.time;
+      _noteController.text = existingItem.note ?? '';
+
+      switch (existingItem.subtitle) {
+        case 'Stolice':
+          _type = 'poop';
+          break;
+        case 'Oboje':
+          _type = 'both';
+          break;
+        default:
+          _type = 'wet';
+      }
+    }
+  }
 
   String _formatDateTime(DateTime value) {
     final day = value.day.toString().padLeft(2, '0');
@@ -72,13 +102,18 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
             : 'Oboje';
 
     final item = TimelineItem()
+      ..id = widget.existingItem?.id ?? Isar.autoIncrement
       ..type = EventType.diaper
       ..time = record.time
       ..title = 'Přebalení'
       ..subtitle = diaperLabel
       ..note = note;
 
-    await AppServices.timelineController.add(item);
+    if (_isEdit) {
+      await AppServices.timelineController.update(item);
+    } else {
+      await AppServices.timelineController.add(item);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -94,7 +129,7 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Přebalení'),
+        title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -141,7 +176,7 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _save,
-                child: const Text('Uložit'),
+                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
               ),
             ),
           ],

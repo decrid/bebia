@@ -8,7 +8,8 @@ class TimelineController {
 
   final TimelineRepository _repository;
 
-  final ValueNotifier<List<TimelineItem>> items = ValueNotifier<List<TimelineItem>>([]);
+  final ValueNotifier<List<TimelineItem>> items =
+      ValueNotifier<List<TimelineItem>>([]);
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
   final ValueNotifier<String?> error = ValueNotifier<String?>(null);
 
@@ -34,6 +35,17 @@ class TimelineController {
       await load();
     } catch (e) {
       error.value = 'Nepodařilo se uložit záznam: $e';
+    }
+  }
+
+  Future<void> update(TimelineItem item) async {
+    error.value = null;
+
+    try {
+      await _repository.updateItem(item);
+      await load();
+    } catch (e) {
+      error.value = 'Nepodařilo se upravit záznam: $e';
     }
   }
 

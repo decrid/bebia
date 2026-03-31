@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import 'feeding_model.dart';
 import '../timeline/timeline_item.dart';
+import 'package:isar_community/isar.dart';
 
 class FeedingFormScreen extends StatefulWidget {
-  const FeedingFormScreen({super.key});
+  const FeedingFormScreen({
+    super.key,
+    this.existingItem,
+  });
+
+  final TimelineItem? existingItem;
 
   @override
   State<FeedingFormScreen> createState() => _FeedingFormScreenState();
@@ -15,6 +21,30 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   DateTime _selectedTime = DateTime.now();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+
+  bool get _isEdit => widget.existingItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final existingItem = widget.existingItem;
+    if (existingItem != null) {
+      _selectedTime = existingItem.time;
+      _noteController.text = existingItem.note ?? '';
+
+      if (existingItem.title == 'Lahvička') {
+        _type = 'bottle';
+      } else {
+        _type = 'breast';
+      }
+
+      final subtitle = existingItem.subtitle.trim();
+      if (subtitle.endsWith(' ml')) {
+        _amountController.text = subtitle.replaceAll(' ml', '').trim();
+      }
+    }
+  }
 
   String _formatDateTime(DateTime value) {
     final day = value.day.toString().padLeft(2, '0');
@@ -70,6 +100,7 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
     );
 
     final item = TimelineItem()
+      ..id = widget.existingItem?.id ?? Isar.autoIncrement
       ..type = EventType.feeding
       ..time = record.time
       ..title = _type == 'breast' ? 'Kojení' : 'Lahvička'
@@ -78,7 +109,11 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       ].join(' • ')
       ..note = note;
 
-    await AppServices.timelineController.add(item);
+    if (_isEdit) {
+      await AppServices.timelineController.update(item);
+    } else {
+      await AppServices.timelineController.add(item);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -95,7 +130,7 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Krmení'),
+        title: Text(_isEdit ? 'Upravit krmení' : 'Krmení'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -150,7 +185,7 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _save,
-                child: const Text('Uložit'),
+                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
               ),
             ),
           ],

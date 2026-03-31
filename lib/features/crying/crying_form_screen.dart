@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
+import 'package:isar_community/isar.dart';
 
 class CryingFormScreen extends StatefulWidget {
-  const CryingFormScreen({super.key});
+  const CryingFormScreen({
+    super.key,
+    this.existingItem,
+  });
+
+  final TimelineItem? existingItem;
 
   @override
   State<CryingFormScreen> createState() => _CryingFormScreenState();
@@ -12,6 +18,28 @@ class CryingFormScreen extends StatefulWidget {
 class _CryingFormScreenState extends State<CryingFormScreen> {
   double _intensity = 3;
   DateTime _selectedTime = DateTime.now();
+
+  bool get _isEdit => widget.existingItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final existingItem = widget.existingItem;
+    if (existingItem != null) {
+      _selectedTime = existingItem.time;
+
+      final prefix = 'Intenzita: ';
+      if (existingItem.subtitle.startsWith(prefix)) {
+        final value = int.tryParse(
+          existingItem.subtitle.replaceFirst(prefix, '').trim(),
+        );
+        if (value != null && value >= 1 && value <= 5) {
+          _intensity = value.toDouble();
+        }
+      }
+    }
+  }
 
   String _formatDateTime(DateTime value) {
     final day = value.day.toString().padLeft(2, '0');
@@ -53,12 +81,17 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
   Future<void> _save() async {
     final item = TimelineItem()
+      ..id = widget.existingItem?.id ?? Isar.autoIncrement
       ..type = EventType.crying
       ..time = _selectedTime
       ..title = 'Pláč'
       ..subtitle = 'Intenzita: ${_intensity.toInt()}';
 
-    await AppServices.timelineController.add(item);
+    if (_isEdit) {
+      await AppServices.timelineController.update(item);
+    } else {
+      await AppServices.timelineController.add(item);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -68,7 +101,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pláč'),
+        title: Text(_isEdit ? 'Upravit pláč' : 'Pláč'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -103,7 +136,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _save,
-                child: const Text('Uložit'),
+                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
               ),
             ),
           ],
