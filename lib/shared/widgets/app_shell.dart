@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/timeline/timeline_screen.dart';
-import '../../features/add/add_event_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -16,7 +15,6 @@ class _AppShellState extends State<AppShell> {
   final List<Widget> _screens = const [
     HomeScreen(),
     TimelineScreen(),
-    AddEventScreen(),
   ];
 
   @override
@@ -40,11 +38,6 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.access_time_outlined),
             selectedIcon: Icon(Icons.access_time),
             label: 'Časová osa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: 'Přidat',
           ),
         ],
       ),
