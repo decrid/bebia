@@ -101,13 +101,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
+            GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.2,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 220,
+                mainAxisExtent: 72,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
               children: [
                 _QuickActionCard(
                   title: 'Krmení',
