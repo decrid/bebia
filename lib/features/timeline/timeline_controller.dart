@@ -12,13 +12,20 @@ class TimelineController {
       ValueNotifier<List<TimelineItem>>([]);
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
   final ValueNotifier<String?> error = ValueNotifier<String?>(null);
+  final ValueNotifier<EventType?> selectedFilter = ValueNotifier<EventType?>(
+    null,
+  );
 
-  Future<void> load() async {
+  Future<void> load([EventType? type]) async {
     isLoading.value = true;
     error.value = null;
 
+    if (type != selectedFilter.value) {
+      selectedFilter.value = type;
+    }
+
     try {
-      final data = await _repository.getAll();
+      final data = await _repository.getFiltered(type);
       items.value = data;
     } catch (e) {
       error.value = 'Nepodařilo se načíst timeline: $e';
@@ -27,12 +34,16 @@ class TimelineController {
     }
   }
 
+  Future<void> reloadCurrent() async {
+    await load(selectedFilter.value);
+  }
+
   Future<void> add(TimelineItem item) async {
     error.value = null;
 
     try {
       await _repository.addItem(item);
-      await load();
+      await reloadCurrent();
     } catch (e) {
       error.value = 'Nepodařilo se uložit záznam: $e';
     }
@@ -43,7 +54,7 @@ class TimelineController {
 
     try {
       await _repository.updateItem(item);
-      await load();
+      await reloadCurrent();
     } catch (e) {
       error.value = 'Nepodařilo se upravit záznam: $e';
     }
@@ -54,7 +65,7 @@ class TimelineController {
 
     try {
       await _repository.deleteItem(id);
-      await load();
+      await reloadCurrent();
     } catch (e) {
       error.value = 'Nepodařilo se smazat záznam: $e';
     }
@@ -64,5 +75,6 @@ class TimelineController {
     items.dispose();
     isLoading.dispose();
     error.dispose();
+    selectedFilter.dispose();
   }
 }

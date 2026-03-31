@@ -40,13 +40,22 @@ class TimelineRepository {
       await _isar.timelineItems.clear();
     });
   }
+
   Future<List<TimelineItem>> getByType(EventType type) async {
-  return _isar.timelineItems
-      .filter()
-      .typeEqualTo(type)
-      .sortByTimeDesc()
-      .findAll();
-}
+    return _isar.timelineItems
+        .filter()
+        .typeEqualTo(type)
+        .sortByTimeDesc()
+        .findAll();
+  }
+
+  Future<List<TimelineItem>> getFiltered(EventType? type) async {
+    if (type == null) {
+      return getAll();
+    }
+
+    return getByType(type);
+  }
 
   Future<TimelineItem?> getLastByType(EventType type) async {
     return _isar.timelineItems
