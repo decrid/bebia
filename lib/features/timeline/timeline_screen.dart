@@ -51,6 +51,51 @@ class _TimelineScreenState extends State<TimelineScreen> {
     await AppServices.timelineController.load();
   }
 
+  String _formatTime(DateTime time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _formatDayLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final target = DateTime(date.year, date.month, date.day);
+
+    if (target == today) {
+      return 'Dnes';
+    }
+
+    if (target == yesterday) {
+      return 'Včera';
+    }
+
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+
+    return '$day.$month.$year';
+  }
+
+  List<_TimelineListEntry> _buildEntries(List<TimelineItem> items) {
+    final entries = <_TimelineListEntry>[];
+    String? currentDayLabel;
+
+    for (final item in items) {
+      final dayLabel = _formatDayLabel(item.time);
+
+      if (dayLabel != currentDayLabel) {
+        currentDayLabel = dayLabel;
+        entries.add(_TimelineHeaderEntry(dayLabel));
+      }
+
+      entries.add(_TimelineItemEntry(item));
+    }
+
+    return entries;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,10 +129,27 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     );
                   }
 
+                  final entries = _buildEntries(items);
+
                   return ListView.builder(
-                    itemCount: items.length,
+                    itemCount: entries.length,
                     itemBuilder: (context, index) {
-                      final item = items[index];
+                      final entry = entries[index];
+
+                      if (entry is _TimelineHeaderEntry) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Text(
+                            entry.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        );
+                      }
+
+                      final item = (entry as _TimelineItemEntry).item;
 
                       final subtitleParts = <String>[
                         if (item.subtitle.isNotEmpty) item.subtitle,
@@ -129,10 +191,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         child: ListTile(
                           onTap: () => _openEditForm(item),
                           title: Text(item.title),
-                          subtitle: Text(subtitleParts.join(' • ')),
-                          trailing: Text(
-                            '${item.time.hour.toString().padLeft(2, '0')}:${item.time.minute.toString().padLeft(2, '0')}',
-                          ),
+                          subtitle: subtitleParts.isEmpty
+                              ? null
+                              : Text(subtitleParts.join(' • ')),
+                          trailing: Text(_formatTime(item.time)),
                         ),
                       );
                     },
@@ -145,4 +207,18 @@ class _TimelineScreenState extends State<TimelineScreen> {
       ),
     );
   }
+}
+
+abstract class _TimelineListEntry {}
+
+class _TimelineHeaderEntry extends _TimelineListEntry {
+  _TimelineHeaderEntry(this.title);
+
+  final String title;
+}
+
+class _TimelineItemEntry extends _TimelineListEntry {
+  _TimelineItemEntry(this.item);
+
+  final TimelineItem item;
 }
