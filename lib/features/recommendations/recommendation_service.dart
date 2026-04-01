@@ -13,6 +13,7 @@ class RecommendationService {
     if (items.isEmpty) return [];
 
     final context = _buildContext(items, DateTime.now());
+
     final recommendations = <Recommendation?>[
       _buildHungerRecommendation(context),
       _buildTiredRecommendation(context),
@@ -61,6 +62,7 @@ class RecommendationService {
       lastDiaper: lastDiaper,
       recentCryings: recentCryings,
       averageCryingIntensity: _averageCryingIntensity(recentCryings),
+      allItems: items,
     );
   }
 
@@ -69,22 +71,17 @@ class RecommendationService {
     final reasons = <String>[];
 
     final lastFeeding = context.lastFeeding;
-    if (lastFeeding == null) {
-      return null;
-    }
+    if (lastFeeding == null) return null;
 
-    final feedingDiff = context.now.difference(lastFeeding.time).inMinutes;
+    final feedingDiff =
+        context.now.difference(lastFeeding.time).inMinutes;
 
     if (feedingDiff >= 120) {
       score += 0.30;
       reasons.add('od posledního krmení uplynuly více než 2 hodiny');
     }
-    if (feedingDiff >= 150) {
-      score += 0.20;
-    }
-    if (feedingDiff >= 180) {
-      score += 0.20;
-    }
+    if (feedingDiff >= 150) score += 0.20;
+    if (feedingDiff >= 180) score += 0.20;
 
     if (lastFeeding.feedingAmountMl != null) {
       final amount = lastFeeding.feedingAmountMl!;
@@ -108,9 +105,17 @@ class RecommendationService {
       score += 0.10;
     }
 
-    if (score < 0.40) {
-      return null;
+    // pattern: více krmení v historii → stabilní hladový cyklus
+    final feedingLast = context.allItems
+        .where((e) => e.type == EventType.feeding)
+        .take(5)
+        .toList();
+
+    if (feedingLast.length >= 3) {
+      score += 0.10;
     }
+
+    if (score < 0.40) return null;
 
     return Recommendation(
       title: 'Možný hlad',
@@ -127,23 +132,18 @@ class RecommendationService {
     final reasons = <String>[];
 
     final lastSleep = context.lastSleep;
-    if (lastSleep == null) {
-      return null;
-    }
+    if (lastSleep == null) return null;
 
     final sleepReferenceTime = lastSleep.sleepEnd ?? lastSleep.time;
-    final sleepDiff = context.now.difference(sleepReferenceTime).inMinutes;
+    final sleepDiff =
+        context.now.difference(sleepReferenceTime).inMinutes;
 
     if (sleepDiff >= 75) {
       score += 0.25;
       reasons.add('dítě je delší dobu vzhůru');
     }
-    if (sleepDiff >= 90) {
-      score += 0.20;
-    }
-    if (sleepDiff >= 120) {
-      score += 0.25;
-    }
+    if (sleepDiff >= 90) score += 0.20;
+    if (sleepDiff >= 120) score += 0.25;
 
     if (lastSleep.sleepDurationMinutes != null) {
       final duration = lastSleep.sleepDurationMinutes!;
@@ -167,9 +167,13 @@ class RecommendationService {
       score += 0.10;
     }
 
-    if (score < 0.40) {
-      return null;
+    // pattern: krátké spánky po sobě
+    if (_hasShortSleepPattern(context.allItems)) {
+      score += 0.15;
+      reasons.add('opakované krátké spánky');
     }
+
+    if (score < 0.40) return null;
 
     return Recommendation(
       title: 'Možná únava',
@@ -188,20 +192,18 @@ class RecommendationService {
     final lastDiaper = context.lastDiaper;
 
     if (lastDiaper != null) {
-      final diaperDiff = context.now.difference(lastDiaper.time).inMinutes;
+      final diaperDiff =
+          context.now.difference(lastDiaper.time).inMinutes;
 
       if (diaperDiff >= 120) {
         score += 0.20;
         reasons.add('od posledního přebalení uplynula delší doba');
       }
-      if (diaperDiff >= 180) {
-        score += 0.20;
-      }
-      if (diaperDiff >= 240) {
-        score += 0.20;
-      }
+      if (diaperDiff >= 180) score += 0.20;
+      if (diaperDiff >= 240) score += 0.20;
 
-      if (lastDiaper.diaperType == 'poop' || lastDiaper.diaperType == 'both') {
+      if (lastDiaper.diaperType == 'poop' ||
+          lastDiaper.diaperType == 'both') {
         score += 0.10;
         reasons.add('poslední přebalení zahrnovalo stolici');
       }
@@ -220,9 +222,7 @@ class RecommendationService {
       reasons.add('není evidované žádné přebalení a dítě plakalo');
     }
 
-    if (score < 0.35) {
-      return null;
-    }
+    if (score < 0.35) return null;
 
     return Recommendation(
       title: 'Možný diskomfort',
@@ -264,9 +264,20 @@ class RecommendationService {
       }
     }
 
-    if (score < 0.35) {
-      return null;
+    // pattern: častý pláč v 60 minutách
+    final cryingLast60 = _countRecentEvents(
+      context.allItems,
+      EventType.crying,
+      60,
+      context.now,
+    );
+
+    if (cryingLast60 >= 3) {
+      score += 0.25;
+      reasons.add('častý pláč v krátkém čase');
     }
+
+    if (score < 0.35) return null;
 
     return Recommendation(
       title: 'Potřeba uklidnění',
@@ -276,6 +287,32 @@ class RecommendationService {
       ),
       score: score.clamp(0.0, 1.0),
     );
+  }
+
+  int _countRecentEvents(
+    List<TimelineItem> items,
+    EventType type,
+    int minutes,
+    DateTime now,
+  ) {
+    return items.where((e) =>
+        e.type == type &&
+        now.difference(e.time).inMinutes <= minutes).length;
+  }
+
+  bool _hasShortSleepPattern(List<TimelineItem> items) {
+    final sleeps = items
+        .where((e) => e.type == EventType.sleep)
+        .take(3)
+        .toList();
+
+    if (sleeps.length < 2) return false;
+
+    final shortSleeps = sleeps
+        .where((s) => (s.sleepDurationMinutes ?? 0) <= 30)
+        .length;
+
+    return shortSleeps >= 2;
   }
 
   double? _averageCryingIntensity(List<TimelineItem> cryings) {
@@ -307,6 +344,7 @@ class _RecommendationContext {
     required this.lastDiaper,
     required this.recentCryings,
     required this.averageCryingIntensity,
+    required this.allItems,
   });
 
   final DateTime now;
@@ -315,6 +353,7 @@ class _RecommendationContext {
   final TimelineItem? lastDiaper;
   final List<TimelineItem> recentCryings;
   final double? averageCryingIntensity;
+  final List<TimelineItem> allItems;
 
   bool get hasRecentCrying => recentCryings.isNotEmpty;
   int get cryingCount => recentCryings.length;
