@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/timeline/timeline_screen.dart';
+import '../../features/statistics/statistics_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -15,6 +16,7 @@ class _AppShellState extends State<AppShell> {
   final List<Widget> _screens = const [
     HomeScreen(),
     TimelineScreen(),
+    StatisticsScreen(),
   ];
 
   @override
@@ -38,6 +40,11 @@ class _AppShellState extends State<AppShell> {
             icon: Icon(Icons.access_time_outlined),
             selectedIcon: Icon(Icons.access_time),
             label: 'Časová osa',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Statistiky',
           ),
         ],
       ),
