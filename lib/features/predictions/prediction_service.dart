@@ -1,21 +1,28 @@
 import '../../data/repositories/timeline_repository.dart';
 import '../timeline/timeline_item.dart';
 import 'prediction_model.dart';
+import 'rhythm_profile_service.dart';
 
 class PredictionService {
-  PredictionService(this._repository);
+  PredictionService(
+    this._repository,
+    this._rhythmProfileService,
+  );
 
   final TimelineRepository _repository;
+  final RhythmProfileService _rhythmProfileService;
 
   Future<List<Prediction>> getPredictions() async {
     final items = await _repository.getAll();
 
     if (items.isEmpty) return [];
 
+    final profile = await _rhythmProfileService.getProfile();
+
     final predictions = <Prediction?>[
-      _predictNextFeeding(items),
-      _predictNextSleep(items),
-      _predictNextDiaper(items),
+      _predictNextFeeding(items, profile.feedingIntervalMinutes),
+      _predictNextSleep(items, profile.awakeWindowMinutes),
+      _predictNextDiaper(items, profile.diaperIntervalMinutes),
     ].whereType<Prediction>().toList();
 
     predictions.sort((a, b) {
@@ -32,7 +39,10 @@ class PredictionService {
     return predictions;
   }
 
-  Prediction? _predictNextFeeding(List<TimelineItem> items) {
+  Prediction? _predictNextFeeding(
+    List<TimelineItem> items,
+    int personalizedIntervalMinutes,
+  ) {
     final feedings = items.where((e) => e.type == EventType.feeding).toList();
 
     if (feedings.isEmpty) return null;
@@ -40,28 +50,35 @@ class PredictionService {
     final lastFeeding = feedings.first;
     final intervals = _intervalsInMinutes(feedings);
 
-    final predictedMinutes = intervals.isEmpty ? 150 : _average(intervals);
+    final predictedMinutes = intervals.isEmpty
+        ? personalizedIntervalMinutes.toDouble()
+        : _average(intervals);
     final predictedTime = lastFeeding.time.add(
       Duration(minutes: predictedMinutes.round()),
     );
 
     return Prediction(
       title: 'Další krmení',
-      description: 'Odhad podle předchozích intervalů krmení.',
+      description: 'Odhad podle personalizovaného rytmu krmení.',
       predictedTime: predictedTime,
-      confidence: intervals.length >= 2 ? 0.75 : 0.45,
+      confidence: intervals.length >= 2 ? 0.80 : 0.55,
     );
   }
 
-  Prediction? _predictNextSleep(List<TimelineItem> items) {
+  Prediction? _predictNextSleep(
+    List<TimelineItem> items,
+    int personalizedAwakeWindowMinutes,
+  ) {
     final sleeps = items.where((e) => e.type == EventType.sleep).toList();
 
     if (sleeps.isEmpty) return null;
 
     final lastSleep = sleeps.first;
-    final intervals = _intervalsInMinutes(sleeps);
+    final intervals = _awakeWindowsInMinutes(sleeps);
 
-    final predictedMinutes = intervals.isEmpty ? 90 : _average(intervals);
+    final predictedMinutes = intervals.isEmpty
+        ? personalizedAwakeWindowMinutes.toDouble()
+        : _average(intervals);
     final sleepReference = lastSleep.sleepEnd ?? lastSleep.time;
     final predictedTime = sleepReference.add(
       Duration(minutes: predictedMinutes.round()),
@@ -69,13 +86,16 @@ class PredictionService {
 
     return Prediction(
       title: 'Další spánek',
-      description: 'Odhad podle předchozího rytmu spánku.',
+      description: 'Odhad podle personalizovaného rytmu bdění a spánku.',
       predictedTime: predictedTime,
-      confidence: intervals.length >= 2 ? 0.70 : 0.40,
+      confidence: intervals.length >= 2 ? 0.78 : 0.50,
     );
   }
 
-  Prediction? _predictNextDiaper(List<TimelineItem> items) {
+  Prediction? _predictNextDiaper(
+    List<TimelineItem> items,
+    int personalizedIntervalMinutes,
+  ) {
     final diapers = items.where((e) => e.type == EventType.diaper).toList();
 
     if (diapers.isEmpty) return null;
@@ -83,16 +103,18 @@ class PredictionService {
     final lastDiaper = diapers.first;
     final intervals = _intervalsInMinutes(diapers);
 
-    final predictedMinutes = intervals.isEmpty ? 180 : _average(intervals);
+    final predictedMinutes = intervals.isEmpty
+        ? personalizedIntervalMinutes.toDouble()
+        : _average(intervals);
     final predictedTime = lastDiaper.time.add(
       Duration(minutes: predictedMinutes.round()),
     );
 
     return Prediction(
       title: 'Další přebalení',
-      description: 'Odhad podle předchozích intervalů přebalení.',
+      description: 'Odhad podle personalizovaného rytmu přebalení.',
       predictedTime: predictedTime,
-      confidence: intervals.length >= 2 ? 0.70 : 0.40,
+      confidence: intervals.length >= 2 ? 0.75 : 0.50,
     );
   }
 
@@ -110,6 +132,26 @@ class PredictionService {
     }
 
     return intervals;
+  }
+
+  List<int> _awakeWindowsInMinutes(List<TimelineItem> sleepItems) {
+    final windows = <int>[];
+
+    for (var i = 0; i < sleepItems.length - 1; i++) {
+      final newerSleep = sleepItems[i];
+      final olderSleep = sleepItems[i + 1];
+
+      final olderSleepEnd = olderSleep.sleepEnd ?? olderSleep.time;
+      final newerSleepStart = newerSleep.sleepStart ?? newerSleep.time;
+
+      final diff = newerSleepStart.difference(olderSleepEnd).inMinutes;
+
+      if (diff > 0) {
+        windows.add(diff);
+      }
+    }
+
+    return windows;
   }
 
   double _average(List<int> values) {
