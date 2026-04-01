@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
+import '../crying/crying_analysis_result.dart';
 import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
@@ -19,11 +20,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Recommendation>> _futureRecommendations;
+  late Future<CryingAnalysisResult?> _futureCryingAnalysis;
 
   @override
   void initState() {
     super.initState();
     _loadRecommendations();
+    _loadCryingAnalysis();
     AppServices.timelineController.load();
   }
 
@@ -32,14 +35,23 @@ class _HomeScreenState extends State<HomeScreen> {
         AppServices.recommendationService.getRecommendations();
   }
 
+  void _loadCryingAnalysis() {
+    _futureCryingAnalysis =
+        AppServices.cryingAnalysisService.analyzeLatestCrying();
+  }
+
   Future<void> _refresh() async {
     await AppServices.timelineController.load();
 
     setState(() {
       _loadRecommendations();
+      _loadCryingAnalysis();
     });
 
-    await _futureRecommendations;
+    await Future.wait([
+      _futureRecommendations,
+      _futureCryingAnalysis,
+    ]);
   }
 
   Future<void> _openForm(Widget screen) async {
@@ -59,6 +71,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  String _cryingCauseLabel(String cause) {
+    switch (cause) {
+      case 'hunger':
+        return 'hlad';
+      case 'tired':
+        return 'únava';
+      case 'discomfort':
+        return 'diskomfort';
+      default:
+        return cause;
+    }
   }
 
   IconData _eventIcon(EventType type) {
@@ -194,6 +219,87 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     );
                   },
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Analýza posledního pláče',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            FutureBuilder<CryingAnalysisResult?>(
+              future: _futureCryingAnalysis,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'Chyba při načítání analýzy pláče: ${snapshot.error}',
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                final analysis = snapshot.data;
+
+                if (analysis == null) {
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Zatím není k dispozici žádná analýza pláče.',
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pravděpodobná příčina: ${_cryingCauseLabel(analysis.probableCause)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Jistota: ${(analysis.confidence * 100).round()} %',
+                          ),
+                          if (analysis.signals.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Signály: ${analysis.signals.join(', ')}',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
