@@ -2,6 +2,7 @@ import '../data/repositories/timeline_repository.dart';
 import '../features/recommendations/recommendation_service.dart';
 import '../features/timeline/timeline_controller.dart';
 import '../features/crying/crying_analysis_service.dart';
+import '../features/predictions/prediction_service.dart';
 
 class AppServices {
   static final TimelineRepository timelineRepository = TimelineRepository();
@@ -14,4 +15,7 @@ class AppServices {
 
   static final CryingAnalysisService cryingAnalysisService =
     CryingAnalysisService(timelineRepository);
+
+  static final PredictionService predictionService =
+    PredictionService(timelineRepository);
 }
