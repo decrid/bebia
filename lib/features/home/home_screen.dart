@@ -376,7 +376,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         leading: const Icon(Icons.schedule_outlined),
                         title: Text(prediction.title),
                         subtitle: Text(
-                          '${prediction.description}\nOdhad: ${_formatPredictionTime(prediction.predictedTime)} • Jistota: ${(prediction.confidence * 100).round()} %',
+                          [
+                            prediction.description,
+                            'Odhad: ${_formatPredictionTime(prediction.predictedTime)} • Jistota: ${(prediction.confidence * 100).round()} %',
+                            if (prediction.signals.isNotEmpty)
+                              'Důvody: ${prediction.signals.join(', ')}',
+                          ].join('\n'),
                         ),
                         isThreeLine: true,
                       ),

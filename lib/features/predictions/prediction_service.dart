@@ -62,6 +62,11 @@ class PredictionService {
       description: 'Odhad podle personalizovaného rytmu krmení.',
       predictedTime: predictedTime,
       confidence: intervals.length >= 2 ? 0.80 : 0.55,
+      signals: [
+        if (intervals.isNotEmpty) 'vypočteno z historie krmení',
+        if (intervals.isEmpty) 'použit fallback rytmus',
+        'interval ~${predictedMinutes.round()} min',
+      ],
     );
   }
 
@@ -89,6 +94,11 @@ class PredictionService {
       description: 'Odhad podle personalizovaného rytmu bdění a spánku.',
       predictedTime: predictedTime,
       confidence: intervals.length >= 2 ? 0.78 : 0.50,
+      signals: [
+        if (intervals.isNotEmpty) 'vypočteno z awake window',
+        if (intervals.isEmpty) 'použit fallback rytmus',
+        'okno bdění ~${predictedMinutes.round()} min',
+      ],
     );
   }
 
@@ -115,6 +125,11 @@ class PredictionService {
       description: 'Odhad podle personalizovaného rytmu přebalení.',
       predictedTime: predictedTime,
       confidence: intervals.length >= 2 ? 0.75 : 0.50,
+      signals: [
+        if (intervals.isNotEmpty) 'vypočteno z historie přebalení',
+        if (intervals.isEmpty) 'použit fallback rytmus',
+        'interval ~${predictedMinutes.round()} min',
+      ],
     );
   }
 
