@@ -108,43 +108,56 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit pláč' : 'Pláč'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              child: ListTile(
-                title: const Text('Čas události'),
-                subtitle: Text(_formatDateTime(_selectedTime)),
-                trailing: TextButton(
-                  onPressed: _pickDateTime,
-                  child: const Text('Změnit'),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Card(
+                        child: ListTile(
+                          title: const Text('Čas události'),
+                          subtitle: Text(_formatDateTime(_selectedTime)),
+                          trailing: TextButton(
+                            onPressed: _pickDateTime,
+                            child: const Text('Změnit'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Intenzita pláče'),
+                      Slider(
+                        value: _intensity,
+                        min: 1,
+                        max: 5,
+                        divisions: 4,
+                        label: _intensity.toInt().toString(),
+                        onChanged: (value) {
+                          setState(() {
+                            _intensity = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text('Intenzita pláče'),
-            Slider(
-              value: _intensity,
-              min: 1,
-              max: 5,
-              divisions: 4,
-              label: _intensity.toInt().toString(),
-              onChanged: (value) {
-                setState(() {
-                  _intensity = value;
-                });
-              },
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _save,
-                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+              const SizedBox(height: 12),
+              SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _save,
+                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

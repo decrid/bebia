@@ -117,39 +117,52 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit spánek' : 'Spánek'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              child: ListTile(
-                title: const Text('Konec spánku'),
-                subtitle: Text(_formatDateTime(_selectedTime)),
-                trailing: TextButton(
-                  onPressed: _pickDateTime,
-                  child: const Text('Změnit'),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Card(
+                        child: ListTile(
+                          title: const Text('Konec spánku'),
+                          subtitle: Text(_formatDateTime(_selectedTime)),
+                          trailing: TextButton(
+                            onPressed: _pickDateTime,
+                            child: const Text('Změnit'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('Pro MVP: uloží se spánek 1 hodina zpět'),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _noteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Poznámka',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const Text('Pro MVP: uloží se spánek 1 hodina zpět'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Poznámka',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _save,
+                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                  ),
+                ),
               ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _save,
-                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

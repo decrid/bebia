@@ -136,55 +136,71 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              child: ListTile(
-                title: const Text('Čas události'),
-                subtitle: Text(_formatDateTime(_selectedTime)),
-                trailing: TextButton(
-                  onPressed: _pickDateTime,
-                  child: const Text('Změnit'),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Card(
+                        child: ListTile(
+                          title: const Text('Čas události'),
+                          subtitle: Text(_formatDateTime(_selectedTime)),
+                          trailing: TextButton(
+                            onPressed: _pickDateTime,
+                            child: const Text('Změnit'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _type,
+                        items: const [
+                          DropdownMenuItem(value: 'wet', child: Text('Mokrá')),
+                          DropdownMenuItem(
+                            value: 'poop',
+                            child: Text('Stolice'),
+                          ),
+                          DropdownMenuItem(value: 'both', child: Text('Oboje')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _type = value!;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Typ přebalení',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _noteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Poznámka',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              items: const [
-                DropdownMenuItem(value: 'wet', child: Text('Mokrá')),
-                DropdownMenuItem(value: 'poop', child: Text('Stolice')),
-                DropdownMenuItem(value: 'both', child: Text('Oboje')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _type = value!;
-                });
-              },
-              decoration: const InputDecoration(
-                labelText: 'Typ přebalení',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _save,
+                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Poznámka',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _save,
-                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

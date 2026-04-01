@@ -140,63 +140,76 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit krmení' : 'Krmení'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              child: ListTile(
-                title: const Text('Čas události'),
-                subtitle: Text(_formatDateTime(_selectedTime)),
-                trailing: TextButton(
-                  onPressed: _pickDateTime,
-                  child: const Text('Změnit'),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Card(
+                        child: ListTile(
+                          title: const Text('Čas události'),
+                          subtitle: Text(_formatDateTime(_selectedTime)),
+                          trailing: TextButton(
+                            onPressed: _pickDateTime,
+                            child: const Text('Změnit'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _type,
+                        items: const [
+                          DropdownMenuItem(value: 'breast', child: Text('Kojení')),
+                          DropdownMenuItem(value: 'bottle', child: Text('Lahvička')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _type = value!;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Typ krmení',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _amountController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Množství (ml)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _noteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Poznámka',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              items: const [
-                DropdownMenuItem(value: 'breast', child: Text('Kojení')),
-                DropdownMenuItem(value: 'bottle', child: Text('Lahvička')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _type = value!;
-                });
-              },
-              decoration: const InputDecoration(
-                labelText: 'Typ krmení',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _save,
+                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Množství (ml)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Poznámka',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _save,
-                child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
