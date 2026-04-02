@@ -54,6 +54,68 @@ class CryingAnalysisService {
       }
     }
 
+    final recentCryings = _insights.getLatestItemsByType(
+      items,
+      EventType.crying,
+      5,
+    );
+
+    final durationMinutes = lastCrying.cryingDurationMinutes;
+    if (durationMinutes != null) {
+      if (durationMinutes >= 10) {
+        hungerScore += 0.10;
+        tiredScore += 0.10;
+        diaperScore += 0.10;
+        signals.add('pláč trvá déle');
+      }
+
+      if (durationMinutes >= 20) {
+        hungerScore += 0.10;
+        tiredScore += 0.10;
+        diaperScore += 0.10;
+        signals.add('delší epizoda pláče');
+      }
+    }
+
+    final feedingSoothingCount = recentCryings
+        .where((item) => item.soothingMethod == 'feeding')
+        .length;
+
+    if (feedingSoothingCount >= 2) {
+      hungerScore += 0.20;
+      signals.add('krmení opakovaně pomohlo uklidnit');
+    } else if (
+        lastCrying.soothingMethod == 'feeding' &&
+        (lastCrying.cryingResolved ?? false)) {
+      hungerScore += 0.10;
+      signals.add('krmení pomohlo při posledním pláči');
+    }
+
+    final soothingResponsiveCount = recentCryings
+        .where(
+          (item) =>
+              item.soothingMethod == 'rocking' ||
+              item.soothingMethod == 'carrying',
+        )
+        .length;
+
+    if (soothingResponsiveCount >= 2) {
+      signals.add('dítě reaguje na houpání nebo nošení');
+    } else if (
+        (lastCrying.soothingMethod == 'rocking' ||
+            lastCrying.soothingMethod == 'carrying') &&
+        (lastCrying.cryingResolved ?? false)) {
+      signals.add('posledně pomohlo houpání nebo nošení');
+    }
+
+    final unresolvedCount = recentCryings
+        .where((item) => item.cryingResolved == false)
+        .length;
+
+    final resolvedCount = recentCryings
+        .where((item) => item.cryingResolved == true)
+        .length;
+
     final scores = {
       'hunger': hungerScore,
       'tired': tiredScore,
@@ -67,9 +129,26 @@ class CryingAnalysisService {
 
     if (best.value == 0) return null;
 
+    double confidence = best.value;
+
+    if (lastCrying.cryingResolved == false) {
+      confidence += 0.10;
+      signals.add('dítě se zatím neuklidnilo');
+    }
+
+    if (unresolvedCount >= 2) {
+      confidence += 0.10;
+      signals.add('opakovaně se nedaří rychle uklidnit');
+    }
+
+    if (resolvedCount >= 3 && unresolvedCount == 0) {
+      confidence -= 0.05;
+      signals.add('pláč se v poslední době dařilo uklidnit');
+    }
+
     return CryingAnalysisResult(
       probableCause: best.key,
-      confidence: best.value,
+      confidence: confidence.clamp(0.0, 1.0),
       signals: signals,
     );
   }
