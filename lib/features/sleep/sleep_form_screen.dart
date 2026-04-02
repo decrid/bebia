@@ -17,7 +17,8 @@ class SleepFormScreen extends StatefulWidget {
 }
 
 class _SleepFormScreenState extends State<SleepFormScreen> {
-  DateTime _selectedTime = DateTime.now();
+  DateTime _startTime = DateTime.now().subtract(const Duration(hours: 1));
+  DateTime _endTime = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
 
   bool get _isEdit => widget.existingItem != null;
@@ -28,7 +29,12 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
 
     final existingItem = widget.existingItem;
     if (existingItem != null) {
-      _selectedTime = existingItem.sleepEnd ?? existingItem.time;
+      _startTime =
+          existingItem.sleepStart ??
+          (existingItem.sleepEnd ?? existingItem.time).subtract(
+            const Duration(hours: 1),
+          );
+      _endTime = existingItem.sleepEnd ?? existingItem.time;
       _noteController.text = existingItem.note ?? '';
     }
   }
@@ -43,10 +49,25 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
     return '$day.$month.$year $hour:$minute';
   }
 
-  Future<void> _pickDateTime() async {
+  String _formatDuration(int minutes) {
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+
+    if (hours > 0 && remainingMinutes > 0) {
+      return '$hours h $remainingMinutes min';
+    }
+    if (hours > 0) {
+      return '$hours h';
+    }
+    return '$remainingMinutes min';
+  }
+
+  int get _durationMinutes => _endTime.difference(_startTime).inMinutes;
+
+  Future<void> _pickStartTime() async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _selectedTime,
+      initialDate: _startTime,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
@@ -55,45 +76,101 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
 
     final pickedTime = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedTime),
+      initialTime: TimeOfDay.fromDateTime(_startTime),
     );
 
     if (pickedTime == null) return;
 
+    final newStartTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (!newStartTime.isBefore(_endTime)) {
+      _showInvalidRangeMessage();
+      return;
+    }
+
     setState(() {
-      _selectedTime = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
+      _startTime = newStartTime;
     });
   }
 
+  Future<void> _pickEndTime() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _endTime,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_endTime),
+    );
+
+    if (pickedTime == null) return;
+
+    final newEndTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (!newEndTime.isAfter(_startTime)) {
+      _showInvalidRangeMessage();
+      return;
+    }
+
+    setState(() {
+      _endTime = newEndTime;
+    });
+  }
+
+  void _showInvalidRangeMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Konec spánku musí být později než začátek spánku.'),
+      ),
+    );
+  }
+
   Future<void> _save() async {
+    if (!_endTime.isAfter(_startTime)) {
+      _showInvalidRangeMessage();
+      return;
+    }
+
     final note = _noteController.text.trim().isEmpty
         ? null
         : _noteController.text.trim();
 
     final record = SleepRecord(
-      id: _selectedTime.millisecondsSinceEpoch.toString(),
-      startTime: _selectedTime.subtract(const Duration(hours: 1)),
-      endTime: _selectedTime,
+      id: _endTime.millisecondsSinceEpoch.toString(),
+      startTime: _startTime,
+      endTime: _endTime,
       note: note,
     );
+
+    final durationMinutes = record.endTime.difference(record.startTime).inMinutes;
 
     final item = TimelineItem()
       ..id = widget.existingItem?.id ?? Isar.autoIncrement
       ..type = EventType.sleep
       ..time = record.endTime
       ..title = 'Spánek'
-      ..subtitle = '1 hodina'
+      ..subtitle = _formatDuration(durationMinutes)
       ..note = note
       ..sleepStart = record.startTime
       ..sleepEnd = record.endTime
-      ..sleepDurationMinutes =
-          record.endTime.difference(record.startTime).inMinutes;
+      ..sleepDurationMinutes = durationMinutes;
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);
@@ -128,16 +205,32 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
                     children: [
                       Card(
                         child: ListTile(
-                          title: const Text('Konec spánku'),
-                          subtitle: Text(_formatDateTime(_selectedTime)),
+                          title: const Text('Začátek spánku'),
+                          subtitle: Text(_formatDateTime(_startTime)),
                           trailing: TextButton(
-                            onPressed: _pickDateTime,
+                            onPressed: _pickStartTime,
                             child: const Text('Změnit'),
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('Pro MVP: uloží se spánek 1 hodina zpět'),
+                      Card(
+                        child: ListTile(
+                          title: const Text('Konec spánku'),
+                          subtitle: Text(_formatDateTime(_endTime)),
+                          trailing: TextButton(
+                            onPressed: _pickEndTime,
+                            child: const Text('Změnit'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: ListTile(
+                          title: const Text('Délka spánku'),
+                          subtitle: Text(_formatDuration(_durationMinutes)),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _noteController,
