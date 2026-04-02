@@ -39,12 +39,19 @@ class RecommendationService {
       now,
     );
 
+    final recentCryingHistory = _insights.getLatestItemsByType(
+      items,
+      EventType.crying,
+      5,
+    );
+
     return _RecommendationContext(
       now: now,
       lastFeeding: _insights.getLastByType(items, EventType.feeding),
       lastSleep: _insights.getLastByType(items, EventType.sleep),
       lastDiaper: _insights.getLastByType(items, EventType.diaper),
       recentCryings: recentCryings,
+      recentCryingHistory: recentCryingHistory,
       averageCryingIntensity: _insights.averageCryingIntensity(recentCryings),
       allItems: items,
     );
@@ -96,6 +103,24 @@ class RecommendationService {
 
     if (feedingLast.length >= 3) {
       score += 0.10;
+    }
+
+    if (context.feedingSoothingCount >= 2) {
+      score += 0.20;
+      reasons.add('krmení opakovaně pomohlo uklidnit pláč');
+    } else if (context.lastCryingUsedFeedingAndResolved) {
+      score += 0.10;
+      reasons.add('při posledním pláči pomohlo krmení');
+    }
+
+    if (context.hasLongRecentCrying) {
+      score += 0.10;
+      reasons.add('poslední pláč trval delší dobu');
+    }
+
+    if (context.hasUnresolvedRecentCrying) {
+      score += 0.05;
+      reasons.add('dítě se při posledním pláči neuklidnilo');
     }
 
     if (score < 0.40) return null;
@@ -154,6 +179,15 @@ class RecommendationService {
       reasons.add('opakované krátké spánky');
     }
 
+    if (context.hasLongRecentCrying) {
+      score += 0.10;
+      reasons.add('delší pláč může souviset s přetížením nebo únavou');
+    }
+
+    if (context.hasUnresolvedRecentCrying) {
+      score += 0.05;
+    }
+
     if (score < 0.40) return null;
 
     return Recommendation(
@@ -195,6 +229,14 @@ class RecommendationService {
       if (context.averageCryingIntensity != null &&
           context.averageCryingIntensity! >= 4) {
         score += 0.10;
+      }
+
+      if (context.hasLongRecentCrying) {
+        score += 0.05;
+      }
+
+      if (context.hasUnresolvedRecentCrying) {
+        score += 0.05;
       }
     } else if (context.hasRecentCrying) {
       score += 0.20;
@@ -255,6 +297,29 @@ class RecommendationService {
       reasons.add('častý pláč v krátkém čase');
     }
 
+    if (context.hasLongRecentCrying) {
+      score += 0.15;
+      reasons.add('poslední pláč trval déle');
+    }
+
+    if (context.hasUnresolvedRecentCrying) {
+      score += 0.20;
+      reasons.add('dítě se při posledním pláči neuklidnilo');
+    }
+
+    if (context.soothingResponsiveCount >= 2) {
+      score += 0.15;
+      reasons.add('opakovaně pomáhá houpání nebo nošení');
+    } else if (context.lastCryingUsedSoothingAndResolved) {
+      score += 0.10;
+      reasons.add('při posledním pláči pomohlo houpání nebo nošení');
+    }
+
+    if (context.fullyResolvedRecentCryingsCount >= 3 &&
+        !context.hasUnresolvedRecentCrying) {
+      score -= 0.05;
+    }
+
     if (score < 0.35) return null;
 
     return Recommendation(
@@ -283,6 +348,7 @@ class _RecommendationContext {
     required this.lastSleep,
     required this.lastDiaper,
     required this.recentCryings,
+    required this.recentCryingHistory,
     required this.averageCryingIntensity,
     required this.allItems,
   });
@@ -292,9 +358,52 @@ class _RecommendationContext {
   final TimelineItem? lastSleep;
   final TimelineItem? lastDiaper;
   final List<TimelineItem> recentCryings;
+  final List<TimelineItem> recentCryingHistory;
   final double? averageCryingIntensity;
   final List<TimelineItem> allItems;
 
   bool get hasRecentCrying => recentCryings.isNotEmpty;
   int get cryingCount => recentCryings.length;
+
+  int get feedingSoothingCount => recentCryingHistory
+      .where((item) => item.soothingMethod == 'feeding')
+      .length;
+
+  int get soothingResponsiveCount => recentCryingHistory
+      .where(
+        (item) =>
+            item.soothingMethod == 'rocking' ||
+            item.soothingMethod == 'carrying',
+      )
+      .length;
+
+  bool get hasLongRecentCrying => recentCryings.any((item) {
+    final duration = item.cryingDurationMinutes;
+    return duration != null && duration >= 10;
+  });
+
+  bool get hasUnresolvedRecentCrying => recentCryings.any(
+        (item) => item.cryingResolved == false,
+      );
+
+  int get fullyResolvedRecentCryingsCount => recentCryingHistory
+      .where((item) => item.cryingResolved == true)
+      .length;
+
+  bool get lastCryingUsedFeedingAndResolved {
+    if (recentCryingHistory.isEmpty) return false;
+
+    final lastCrying = recentCryingHistory.first;
+    return lastCrying.soothingMethod == 'feeding' &&
+        lastCrying.cryingResolved == true;
+  }
+
+  bool get lastCryingUsedSoothingAndResolved {
+    if (recentCryingHistory.isEmpty) return false;
+
+    final lastCrying = recentCryingHistory.first;
+    return (lastCrying.soothingMethod == 'rocking' ||
+            lastCrying.soothingMethod == 'carrying') &&
+        lastCrying.cryingResolved == true;
+  }
 }
