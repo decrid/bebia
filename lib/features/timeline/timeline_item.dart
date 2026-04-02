@@ -35,4 +35,7 @@ class TimelineItem {
 
   // Crying
   int? cryingIntensity; // 1-5
+  int? cryingDurationMinutes;
+  String? soothingMethod; // rocking, feeding, carrying, pacifier, other
+  bool? cryingResolved;
 }
