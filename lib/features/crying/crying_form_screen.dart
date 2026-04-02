@@ -18,6 +18,9 @@ class CryingFormScreen extends StatefulWidget {
 class _CryingFormScreenState extends State<CryingFormScreen> {
   double _intensity = 3;
   DateTime _selectedTime = DateTime.now();
+  final TextEditingController _durationController = TextEditingController();
+  String? _soothingMethod;
+  bool _cryingResolved = false;
 
   bool get _isEdit => widget.existingItem != null;
 
@@ -42,6 +45,14 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
           }
         }
       }
+
+      if (existingItem.cryingDurationMinutes != null) {
+        _durationController.text =
+            existingItem.cryingDurationMinutes.toString();
+      }
+
+      _soothingMethod = existingItem.soothingMethod;
+      _cryingResolved = existingItem.cryingResolved ?? false;
     }
   }
 
@@ -83,14 +94,30 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     });
   }
 
+  String _buildSubtitle(int intensity, int? durationMinutes) {
+    final parts = <String>[
+      'Intenzita: $intensity',
+      if (durationMinutes != null) '$durationMinutes min',
+    ];
+
+    return parts.join(' • ');
+  }
+
   Future<void> _save() async {
+    final durationText = _durationController.text.trim();
+    final durationMinutes =
+        durationText.isEmpty ? null : int.tryParse(durationText);
+
     final item = TimelineItem()
       ..id = widget.existingItem?.id ?? Isar.autoIncrement
       ..type = EventType.crying
       ..time = _selectedTime
       ..title = 'Pláč'
-      ..subtitle = 'Intenzita: ${_intensity.toInt()}'
-      ..cryingIntensity = _intensity.toInt();
+      ..subtitle = _buildSubtitle(_intensity.toInt(), durationMinutes)
+      ..cryingIntensity = _intensity.toInt()
+      ..cryingDurationMinutes = durationMinutes
+      ..soothingMethod = _soothingMethod
+      ..cryingResolved = _cryingResolved;
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);
@@ -100,6 +127,12 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
     if (!mounted) return;
     Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _durationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -138,6 +171,61 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                         onChanged: (value) {
                           setState(() {
                             _intensity = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _durationController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Délka pláče (min)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _soothingMethod,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'rocking',
+                            child: Text('Houpání'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'feeding',
+                            child: Text('Krmení'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'carrying',
+                            child: Text('Nošení'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'pacifier',
+                            child: Text('Dudlík'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'other',
+                            child: Text('Jiné'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _soothingMethod = value;
+                          });
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Co pomohlo uklidnit',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Dítě se uklidnilo'),
+                        value: _cryingResolved,
+                        onChanged: (value) {
+                          setState(() {
+                            _cryingResolved = value;
                           });
                         },
                       ),
