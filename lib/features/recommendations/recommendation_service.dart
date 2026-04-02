@@ -1,11 +1,13 @@
 import '../../data/repositories/timeline_repository.dart';
+import '../intelligence/infant_insights_service.dart';
 import '../timeline/timeline_item.dart';
 import 'recommendation_model.dart';
 
 class RecommendationService {
-  RecommendationService(this._repository);
+  RecommendationService(this._repository, this._insights);
 
   final TimelineRepository _repository;
+  final InfantInsightsService _insights;
 
   Future<List<Recommendation>> getRecommendations() async {
     final items = await _repository.getAll();
@@ -30,38 +32,20 @@ class RecommendationService {
     List<TimelineItem> items,
     DateTime now,
   ) {
-    TimelineItem? lastFeeding;
-    TimelineItem? lastSleep;
-    TimelineItem? lastDiaper;
-
-    final recentCryings = <TimelineItem>[];
-
-    for (final item in items) {
-      if (lastFeeding == null && item.type == EventType.feeding) {
-        lastFeeding = item;
-      }
-
-      if (lastSleep == null && item.type == EventType.sleep) {
-        lastSleep = item;
-      }
-
-      if (lastDiaper == null && item.type == EventType.diaper) {
-        lastDiaper = item;
-      }
-
-      if (item.type == EventType.crying &&
-          now.difference(item.time).inMinutes <= 30) {
-        recentCryings.add(item);
-      }
-    }
+    final recentCryings = _insights.getRecentEventsByType(
+      items,
+      EventType.crying,
+      30,
+      now,
+    );
 
     return _RecommendationContext(
       now: now,
-      lastFeeding: lastFeeding,
-      lastSleep: lastSleep,
-      lastDiaper: lastDiaper,
+      lastFeeding: _insights.getLastByType(items, EventType.feeding),
+      lastSleep: _insights.getLastByType(items, EventType.sleep),
+      lastDiaper: _insights.getLastByType(items, EventType.diaper),
       recentCryings: recentCryings,
-      averageCryingIntensity: _averageCryingIntensity(recentCryings),
+      averageCryingIntensity: _insights.averageCryingIntensity(recentCryings),
       allItems: items,
     );
   }
@@ -73,8 +57,7 @@ class RecommendationService {
     final lastFeeding = context.lastFeeding;
     if (lastFeeding == null) return null;
 
-    final feedingDiff =
-        context.now.difference(lastFeeding.time).inMinutes;
+    final feedingDiff = context.now.difference(lastFeeding.time).inMinutes;
 
     if (feedingDiff >= 120) {
       score += 0.30;
@@ -105,11 +88,11 @@ class RecommendationService {
       score += 0.10;
     }
 
-    // pattern: více krmení v historii → stabilní hladový cyklus
-    final feedingLast = context.allItems
-        .where((e) => e.type == EventType.feeding)
-        .take(5)
-        .toList();
+    final feedingLast = _insights.getLatestItemsByType(
+      context.allItems,
+      EventType.feeding,
+      5,
+    );
 
     if (feedingLast.length >= 3) {
       score += 0.10;
@@ -135,8 +118,7 @@ class RecommendationService {
     if (lastSleep == null) return null;
 
     final sleepReferenceTime = lastSleep.sleepEnd ?? lastSleep.time;
-    final sleepDiff =
-        context.now.difference(sleepReferenceTime).inMinutes;
+    final sleepDiff = context.now.difference(sleepReferenceTime).inMinutes;
 
     if (sleepDiff >= 75) {
       score += 0.25;
@@ -167,8 +149,7 @@ class RecommendationService {
       score += 0.10;
     }
 
-    // pattern: krátké spánky po sobě
-    if (_hasShortSleepPattern(context.allItems)) {
+    if (_insights.hasShortSleepPattern(context.allItems)) {
       score += 0.15;
       reasons.add('opakované krátké spánky');
     }
@@ -192,8 +173,7 @@ class RecommendationService {
     final lastDiaper = context.lastDiaper;
 
     if (lastDiaper != null) {
-      final diaperDiff =
-          context.now.difference(lastDiaper.time).inMinutes;
+      final diaperDiff = context.now.difference(lastDiaper.time).inMinutes;
 
       if (diaperDiff >= 120) {
         score += 0.20;
@@ -202,8 +182,7 @@ class RecommendationService {
       if (diaperDiff >= 180) score += 0.20;
       if (diaperDiff >= 240) score += 0.20;
 
-      if (lastDiaper.diaperType == 'poop' ||
-          lastDiaper.diaperType == 'both') {
+      if (lastDiaper.diaperType == 'poop' || lastDiaper.diaperType == 'both') {
         score += 0.10;
         reasons.add('poslední přebalení zahrnovalo stolici');
       }
@@ -264,8 +243,7 @@ class RecommendationService {
       }
     }
 
-    // pattern: častý pláč v 60 minutách
-    final cryingLast60 = _countRecentEvents(
+    final cryingLast60 = _insights.countRecentEvents(
       context.allItems,
       EventType.crying,
       60,
@@ -287,44 +265,6 @@ class RecommendationService {
       ),
       score: score.clamp(0.0, 1.0),
     );
-  }
-
-  int _countRecentEvents(
-    List<TimelineItem> items,
-    EventType type,
-    int minutes,
-    DateTime now,
-  ) {
-    return items.where((e) =>
-        e.type == type &&
-        now.difference(e.time).inMinutes <= minutes).length;
-  }
-
-  bool _hasShortSleepPattern(List<TimelineItem> items) {
-    final sleeps = items
-        .where((e) => e.type == EventType.sleep)
-        .take(3)
-        .toList();
-
-    if (sleeps.length < 2) return false;
-
-    final shortSleeps = sleeps
-        .where((s) => (s.sleepDurationMinutes ?? 0) <= 30)
-        .length;
-
-    return shortSleeps >= 2;
-  }
-
-  double? _averageCryingIntensity(List<TimelineItem> cryings) {
-    final intensities = cryings
-        .map((item) => item.cryingIntensity)
-        .whereType<int>()
-        .toList();
-
-    if (intensities.isEmpty) return null;
-
-    final sum = intensities.fold<int>(0, (total, value) => total + value);
-    return sum / intensities.length;
   }
 
   String _buildDescription({

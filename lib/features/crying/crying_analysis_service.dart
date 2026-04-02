@@ -1,34 +1,21 @@
 import '../../data/repositories/timeline_repository.dart';
+import '../intelligence/infant_insights_service.dart';
 import '../timeline/timeline_item.dart';
 import 'crying_analysis_result.dart';
 
 class CryingAnalysisService {
-  CryingAnalysisService(this._repository);
+  CryingAnalysisService(this._repository, this._insights);
 
   final TimelineRepository _repository;
+  final InfantInsightsService _insights;
 
   Future<CryingAnalysisResult?> analyzeLatestCrying() async {
     final items = await _repository.getAll();
 
-    TimelineItem? lastCrying;
-    TimelineItem? lastFeeding;
-    TimelineItem? lastSleep;
-    TimelineItem? lastDiaper;
-
-    for (final item in items) {
-      if (lastCrying == null && item.type == EventType.crying) {
-        lastCrying = item;
-      }
-      if (lastFeeding == null && item.type == EventType.feeding) {
-        lastFeeding = item;
-      }
-      if (lastSleep == null && item.type == EventType.sleep) {
-        lastSleep = item;
-      }
-      if (lastDiaper == null && item.type == EventType.diaper) {
-        lastDiaper = item;
-      }
-    }
+    final lastCrying = _insights.getLastByType(items, EventType.crying);
+    final lastFeeding = _insights.getLastByType(items, EventType.feeding);
+    final lastSleep = _insights.getLastByType(items, EventType.sleep);
+    final lastDiaper = _insights.getLastByType(items, EventType.diaper);
 
     if (lastCrying == null) return null;
 

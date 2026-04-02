@@ -1,4 +1,5 @@
 import '../../data/repositories/timeline_repository.dart';
+import '../intelligence/infant_insights_service.dart';
 import '../timeline/timeline_item.dart';
 import 'prediction_model.dart';
 import 'rhythm_profile_service.dart';
@@ -7,10 +8,12 @@ class PredictionService {
   PredictionService(
     this._repository,
     this._rhythmProfileService,
+    this._insights,
   );
 
   final TimelineRepository _repository;
   final RhythmProfileService _rhythmProfileService;
+  final InfantInsightsService _insights;
 
   Future<List<Prediction>> getPredictions() async {
     final items = await _repository.getAll();
@@ -48,11 +51,11 @@ class PredictionService {
     if (feedings.isEmpty) return null;
 
     final lastFeeding = feedings.first;
-    final intervals = _intervalsInMinutes(feedings);
+    final intervals = _insights.intervalsInMinutes(feedings);
 
     final predictedMinutes = intervals.isEmpty
         ? personalizedIntervalMinutes.toDouble()
-        : _average(intervals);
+        : _insights.average(intervals);
     final predictedTime = lastFeeding.time.add(
       Duration(minutes: predictedMinutes.round()),
     );
@@ -79,11 +82,11 @@ class PredictionService {
     if (sleeps.isEmpty) return null;
 
     final lastSleep = sleeps.first;
-    final intervals = _awakeWindowsInMinutes(sleeps);
+    final intervals = _insights.awakeWindowsInMinutes(sleeps);
 
     final predictedMinutes = intervals.isEmpty
         ? personalizedAwakeWindowMinutes.toDouble()
-        : _average(intervals);
+        : _insights.average(intervals);
     final sleepReference = lastSleep.sleepEnd ?? lastSleep.time;
     final predictedTime = sleepReference.add(
       Duration(minutes: predictedMinutes.round()),
@@ -111,11 +114,11 @@ class PredictionService {
     if (diapers.isEmpty) return null;
 
     final lastDiaper = diapers.first;
-    final intervals = _intervalsInMinutes(diapers);
+    final intervals = _insights.intervalsInMinutes(diapers);
 
     final predictedMinutes = intervals.isEmpty
         ? personalizedIntervalMinutes.toDouble()
-        : _average(intervals);
+        : _insights.average(intervals);
     final predictedTime = lastDiaper.time.add(
       Duration(minutes: predictedMinutes.round()),
     );
@@ -131,46 +134,5 @@ class PredictionService {
         'interval ~${predictedMinutes.round()} min',
       ],
     );
-  }
-
-  List<int> _intervalsInMinutes(List<TimelineItem> items) {
-    final intervals = <int>[];
-
-    for (var i = 0; i < items.length - 1; i++) {
-      final newer = items[i];
-      final older = items[i + 1];
-      final diff = newer.time.difference(older.time).inMinutes;
-
-      if (diff > 0) {
-        intervals.add(diff);
-      }
-    }
-
-    return intervals;
-  }
-
-  List<int> _awakeWindowsInMinutes(List<TimelineItem> sleepItems) {
-    final windows = <int>[];
-
-    for (var i = 0; i < sleepItems.length - 1; i++) {
-      final newerSleep = sleepItems[i];
-      final olderSleep = sleepItems[i + 1];
-
-      final olderSleepEnd = olderSleep.sleepEnd ?? olderSleep.time;
-      final newerSleepStart = newerSleep.sleepStart ?? newerSleep.time;
-
-      final diff = newerSleepStart.difference(olderSleepEnd).inMinutes;
-
-      if (diff > 0) {
-        windows.add(diff);
-      }
-    }
-
-    return windows;
-  }
-
-  double _average(List<int> values) {
-    final sum = values.fold<int>(0, (total, value) => total + value);
-    return sum / values.length;
   }
 }
