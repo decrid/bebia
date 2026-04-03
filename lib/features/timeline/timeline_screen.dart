@@ -82,6 +82,53 @@ class _TimelineScreenState extends State<TimelineScreen> {
     return '$day.$month.$year';
   }
 
+  String? _soothingMethodLabel(String? method) {
+    switch (method) {
+      case 'rocking':
+        return 'Houpání';
+      case 'feeding':
+        return 'Krmení';
+      case 'carrying':
+        return 'Nošení';
+      case 'pacifier':
+        return 'Dudlík';
+      case 'other':
+        return 'Jiné';
+      default:
+        return null;
+    }
+  }
+
+  List<String> _buildSubtitleParts(TimelineItem item) {
+    final parts = <String>[
+      if (item.subtitle.isNotEmpty) item.subtitle,
+    ];
+
+    if (item.type == EventType.crying) {
+      final duration = item.cryingDurationMinutes;
+      final soothingLabel = _soothingMethodLabel(item.soothingMethod);
+
+      if (duration != null &&
+          !parts.any((part) => part.contains('$duration min'))) {
+        parts.add('$duration min');
+      }
+
+      if (soothingLabel != null) {
+        parts.add('Pomohlo: $soothingLabel');
+      }
+
+      if (item.cryingResolved != null) {
+        parts.add(item.cryingResolved! ? 'Uklidněno' : 'Neuklidněno');
+      }
+    }
+
+    if (item.note != null && item.note!.isNotEmpty) {
+      parts.add(item.note!);
+    }
+
+    return parts;
+  }
+
   List<_TimelineListEntry> _buildEntries(List<TimelineItem> items) {
     final entries = <_TimelineListEntry>[];
     String? currentDayLabel;
@@ -206,12 +253,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                             }
 
                             final item = (entry as _TimelineItemEntry).item;
-
-                            final subtitleParts = <String>[
-                              if (item.subtitle.isNotEmpty) item.subtitle,
-                              if (item.note != null && item.note!.isNotEmpty)
-                                item.note!,
-                            ];
+                            final subtitleParts = _buildSubtitleParts(item);
 
                             return Dismissible(
                               key: ValueKey(item.id),

@@ -103,6 +103,53 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String? _soothingMethodLabel(String? method) {
+    switch (method) {
+      case 'rocking':
+        return 'Houpání';
+      case 'feeding':
+        return 'Krmení';
+      case 'carrying':
+        return 'Nošení';
+      case 'pacifier':
+        return 'Dudlík';
+      case 'other':
+        return 'Jiné';
+      default:
+        return null;
+    }
+  }
+
+  List<String> _buildSubtitleParts(TimelineItem item) {
+    final parts = <String>[
+      if (item.subtitle.isNotEmpty) item.subtitle,
+    ];
+
+    if (item.type == EventType.crying) {
+      final duration = item.cryingDurationMinutes;
+      final soothingLabel = _soothingMethodLabel(item.soothingMethod);
+
+      if (duration != null &&
+          !parts.any((part) => part.contains('$duration min'))) {
+        parts.add('$duration min');
+      }
+
+      if (soothingLabel != null) {
+        parts.add('Pomohlo: $soothingLabel');
+      }
+
+      if (item.cryingResolved != null) {
+        parts.add(item.cryingResolved! ? 'Uklidněno' : 'Neuklidněno');
+      }
+    }
+
+    if (item.note != null && item.note!.isNotEmpty) {
+      parts.add(item.note!);
+    }
+
+    return parts;
+  }
+
   IconData _eventIcon(EventType type) {
     switch (type) {
       case EventType.feeding:
@@ -214,11 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         return Column(
                           children: recentItems.map((item) {
-                            final subtitleParts = <String>[
-                              if (item.subtitle.isNotEmpty) item.subtitle,
-                              if (item.note != null && item.note!.isNotEmpty)
-                                item.note!,
-                            ];
+                            final subtitleParts = _buildSubtitleParts(item);
 
                             return Card(
                               margin: const EdgeInsets.only(top: 8),
