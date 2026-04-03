@@ -24,9 +24,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
 
-    final todayItems = items
-        .where((e) => e.time.isAfter(todayStart))
-        .toList();
+    final todayItems = items.where((e) => e.time.isAfter(todayStart)).toList();
 
     int feedingCount = 0;
     int sleepCount = 0;
@@ -40,6 +38,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     TimelineItem? lastSleep;
     TimelineItem? lastDiaper;
     TimelineItem? lastCrying;
+
+    int totalCryingDurationMinutes = 0;
+    int cryingDurationCount = 0;
+    int cryingResolvedCount = 0;
+    int cryingUnresolvedCount = 0;
+
+    int soothingFeedingCount = 0;
+    int soothingRockingCount = 0;
+    int soothingCarryingCount = 0;
+    int soothingPacifierCount = 0;
+    int soothingOtherCount = 0;
 
     for (final item in todayItems) {
       switch (item.type) {
@@ -67,9 +76,47 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         case EventType.crying:
           cryingCount++;
           lastCrying ??= item;
+
+          if (item.cryingDurationMinutes != null) {
+            totalCryingDurationMinutes += item.cryingDurationMinutes!;
+            cryingDurationCount++;
+          }
+
+          if (item.cryingResolved == true) {
+            cryingResolvedCount++;
+          } else if (item.cryingResolved == false) {
+            cryingUnresolvedCount++;
+          }
+
+          switch (item.soothingMethod) {
+            case 'feeding':
+              soothingFeedingCount++;
+              break;
+            case 'rocking':
+              soothingRockingCount++;
+              break;
+            case 'carrying':
+              soothingCarryingCount++;
+              break;
+            case 'pacifier':
+              soothingPacifierCount++;
+              break;
+            case 'other':
+              soothingOtherCount++;
+              break;
+          }
+
           break;
       }
     }
+
+    final averageCryingDurationMinutes = cryingDurationCount == 0
+        ? null
+        : (totalCryingDurationMinutes / cryingDurationCount).round();
+
+    final cryingResolvedRate = cryingCount == 0
+        ? null
+        : ((cryingResolvedCount / cryingCount) * 100).round();
 
     return _Stats(
       feedingCount: feedingCount,
@@ -82,6 +129,15 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       lastSleep: lastSleep,
       lastDiaper: lastDiaper,
       lastCrying: lastCrying,
+      averageCryingDurationMinutes: averageCryingDurationMinutes,
+      cryingResolvedCount: cryingResolvedCount,
+      cryingUnresolvedCount: cryingUnresolvedCount,
+      cryingResolvedRate: cryingResolvedRate,
+      soothingFeedingCount: soothingFeedingCount,
+      soothingRockingCount: soothingRockingCount,
+      soothingCarryingCount: soothingCarryingCount,
+      soothingPacifierCount: soothingPacifierCount,
+      soothingOtherCount: soothingOtherCount,
     );
   }
 
@@ -102,26 +158,43 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _sectionTitle('Dnes'),
-
               _statTile('Krmení', stats.feedingCount.toString()),
               _statTile('Spánek', stats.sleepCount.toString()),
               _statTile('Přebalení', stats.diaperCount.toString()),
               _statTile('Pláč', stats.cryingCount.toString()),
-
               const SizedBox(height: 16),
-
               _sectionTitle('Souhrn'),
-
               _statTile('Celkem ml', '${stats.totalMl} ml'),
+              _statTile('Spánek', '${stats.totalSleepMinutes} min'),
               _statTile(
-                'Spánek',
-                '${stats.totalSleepMinutes} min',
+                'Průměrná délka pláče',
+                stats.averageCryingDurationMinutes == null
+                    ? '-'
+                    : '${stats.averageCryingDurationMinutes} min',
               ),
-
+              _statTile(
+                'Uklidněné pláče',
+                stats.cryingResolvedCount.toString(),
+              ),
+              _statTile(
+                'Neuklidněné pláče',
+                stats.cryingUnresolvedCount.toString(),
+              ),
+              _statTile(
+                'Úspěšnost uklidnění',
+                stats.cryingResolvedRate == null
+                    ? '-'
+                    : '${stats.cryingResolvedRate} %',
+              ),
               const SizedBox(height: 16),
-
+              _sectionTitle('Co pomáhalo uklidnit'),
+              _statTile('Krmení', stats.soothingFeedingCount.toString()),
+              _statTile('Houpání', stats.soothingRockingCount.toString()),
+              _statTile('Nošení', stats.soothingCarryingCount.toString()),
+              _statTile('Dudlík', stats.soothingPacifierCount.toString()),
+              _statTile('Jiné', stats.soothingOtherCount.toString()),
+              const SizedBox(height: 16),
               _sectionTitle('Poslední události'),
-
               _lastItem('Krmení', stats.lastFeeding),
               _lastItem('Spánek', stats.lastSleep),
               _lastItem('Přebalení', stats.lastDiaper),
@@ -177,6 +250,17 @@ class _Stats {
   final TimelineItem? lastDiaper;
   final TimelineItem? lastCrying;
 
+  final int? averageCryingDurationMinutes;
+  final int cryingResolvedCount;
+  final int cryingUnresolvedCount;
+  final int? cryingResolvedRate;
+
+  final int soothingFeedingCount;
+  final int soothingRockingCount;
+  final int soothingCarryingCount;
+  final int soothingPacifierCount;
+  final int soothingOtherCount;
+
   _Stats({
     required this.feedingCount,
     required this.sleepCount,
@@ -188,5 +272,14 @@ class _Stats {
     required this.lastSleep,
     required this.lastDiaper,
     required this.lastCrying,
+    required this.averageCryingDurationMinutes,
+    required this.cryingResolvedCount,
+    required this.cryingUnresolvedCount,
+    required this.cryingResolvedRate,
+    required this.soothingFeedingCount,
+    required this.soothingRockingCount,
+    required this.soothingCarryingCount,
+    required this.soothingPacifierCount,
+    required this.soothingOtherCount,
   });
 }
