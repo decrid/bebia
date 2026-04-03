@@ -38,4 +38,12 @@ class TimelineItem {
   int? cryingDurationMinutes;
   String? soothingMethod; // rocking, feeding, carrying, pacifier, other
   bool? cryingResolved;
+
+  // Crying AI metadata
+  String? cryingSource; // manual, ai_detected, ai_confirmed
+  double? aiCryProbability;
+  String? aiProbableCause;
+  double? aiConfidence;
+  String? aiModelVersion;
+  DateTime? aiAnalyzedAt;
 }

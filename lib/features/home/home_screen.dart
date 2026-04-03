@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../crying/crying_analysis_result.dart';
 import '../crying/crying_form_screen.dart';
+import '../crying/crying_source.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../predictions/prediction_model.dart';
@@ -140,6 +141,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (item.cryingResolved != null) {
         parts.add(item.cryingResolved! ? 'Uklidněno' : 'Neuklidněno');
+      }
+
+      if (item.cryingSource != null) {
+        parts.add(CryingSource.label(item.cryingSource));
+      }
+
+      if (item.aiProbableCause != null) {
+        final cause = _cryingCauseLabel(item.aiProbableCause!);
+        final confidence = item.aiConfidence;
+
+        if (confidence != null) {
+          parts.add('AI odhad: $cause (${(confidence * 100).round()} %)');
+        } else {
+          parts.add('AI odhad: $cause');
+        }
       }
     }
 

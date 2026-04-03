@@ -17,51 +17,96 @@ const TimelineItemSchema = CollectionSchema(
   name: r'TimelineItem',
   id: 7897128962366655622,
   properties: {
-    r'cryingIntensity': PropertySchema(
+    r'aiAnalyzedAt': PropertySchema(
       id: 0,
+      name: r'aiAnalyzedAt',
+      type: IsarType.dateTime,
+    ),
+    r'aiConfidence': PropertySchema(
+      id: 1,
+      name: r'aiConfidence',
+      type: IsarType.double,
+    ),
+    r'aiCryProbability': PropertySchema(
+      id: 2,
+      name: r'aiCryProbability',
+      type: IsarType.double,
+    ),
+    r'aiModelVersion': PropertySchema(
+      id: 3,
+      name: r'aiModelVersion',
+      type: IsarType.string,
+    ),
+    r'aiProbableCause': PropertySchema(
+      id: 4,
+      name: r'aiProbableCause',
+      type: IsarType.string,
+    ),
+    r'cryingDurationMinutes': PropertySchema(
+      id: 5,
+      name: r'cryingDurationMinutes',
+      type: IsarType.long,
+    ),
+    r'cryingIntensity': PropertySchema(
+      id: 6,
       name: r'cryingIntensity',
       type: IsarType.long,
     ),
+    r'cryingResolved': PropertySchema(
+      id: 7,
+      name: r'cryingResolved',
+      type: IsarType.bool,
+    ),
+    r'cryingSource': PropertySchema(
+      id: 8,
+      name: r'cryingSource',
+      type: IsarType.string,
+    ),
     r'diaperType': PropertySchema(
-      id: 1,
+      id: 9,
       name: r'diaperType',
       type: IsarType.string,
     ),
     r'feedingAmountMl': PropertySchema(
-      id: 2,
+      id: 10,
       name: r'feedingAmountMl',
       type: IsarType.long,
     ),
     r'feedingType': PropertySchema(
-      id: 3,
+      id: 11,
       name: r'feedingType',
       type: IsarType.string,
     ),
-    r'note': PropertySchema(id: 4, name: r'note', type: IsarType.string),
+    r'note': PropertySchema(id: 12, name: r'note', type: IsarType.string),
     r'sleepDurationMinutes': PropertySchema(
-      id: 5,
+      id: 13,
       name: r'sleepDurationMinutes',
       type: IsarType.long,
     ),
     r'sleepEnd': PropertySchema(
-      id: 6,
+      id: 14,
       name: r'sleepEnd',
       type: IsarType.dateTime,
     ),
     r'sleepStart': PropertySchema(
-      id: 7,
+      id: 15,
       name: r'sleepStart',
       type: IsarType.dateTime,
     ),
+    r'soothingMethod': PropertySchema(
+      id: 16,
+      name: r'soothingMethod',
+      type: IsarType.string,
+    ),
     r'subtitle': PropertySchema(
-      id: 8,
+      id: 17,
       name: r'subtitle',
       type: IsarType.string,
     ),
-    r'time': PropertySchema(id: 9, name: r'time', type: IsarType.dateTime),
-    r'title': PropertySchema(id: 10, name: r'title', type: IsarType.string),
+    r'time': PropertySchema(id: 18, name: r'time', type: IsarType.dateTime),
+    r'title': PropertySchema(id: 19, name: r'title', type: IsarType.string),
     r'type': PropertySchema(
-      id: 11,
+      id: 20,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TimelineItemtypeEnumValueMap,
@@ -90,6 +135,24 @@ int _timelineItemEstimateSize(
 ) {
   var bytesCount = offsets.last;
   {
+    final value = object.aiModelVersion;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.aiProbableCause;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.cryingSource;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.diaperType;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -107,6 +170,12 @@ int _timelineItemEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.soothingMethod;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.subtitle.length * 3;
   bytesCount += 3 + object.title.length * 3;
   return bytesCount;
@@ -118,18 +187,27 @@ void _timelineItemSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeLong(offsets[0], object.cryingIntensity);
-  writer.writeString(offsets[1], object.diaperType);
-  writer.writeLong(offsets[2], object.feedingAmountMl);
-  writer.writeString(offsets[3], object.feedingType);
-  writer.writeString(offsets[4], object.note);
-  writer.writeLong(offsets[5], object.sleepDurationMinutes);
-  writer.writeDateTime(offsets[6], object.sleepEnd);
-  writer.writeDateTime(offsets[7], object.sleepStart);
-  writer.writeString(offsets[8], object.subtitle);
-  writer.writeDateTime(offsets[9], object.time);
-  writer.writeString(offsets[10], object.title);
-  writer.writeByte(offsets[11], object.type.index);
+  writer.writeDateTime(offsets[0], object.aiAnalyzedAt);
+  writer.writeDouble(offsets[1], object.aiConfidence);
+  writer.writeDouble(offsets[2], object.aiCryProbability);
+  writer.writeString(offsets[3], object.aiModelVersion);
+  writer.writeString(offsets[4], object.aiProbableCause);
+  writer.writeLong(offsets[5], object.cryingDurationMinutes);
+  writer.writeLong(offsets[6], object.cryingIntensity);
+  writer.writeBool(offsets[7], object.cryingResolved);
+  writer.writeString(offsets[8], object.cryingSource);
+  writer.writeString(offsets[9], object.diaperType);
+  writer.writeLong(offsets[10], object.feedingAmountMl);
+  writer.writeString(offsets[11], object.feedingType);
+  writer.writeString(offsets[12], object.note);
+  writer.writeLong(offsets[13], object.sleepDurationMinutes);
+  writer.writeDateTime(offsets[14], object.sleepEnd);
+  writer.writeDateTime(offsets[15], object.sleepStart);
+  writer.writeString(offsets[16], object.soothingMethod);
+  writer.writeString(offsets[17], object.subtitle);
+  writer.writeDateTime(offsets[18], object.time);
+  writer.writeString(offsets[19], object.title);
+  writer.writeByte(offsets[20], object.type.index);
 }
 
 TimelineItem _timelineItemDeserialize(
@@ -139,20 +217,29 @@ TimelineItem _timelineItemDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = TimelineItem();
-  object.cryingIntensity = reader.readLongOrNull(offsets[0]);
-  object.diaperType = reader.readStringOrNull(offsets[1]);
-  object.feedingAmountMl = reader.readLongOrNull(offsets[2]);
-  object.feedingType = reader.readStringOrNull(offsets[3]);
+  object.aiAnalyzedAt = reader.readDateTimeOrNull(offsets[0]);
+  object.aiConfidence = reader.readDoubleOrNull(offsets[1]);
+  object.aiCryProbability = reader.readDoubleOrNull(offsets[2]);
+  object.aiModelVersion = reader.readStringOrNull(offsets[3]);
+  object.aiProbableCause = reader.readStringOrNull(offsets[4]);
+  object.cryingDurationMinutes = reader.readLongOrNull(offsets[5]);
+  object.cryingIntensity = reader.readLongOrNull(offsets[6]);
+  object.cryingResolved = reader.readBoolOrNull(offsets[7]);
+  object.cryingSource = reader.readStringOrNull(offsets[8]);
+  object.diaperType = reader.readStringOrNull(offsets[9]);
+  object.feedingAmountMl = reader.readLongOrNull(offsets[10]);
+  object.feedingType = reader.readStringOrNull(offsets[11]);
   object.id = id;
-  object.note = reader.readStringOrNull(offsets[4]);
-  object.sleepDurationMinutes = reader.readLongOrNull(offsets[5]);
-  object.sleepEnd = reader.readDateTimeOrNull(offsets[6]);
-  object.sleepStart = reader.readDateTimeOrNull(offsets[7]);
-  object.subtitle = reader.readString(offsets[8]);
-  object.time = reader.readDateTime(offsets[9]);
-  object.title = reader.readString(offsets[10]);
+  object.note = reader.readStringOrNull(offsets[12]);
+  object.sleepDurationMinutes = reader.readLongOrNull(offsets[13]);
+  object.sleepEnd = reader.readDateTimeOrNull(offsets[14]);
+  object.sleepStart = reader.readDateTimeOrNull(offsets[15]);
+  object.soothingMethod = reader.readStringOrNull(offsets[16]);
+  object.subtitle = reader.readString(offsets[17]);
+  object.time = reader.readDateTime(offsets[18]);
+  object.title = reader.readString(offsets[19]);
   object.type =
-      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[11])] ??
+      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[20])] ??
       EventType.feeding;
   return object;
 }
@@ -165,11 +252,11 @@ P _timelineItemDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 1:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 2:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 3:
       return (reader.readStringOrNull(offset)) as P;
     case 4:
@@ -177,16 +264,34 @@ P _timelineItemDeserializeProp<P>(
     case 5:
       return (reader.readLongOrNull(offset)) as P;
     case 6:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 7:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBoolOrNull(offset)) as P;
     case 8:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 9:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 11:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readLongOrNull(offset)) as P;
+    case 14:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 15:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 16:
+      return (reader.readStringOrNull(offset)) as P;
+    case 17:
+      return (reader.readString(offset)) as P;
+    case 18:
+      return (reader.readDateTime(offset)) as P;
+    case 19:
+      return (reader.readString(offset)) as P;
+    case 20:
       return (_TimelineItemtypeValueEnumMap[reader.readByteOrNull(offset)] ??
               EventType.feeding)
           as P;
@@ -309,6 +414,659 @@ extension TimelineItemQueryWhere
 extension TimelineItemQueryFilter
     on QueryBuilder<TimelineItem, TimelineItem, QFilterCondition> {
   QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiAnalyzedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiAnalyzedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiAnalyzedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiAnalyzedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiAnalyzedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aiAnalyzedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiAnalyzedAtGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiAnalyzedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiAnalyzedAtLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiAnalyzedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiAnalyzedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiAnalyzedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiConfidenceIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiConfidence'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiConfidenceIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiConfidence'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiConfidenceEqualTo(double? value, {double epsilon = Query.epsilon}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiConfidence',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiConfidenceGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiConfidence',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiConfidenceLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiConfidence',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiConfidenceBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiConfidence',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiCryProbabilityIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiCryProbability'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiCryProbabilityIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiCryProbability'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiCryProbabilityEqualTo(double? value, {double epsilon = Query.epsilon}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiCryProbability',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiCryProbabilityGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiCryProbability',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiCryProbabilityLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiCryProbability',
+          value: value,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiCryProbabilityBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiCryProbability',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+
+          epsilon: epsilon,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiModelVersion'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiModelVersion'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiModelVersion',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'aiModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'aiModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'aiModelVersion',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'aiModelVersion',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aiModelVersion', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiModelVersionIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'aiModelVersion', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiProbableCause'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiProbableCause'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiProbableCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiProbableCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiProbableCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiProbableCause',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'aiProbableCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'aiProbableCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'aiProbableCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'aiProbableCause',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aiProbableCause', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiProbableCauseIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'aiProbableCause', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingDurationMinutesIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'cryingDurationMinutes'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingDurationMinutesIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'cryingDurationMinutes'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingDurationMinutesEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'cryingDurationMinutes',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingDurationMinutesGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'cryingDurationMinutes',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingDurationMinutesLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'cryingDurationMinutes',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingDurationMinutesBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'cryingDurationMinutes',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
   cryingIntensityIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -377,6 +1135,192 @@ extension TimelineItemQueryFilter
           upper: upper,
           includeUpper: includeUpper,
         ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingResolvedIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'cryingResolved'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingResolvedIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'cryingResolved'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingResolvedEqualTo(bool? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'cryingResolved', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'cryingSource'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'cryingSource'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'cryingSource',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'cryingSource',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'cryingSource',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'cryingSource',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'cryingSource',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'cryingSource',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'cryingSource',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'cryingSource',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'cryingSource', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  cryingSourceIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'cryingSource', value: ''),
       );
     });
   }
@@ -1218,6 +2162,165 @@ extension TimelineItemQueryFilter
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'soothingMethod'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'soothingMethod'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'soothingMethod',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'soothingMethod',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'soothingMethod',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'soothingMethod',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'soothingMethod',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'soothingMethod',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'soothingMethod',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'soothingMethod',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'soothingMethod', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  soothingMethodIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'soothingMethod', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
   subtitleEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -1628,6 +2731,88 @@ extension TimelineItemQueryLinks
 
 extension TimelineItemQuerySortBy
     on QueryBuilder<TimelineItem, TimelineItem, QSortBy> {
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortByAiAnalyzedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiAnalyzedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiAnalyzedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiAnalyzedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortByAiConfidence() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConfidence', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiConfidenceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConfidence', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiCryProbability() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiCryProbability', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiCryProbabilityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiCryProbability', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiModelVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiModelVersion', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiModelVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiModelVersion', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiProbableCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiProbableCause', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiProbableCauseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiProbableCause', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByCryingDurationMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingDurationMinutes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByCryingDurationMinutesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingDurationMinutes', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
   sortByCryingIntensity() {
     return QueryBuilder.apply(this, (query) {
@@ -1639,6 +2824,33 @@ extension TimelineItemQuerySortBy
   sortByCryingIntensityDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cryingIntensity', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByCryingResolved() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingResolved', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByCryingResolvedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingResolved', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortByCryingSource() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingSource', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByCryingSourceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingSource', Sort.desc);
     });
   }
 
@@ -1733,6 +2945,20 @@ extension TimelineItemQuerySortBy
     });
   }
 
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortBySoothingMethod() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'soothingMethod', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortBySoothingMethodDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'soothingMethod', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> sortBySubtitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subtitle', Sort.asc);
@@ -1784,6 +3010,88 @@ extension TimelineItemQuerySortBy
 
 extension TimelineItemQuerySortThenBy
     on QueryBuilder<TimelineItem, TimelineItem, QSortThenBy> {
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenByAiAnalyzedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiAnalyzedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiAnalyzedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiAnalyzedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenByAiConfidence() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConfidence', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiConfidenceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiConfidence', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiCryProbability() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiCryProbability', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiCryProbabilityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiCryProbability', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiModelVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiModelVersion', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiModelVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiModelVersion', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiProbableCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiProbableCause', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiProbableCauseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiProbableCause', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByCryingDurationMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingDurationMinutes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByCryingDurationMinutesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingDurationMinutes', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
   thenByCryingIntensity() {
     return QueryBuilder.apply(this, (query) {
@@ -1795,6 +3103,33 @@ extension TimelineItemQuerySortThenBy
   thenByCryingIntensityDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cryingIntensity', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByCryingResolved() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingResolved', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByCryingResolvedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingResolved', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenByCryingSource() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingSource', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByCryingSourceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cryingSource', Sort.desc);
     });
   }
 
@@ -1901,6 +3236,20 @@ extension TimelineItemQuerySortThenBy
     });
   }
 
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenBySoothingMethod() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'soothingMethod', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenBySoothingMethodDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'soothingMethod', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy> thenBySubtitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subtitle', Sort.asc);
@@ -1952,10 +3301,72 @@ extension TimelineItemQuerySortThenBy
 
 extension TimelineItemQueryWhereDistinct
     on QueryBuilder<TimelineItem, TimelineItem, QDistinct> {
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctByAiAnalyzedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiAnalyzedAt');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctByAiConfidence() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiConfidence');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByAiCryProbability() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiCryProbability');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctByAiModelVersion({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'aiModelVersion',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByAiProbableCause({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'aiProbableCause',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByCryingDurationMinutes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cryingDurationMinutes');
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QDistinct>
   distinctByCryingIntensity() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'cryingIntensity');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByCryingResolved() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cryingResolved');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctByCryingSource({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cryingSource', caseSensitive: caseSensitive);
     });
   }
 
@@ -2009,6 +3420,17 @@ extension TimelineItemQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctBySoothingMethod({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'soothingMethod',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
   QueryBuilder<TimelineItem, TimelineItem, QDistinct> distinctBySubtitle({
     bool caseSensitive = true,
   }) {
@@ -2046,9 +3468,62 @@ extension TimelineItemQueryProperty
     });
   }
 
+  QueryBuilder<TimelineItem, DateTime?, QQueryOperations>
+  aiAnalyzedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiAnalyzedAt');
+    });
+  }
+
+  QueryBuilder<TimelineItem, double?, QQueryOperations> aiConfidenceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiConfidence');
+    });
+  }
+
+  QueryBuilder<TimelineItem, double?, QQueryOperations>
+  aiCryProbabilityProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiCryProbability');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations>
+  aiModelVersionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiModelVersion');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations>
+  aiProbableCauseProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiProbableCause');
+    });
+  }
+
+  QueryBuilder<TimelineItem, int?, QQueryOperations>
+  cryingDurationMinutesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cryingDurationMinutes');
+    });
+  }
+
   QueryBuilder<TimelineItem, int?, QQueryOperations> cryingIntensityProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'cryingIntensity');
+    });
+  }
+
+  QueryBuilder<TimelineItem, bool?, QQueryOperations> cryingResolvedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cryingResolved');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations> cryingSourceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cryingSource');
     });
   }
 
@@ -2092,6 +3567,13 @@ extension TimelineItemQueryProperty
   QueryBuilder<TimelineItem, DateTime?, QQueryOperations> sleepStartProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'sleepStart');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations>
+  soothingMethodProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'soothingMethod');
     });
   }
 

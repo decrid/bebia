@@ -1,4 +1,5 @@
 import '../data/repositories/timeline_repository.dart';
+import '../features/crying/crying_ai_service.dart';
 import '../features/crying/crying_analysis_service.dart';
 import '../features/intelligence/infant_insights_service.dart';
 import '../features/predictions/prediction_service.dart';
@@ -26,6 +27,11 @@ class AppServices {
         timelineRepository,
         infantInsightsService,
       );
+
+  static final CryingAiService cryingAiService = CryingAiService(
+    timelineRepository,
+    infantInsightsService,
+  );
 
   static final RhythmProfileService rhythmProfileService =
       RhythmProfileService(

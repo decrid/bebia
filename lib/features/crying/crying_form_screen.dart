@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
+import 'crying_source.dart';
 
 class CryingFormScreen extends StatefulWidget {
   const CryingFormScreen({
@@ -117,7 +118,22 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       ..cryingIntensity = _intensity.toInt()
       ..cryingDurationMinutes = durationMinutes
       ..soothingMethod = _soothingMethod
-      ..cryingResolved = _cryingResolved;
+      ..cryingResolved = _cryingResolved
+      ..cryingSource = widget.existingItem?.cryingSource ?? CryingSource.manual
+      ..aiCryProbability = widget.existingItem?.aiCryProbability
+      ..aiProbableCause = widget.existingItem?.aiProbableCause
+      ..aiConfidence = widget.existingItem?.aiConfidence
+      ..aiModelVersion = widget.existingItem?.aiModelVersion
+      ..aiAnalyzedAt = widget.existingItem?.aiAnalyzedAt;
+
+    final aiResult = await AppServices.cryingAiService.analyzeCryingItem(item);
+
+    item
+      ..aiCryProbability = aiResult.cryProbability
+      ..aiProbableCause = aiResult.probableCause
+      ..aiConfidence = aiResult.confidence
+      ..aiModelVersion = aiResult.modelVersion
+      ..aiAnalyzedAt = DateTime.now();
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);
