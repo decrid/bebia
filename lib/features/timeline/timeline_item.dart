@@ -46,4 +46,5 @@ class TimelineItem {
   double? aiConfidence;
   String? aiModelVersion;
   DateTime? aiAnalyzedAt;
+  String? audioSamplePath;
 }

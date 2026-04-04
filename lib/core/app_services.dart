@@ -1,3 +1,4 @@
+import 'audio_capture_service.dart';
 import '../data/repositories/timeline_repository.dart';
 import '../features/crying/crying_ai_service.dart';
 import '../features/crying/crying_analysis_service.dart';
@@ -12,6 +13,8 @@ class AppServices {
 
   static final InfantInsightsService infantInsightsService =
       InfantInsightsService();
+
+  static final AudioCaptureService audioCaptureService = AudioCaptureService();
 
   static final TimelineController timelineController =
       TimelineController(timelineRepository);
@@ -30,7 +33,6 @@ class AppServices {
 
   static final CryingAiService cryingAiService = CryingAiService(
     timelineRepository,
-    infantInsightsService,
   );
 
   static final RhythmProfileService rhythmProfileService =
