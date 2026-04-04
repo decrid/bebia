@@ -1,15 +1,18 @@
 import '../../data/repositories/timeline_repository.dart';
 import '../timeline/timeline_item.dart';
 import 'ai_crying_analysis_result.dart';
+import 'mock_cry_detection_service.dart';
 
 class CryingAiService {
-  CryingAiService(this._repository);
+  CryingAiService(this._repository, this._mockCryDetectionService);
 
   final TimelineRepository _repository;
+  final MockCryDetectionService _mockCryDetectionService;
 
   Future<AiCryingAnalysisResult> analyzeCryingItem(
     TimelineItem cryingItem,
   ) async {
+    final audioDetection = await _mockCryDetectionService.detect(cryingItem);
     final items = await _repository.getAll();
 
     final mergedItems = <TimelineItem>[
@@ -48,7 +51,9 @@ class CryingAiService {
     double tiredScore = 0;
     double diaperScore = 0;
 
-    final signals = <String>[];
+    final signals = <String>[
+      ...audioDetection.signals,
+    ];
 
     if (lastFeeding != null) {
       final diff = referenceTime.difference(lastFeeding.time).inMinutes;
@@ -144,14 +149,22 @@ class CryingAiService {
 
     final best = sorted.first;
 
+    final combinedCryProbability = audioDetection.hasUsableAudio
+        ? audioDetection.cryProbability
+        : 1.0;
+
     if (best.value == 0) {
-      return const AiCryingAnalysisResult(
-        cryDetected: true,
-        cryProbability: 1.0,
+      return AiCryingAnalysisResult(
+        cryDetected: audioDetection.hasUsableAudio
+            ? audioDetection.cryDetected
+            : true,
+        cryProbability: combinedCryProbability,
         probableCause: null,
         confidence: null,
-        signals: [],
-        modelVersion: 'context-v1',
+        signals: signals,
+        modelVersion: audioDetection.hasUsableAudio
+            ? '${audioDetection.modelVersion}+context-v1'
+            : 'context-v1',
       );
     }
 
@@ -173,12 +186,16 @@ class CryingAiService {
     }
 
     return AiCryingAnalysisResult(
-      cryDetected: true,
-      cryProbability: 1.0,
+      cryDetected: audioDetection.hasUsableAudio
+          ? audioDetection.cryDetected
+          : true,
+      cryProbability: combinedCryProbability,
       probableCause: best.key,
       confidence: confidence.clamp(0.0, 1.0),
       signals: signals,
-      modelVersion: 'context-v1',
+      modelVersion: audioDetection.hasUsableAudio
+          ? '${audioDetection.modelVersion}+context-v1'
+          : 'context-v1',
     );
   }
 
