@@ -1,12 +1,14 @@
 import '../timeline/timeline_item.dart';
 import 'audio_preprocessing_service.dart';
 import 'cry_detection_result.dart';
+import 'cry_detection_service.dart';
 
-class MockCryDetectionService {
+class MockCryDetectionService implements CryDetectionService {
   MockCryDetectionService(this._audioPreprocessingService);
 
   final AudioPreprocessingService _audioPreprocessingService;
 
+  @override
   Future<CryDetectionResult> detect(TimelineItem cryingItem) async {
     final audio = await _audioPreprocessingService.prepare(
       cryingItem.audioSamplePath,

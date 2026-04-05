@@ -1,18 +1,18 @@
 import '../../data/repositories/timeline_repository.dart';
 import '../timeline/timeline_item.dart';
 import 'ai_crying_analysis_result.dart';
-import 'mock_cry_detection_service.dart';
+import 'cry_detection_service.dart';
 
 class CryingAiService {
-  CryingAiService(this._repository, this._mockCryDetectionService);
+  CryingAiService(this._repository, this._cryDetectionService);
 
   final TimelineRepository _repository;
-  final MockCryDetectionService _mockCryDetectionService;
+  final CryDetectionService _cryDetectionService;
 
   Future<AiCryingAnalysisResult> analyzeCryingItem(
     TimelineItem cryingItem,
   ) async {
-    final audioDetection = await _mockCryDetectionService.detect(cryingItem);
+    final audioDetection = await _cryDetectionService.detect(cryingItem);
     final items = await _repository.getAll();
 
     final mergedItems = <TimelineItem>[
