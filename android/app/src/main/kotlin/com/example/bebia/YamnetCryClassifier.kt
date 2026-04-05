@@ -37,7 +37,7 @@ class YamnetCryClassifier(
         val audioData = AudioData.create(
             AudioData.AudioDataFormat.builder()
                 .setNumOfChannels(1)
-                .setSampleRate(SAMPLE_RATE)
+                .setSampleRate(SAMPLE_RATE.toFloat())
                 .build(),
             wav.samples.size,
         )

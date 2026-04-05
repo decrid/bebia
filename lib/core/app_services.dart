@@ -4,7 +4,6 @@ import '../features/crying/audio_preprocessing_service.dart';
 import '../features/crying/crying_ai_service.dart';
 import '../features/crying/crying_analysis_service.dart';
 import '../features/crying/mock_cry_detection_service.dart';
-import '../features/crying/real_cry_detection_service.dart';
 import '../features/intelligence/infant_insights_service.dart';
 import '../features/predictions/prediction_service.dart';
 import '../features/predictions/rhythm_profile_service.dart';
@@ -27,11 +26,6 @@ class AppServices {
         audioPreprocessingService,
       );
 
-  static final RealCryDetectionService realCryDetectionService =
-      RealCryDetectionService(
-        mockCryDetectionService,
-      );
-
   static final TimelineController timelineController =
       TimelineController(timelineRepository);
 
@@ -49,7 +43,7 @@ class AppServices {
 
   static final CryingAiService cryingAiService = CryingAiService(
     timelineRepository,
-    realCryDetectionService,
+    mockCryDetectionService,
   );
 
   static final RhythmProfileService rhythmProfileService =
