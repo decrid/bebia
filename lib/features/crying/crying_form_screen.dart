@@ -34,6 +34,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   bool _isAnalyzingAi = false;
   String? _aiPreviewError;
 
+  bool? _aiUserConfirmedCry;
+  bool? _aiUserConfirmedCause;
+  String? _aiUserCorrectedCause;
+
   bool get _isEdit => widget.existingItem != null;
 
   @override
@@ -66,6 +70,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       _soothingMethod = existingItem.soothingMethod;
       _cryingResolved = existingItem.cryingResolved ?? false;
       _audioSamplePath = existingItem.audioSamplePath;
+      _aiUserConfirmedCry = existingItem.aiUserConfirmedCry;
+      _aiUserConfirmedCause = existingItem.aiUserConfirmedCause;
+      _aiUserCorrectedCause = existingItem.aiUserCorrectedCause;
 
       if (_audioSamplePath != null && _audioSamplePath!.isNotEmpty) {
         _audioStatus = 'Audio vzorek je uložen';
@@ -91,6 +98,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
         return 'únava';
       case 'discomfort':
         return 'diskomfort';
+      case 'other':
+        return 'jiné';
+      case 'unknown':
+        return 'nevím';
       default:
         return cause;
     }
@@ -102,6 +113,14 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     setState(() {
       _aiPreview = null;
       _aiPreviewError = null;
+    });
+  }
+
+  void _resetAiFeedback() {
+    setState(() {
+      _aiUserConfirmedCry = null;
+      _aiUserConfirmedCause = null;
+      _aiUserCorrectedCause = null;
     });
   }
 
@@ -133,6 +152,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     });
 
     _invalidateAiPreview();
+    _resetAiFeedback();
   }
 
   String _buildSubtitle(int intensity, int? durationMinutes) {
@@ -166,7 +186,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       ..aiModelVersion = widget.existingItem?.aiModelVersion
       ..aiAnalyzedAt = widget.existingItem?.aiAnalyzedAt
       ..audioSamplePath = _audioSamplePath
-      ..aiSignalsSerialized = widget.existingItem?.aiSignalsSerialized;
+      ..aiSignalsSerialized = widget.existingItem?.aiSignalsSerialized
+      ..aiUserConfirmedCry = _aiUserConfirmedCry
+      ..aiUserConfirmedCause = _aiUserConfirmedCause
+      ..aiUserCorrectedCause = _aiUserCorrectedCause;
   }
 
   Future<void> _analyzeAiPreview() async {
@@ -186,6 +209,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
       setState(() {
         _aiPreview = result;
+        _aiUserConfirmedCry = null;
+        _aiUserConfirmedCause = null;
+        _aiUserCorrectedCause = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -222,6 +248,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       });
 
       _invalidateAiPreview();
+      _resetAiFeedback();
     } catch (e) {
       if (!mounted) return;
 
@@ -258,6 +285,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       });
 
       _invalidateAiPreview();
+      _resetAiFeedback();
     } catch (e) {
       if (!mounted) return;
 
@@ -300,6 +328,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     });
 
     _invalidateAiPreview();
+    _resetAiFeedback();
   }
 
   Future<void> _save() async {
@@ -339,6 +368,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final hasAudio = _audioSamplePath != null && _audioSamplePath!.isNotEmpty;
+    final showCauseFeedback =
+        _aiPreview != null &&
+        _aiPreview!.probableCause != null &&
+        _aiUserConfirmedCry != false;
 
     return Scaffold(
       appBar: AppBar(
@@ -376,6 +409,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                             _intensity = value;
                           });
                           _invalidateAiPreview();
+                          _resetAiFeedback();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -386,7 +420,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           labelText: 'Délka pláče (min)',
                           border: OutlineInputBorder(),
                         ),
-                        onChanged: (_) => _invalidateAiPreview(),
+                        onChanged: (_) {
+                          _invalidateAiPreview();
+                          _resetAiFeedback();
+                        },
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
@@ -418,6 +455,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                             _soothingMethod = value;
                           });
                           _invalidateAiPreview();
+                          _resetAiFeedback();
                         },
                         decoration: const InputDecoration(
                           labelText: 'Co pomohlo uklidnit',
@@ -434,6 +472,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                             _cryingResolved = value;
                           });
                           _invalidateAiPreview();
+                          _resetAiFeedback();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -563,6 +602,119 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           ),
                         ),
                       ),
+                      if (_aiPreview != null) ...[
+                        const SizedBox(height: 12),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'AI validace',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text('Je to opravdu pláč?'),
+                                RadioGroup<bool>(
+                                  groupValue: _aiUserConfirmedCry,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _aiUserConfirmedCry = value;
+                                      if (value == false) {
+                                        _aiUserConfirmedCause = null;
+                                        _aiUserCorrectedCause = null;
+                                      }
+                                    });
+                                  },
+                                  child: Column(
+                                    children: const [
+                                      RadioListTile<bool>(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: Text('Ano'),
+                                        value: true,
+                                      ),
+                                      RadioListTile<bool>(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: Text('Ne'),
+                                        value: false,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (showCauseFeedback) ...[
+                                  const SizedBox(height: 8),
+                                  const Text('Sedí odhad příčiny?'),
+                                  RadioGroup<bool>(
+                                    groupValue: _aiUserConfirmedCause,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _aiUserConfirmedCause = value;
+                                        if (value == true) {
+                                          _aiUserCorrectedCause = null;
+                                        }
+                                      });
+                                    },
+                                    child: Column(
+                                      children: const [
+                                        RadioListTile<bool>(
+                                          contentPadding: EdgeInsets.zero,
+                                          title: Text('Ano'),
+                                          value: true,
+                                        ),
+                                        RadioListTile<bool>(
+                                          contentPadding: EdgeInsets.zero,
+                                          title: Text('Ne'),
+                                          value: false,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_aiUserConfirmedCause == false) ...[
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<String>(
+                                      initialValue: _aiUserCorrectedCause,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'hunger',
+                                          child: Text('Hlad'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'tired',
+                                          child: Text('Únava'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'discomfort',
+                                          child: Text('Diskomfort'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'other',
+                                          child: Text('Jiné'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'unknown',
+                                          child: Text('Nevím'),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _aiUserCorrectedCause = value;
+                                        });
+                                      },
+                                      decoration: const InputDecoration(
+                                        labelText: 'Správná příčina',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

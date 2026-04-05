@@ -100,6 +100,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return 'únava';
       case 'discomfort':
         return 'diskomfort';
+      case 'other':
+        return 'jiné';
+      case 'unknown':
+        return 'nevím';
       default:
         return cause;
     }
@@ -166,6 +170,25 @@ class _HomeScreenState extends State<HomeScreen> {
       if (item.aiSignalsSerialized != null &&
           item.aiSignalsSerialized!.trim().isNotEmpty) {
         parts.add('AI signály uloženy');
+      }
+
+      if (item.aiUserConfirmedCry == true) {
+        parts.add('AI pláč potvrzen');
+      } else if (item.aiUserConfirmedCry == false) {
+        parts.add('AI pláč zamítnut');
+      }
+
+      if (item.aiUserConfirmedCause == true) {
+        parts.add('AI příčina potvrzena');
+      } else if (item.aiUserConfirmedCause == false) {
+        parts.add('AI příčina opravena');
+      }
+
+      if (item.aiUserCorrectedCause != null &&
+          item.aiUserCorrectedCause!.trim().isNotEmpty) {
+        parts.add(
+          'Správná příčina: ${_cryingCauseLabel(item.aiUserCorrectedCause!)}',
+        );
       }
     }
 

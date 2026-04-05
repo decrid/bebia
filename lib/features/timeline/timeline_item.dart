@@ -48,4 +48,9 @@ class TimelineItem {
   DateTime? aiAnalyzedAt;
   String? audioSamplePath;
   String? aiSignalsSerialized;
+
+  // Crying AI validation feedback
+  bool? aiUserConfirmedCry;
+  bool? aiUserConfirmedCause;
+  String? aiUserCorrectedCause;
 }

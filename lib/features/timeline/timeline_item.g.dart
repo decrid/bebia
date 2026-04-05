@@ -47,76 +47,91 @@ const TimelineItemSchema = CollectionSchema(
       name: r'aiSignalsSerialized',
       type: IsarType.string,
     ),
-    r'audioSamplePath': PropertySchema(
+    r'aiUserConfirmedCause': PropertySchema(
       id: 6,
+      name: r'aiUserConfirmedCause',
+      type: IsarType.bool,
+    ),
+    r'aiUserConfirmedCry': PropertySchema(
+      id: 7,
+      name: r'aiUserConfirmedCry',
+      type: IsarType.bool,
+    ),
+    r'aiUserCorrectedCause': PropertySchema(
+      id: 8,
+      name: r'aiUserCorrectedCause',
+      type: IsarType.string,
+    ),
+    r'audioSamplePath': PropertySchema(
+      id: 9,
       name: r'audioSamplePath',
       type: IsarType.string,
     ),
     r'cryingDurationMinutes': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'cryingDurationMinutes',
       type: IsarType.long,
     ),
     r'cryingIntensity': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'cryingIntensity',
       type: IsarType.long,
     ),
     r'cryingResolved': PropertySchema(
-      id: 9,
+      id: 12,
       name: r'cryingResolved',
       type: IsarType.bool,
     ),
     r'cryingSource': PropertySchema(
-      id: 10,
+      id: 13,
       name: r'cryingSource',
       type: IsarType.string,
     ),
     r'diaperType': PropertySchema(
-      id: 11,
+      id: 14,
       name: r'diaperType',
       type: IsarType.string,
     ),
     r'feedingAmountMl': PropertySchema(
-      id: 12,
+      id: 15,
       name: r'feedingAmountMl',
       type: IsarType.long,
     ),
     r'feedingType': PropertySchema(
-      id: 13,
+      id: 16,
       name: r'feedingType',
       type: IsarType.string,
     ),
-    r'note': PropertySchema(id: 14, name: r'note', type: IsarType.string),
+    r'note': PropertySchema(id: 17, name: r'note', type: IsarType.string),
     r'sleepDurationMinutes': PropertySchema(
-      id: 15,
+      id: 18,
       name: r'sleepDurationMinutes',
       type: IsarType.long,
     ),
     r'sleepEnd': PropertySchema(
-      id: 16,
+      id: 19,
       name: r'sleepEnd',
       type: IsarType.dateTime,
     ),
     r'sleepStart': PropertySchema(
-      id: 17,
+      id: 20,
       name: r'sleepStart',
       type: IsarType.dateTime,
     ),
     r'soothingMethod': PropertySchema(
-      id: 18,
+      id: 21,
       name: r'soothingMethod',
       type: IsarType.string,
     ),
     r'subtitle': PropertySchema(
-      id: 19,
+      id: 22,
       name: r'subtitle',
       type: IsarType.string,
     ),
-    r'time': PropertySchema(id: 20, name: r'time', type: IsarType.dateTime),
-    r'title': PropertySchema(id: 21, name: r'title', type: IsarType.string),
+    r'time': PropertySchema(id: 23, name: r'time', type: IsarType.dateTime),
+    r'title': PropertySchema(id: 24, name: r'title', type: IsarType.string),
     r'type': PropertySchema(
-      id: 22,
+      id: 25,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TimelineItemtypeEnumValueMap,
@@ -158,6 +173,12 @@ int _timelineItemEstimateSize(
   }
   {
     final value = object.aiSignalsSerialized;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.aiUserCorrectedCause;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -215,23 +236,26 @@ void _timelineItemSerialize(
   writer.writeString(offsets[3], object.aiModelVersion);
   writer.writeString(offsets[4], object.aiProbableCause);
   writer.writeString(offsets[5], object.aiSignalsSerialized);
-  writer.writeString(offsets[6], object.audioSamplePath);
-  writer.writeLong(offsets[7], object.cryingDurationMinutes);
-  writer.writeLong(offsets[8], object.cryingIntensity);
-  writer.writeBool(offsets[9], object.cryingResolved);
-  writer.writeString(offsets[10], object.cryingSource);
-  writer.writeString(offsets[11], object.diaperType);
-  writer.writeLong(offsets[12], object.feedingAmountMl);
-  writer.writeString(offsets[13], object.feedingType);
-  writer.writeString(offsets[14], object.note);
-  writer.writeLong(offsets[15], object.sleepDurationMinutes);
-  writer.writeDateTime(offsets[16], object.sleepEnd);
-  writer.writeDateTime(offsets[17], object.sleepStart);
-  writer.writeString(offsets[18], object.soothingMethod);
-  writer.writeString(offsets[19], object.subtitle);
-  writer.writeDateTime(offsets[20], object.time);
-  writer.writeString(offsets[21], object.title);
-  writer.writeByte(offsets[22], object.type.index);
+  writer.writeBool(offsets[6], object.aiUserConfirmedCause);
+  writer.writeBool(offsets[7], object.aiUserConfirmedCry);
+  writer.writeString(offsets[8], object.aiUserCorrectedCause);
+  writer.writeString(offsets[9], object.audioSamplePath);
+  writer.writeLong(offsets[10], object.cryingDurationMinutes);
+  writer.writeLong(offsets[11], object.cryingIntensity);
+  writer.writeBool(offsets[12], object.cryingResolved);
+  writer.writeString(offsets[13], object.cryingSource);
+  writer.writeString(offsets[14], object.diaperType);
+  writer.writeLong(offsets[15], object.feedingAmountMl);
+  writer.writeString(offsets[16], object.feedingType);
+  writer.writeString(offsets[17], object.note);
+  writer.writeLong(offsets[18], object.sleepDurationMinutes);
+  writer.writeDateTime(offsets[19], object.sleepEnd);
+  writer.writeDateTime(offsets[20], object.sleepStart);
+  writer.writeString(offsets[21], object.soothingMethod);
+  writer.writeString(offsets[22], object.subtitle);
+  writer.writeDateTime(offsets[23], object.time);
+  writer.writeString(offsets[24], object.title);
+  writer.writeByte(offsets[25], object.type.index);
 }
 
 TimelineItem _timelineItemDeserialize(
@@ -247,25 +271,28 @@ TimelineItem _timelineItemDeserialize(
   object.aiModelVersion = reader.readStringOrNull(offsets[3]);
   object.aiProbableCause = reader.readStringOrNull(offsets[4]);
   object.aiSignalsSerialized = reader.readStringOrNull(offsets[5]);
-  object.audioSamplePath = reader.readStringOrNull(offsets[6]);
-  object.cryingDurationMinutes = reader.readLongOrNull(offsets[7]);
-  object.cryingIntensity = reader.readLongOrNull(offsets[8]);
-  object.cryingResolved = reader.readBoolOrNull(offsets[9]);
-  object.cryingSource = reader.readStringOrNull(offsets[10]);
-  object.diaperType = reader.readStringOrNull(offsets[11]);
-  object.feedingAmountMl = reader.readLongOrNull(offsets[12]);
-  object.feedingType = reader.readStringOrNull(offsets[13]);
+  object.aiUserConfirmedCause = reader.readBoolOrNull(offsets[6]);
+  object.aiUserConfirmedCry = reader.readBoolOrNull(offsets[7]);
+  object.aiUserCorrectedCause = reader.readStringOrNull(offsets[8]);
+  object.audioSamplePath = reader.readStringOrNull(offsets[9]);
+  object.cryingDurationMinutes = reader.readLongOrNull(offsets[10]);
+  object.cryingIntensity = reader.readLongOrNull(offsets[11]);
+  object.cryingResolved = reader.readBoolOrNull(offsets[12]);
+  object.cryingSource = reader.readStringOrNull(offsets[13]);
+  object.diaperType = reader.readStringOrNull(offsets[14]);
+  object.feedingAmountMl = reader.readLongOrNull(offsets[15]);
+  object.feedingType = reader.readStringOrNull(offsets[16]);
   object.id = id;
-  object.note = reader.readStringOrNull(offsets[14]);
-  object.sleepDurationMinutes = reader.readLongOrNull(offsets[15]);
-  object.sleepEnd = reader.readDateTimeOrNull(offsets[16]);
-  object.sleepStart = reader.readDateTimeOrNull(offsets[17]);
-  object.soothingMethod = reader.readStringOrNull(offsets[18]);
-  object.subtitle = reader.readString(offsets[19]);
-  object.time = reader.readDateTime(offsets[20]);
-  object.title = reader.readString(offsets[21]);
+  object.note = reader.readStringOrNull(offsets[17]);
+  object.sleepDurationMinutes = reader.readLongOrNull(offsets[18]);
+  object.sleepEnd = reader.readDateTimeOrNull(offsets[19]);
+  object.sleepStart = reader.readDateTimeOrNull(offsets[20]);
+  object.soothingMethod = reader.readStringOrNull(offsets[21]);
+  object.subtitle = reader.readString(offsets[22]);
+  object.time = reader.readDateTime(offsets[23]);
+  object.title = reader.readString(offsets[24]);
   object.type =
-      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[22])] ??
+      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[25])] ??
       EventType.feeding;
   return object;
 }
@@ -290,19 +317,19 @@ P _timelineItemDeserializeProp<P>(
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readStringOrNull(offset)) as P;
-    case 7:
-      return (reader.readLongOrNull(offset)) as P;
-    case 8:
-      return (reader.readLongOrNull(offset)) as P;
-    case 9:
       return (reader.readBoolOrNull(offset)) as P;
+    case 7:
+      return (reader.readBoolOrNull(offset)) as P;
+    case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readStringOrNull(offset)) as P;
-    case 11:
-      return (reader.readStringOrNull(offset)) as P;
-    case 12:
       return (reader.readLongOrNull(offset)) as P;
+    case 11:
+      return (reader.readLongOrNull(offset)) as P;
+    case 12:
+      return (reader.readBoolOrNull(offset)) as P;
     case 13:
       return (reader.readStringOrNull(offset)) as P;
     case 14:
@@ -310,18 +337,24 @@ P _timelineItemDeserializeProp<P>(
     case 15:
       return (reader.readLongOrNull(offset)) as P;
     case 16:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 17:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 18:
       return (reader.readStringOrNull(offset)) as P;
+    case 17:
+      return (reader.readStringOrNull(offset)) as P;
+    case 18:
+      return (reader.readLongOrNull(offset)) as P;
     case 19:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 20:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 21:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 22:
+      return (reader.readString(offset)) as P;
+    case 23:
+      return (reader.readDateTime(offset)) as P;
+    case 24:
+      return (reader.readString(offset)) as P;
+    case 25:
       return (_TimelineItemtypeValueEnumMap[reader.readByteOrNull(offset)] ??
               EventType.feeding)
           as P;
@@ -1176,6 +1209,225 @@ extension TimelineItemQueryFilter
       return query.addFilterCondition(
         FilterCondition.greaterThan(
           property: r'aiSignalsSerialized',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserConfirmedCauseIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiUserConfirmedCause'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserConfirmedCauseIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiUserConfirmedCause'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserConfirmedCauseEqualTo(bool? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiUserConfirmedCause',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserConfirmedCryIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiUserConfirmedCry'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserConfirmedCryIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiUserConfirmedCry'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserConfirmedCryEqualTo(bool? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aiUserConfirmedCry', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiUserCorrectedCause'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiUserCorrectedCause'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiUserCorrectedCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiUserCorrectedCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiUserCorrectedCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiUserCorrectedCause',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'aiUserCorrectedCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'aiUserCorrectedCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'aiUserCorrectedCause',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'aiUserCorrectedCause',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aiUserCorrectedCause', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiUserCorrectedCauseIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'aiUserCorrectedCause',
           value: '',
         ),
       );
@@ -3165,6 +3417,48 @@ extension TimelineItemQuerySortBy
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiUserConfirmedCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCause', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiUserConfirmedCauseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCause', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiUserConfirmedCry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCry', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiUserConfirmedCryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCry', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiUserCorrectedCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserCorrectedCause', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiUserCorrectedCauseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserCorrectedCause', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
   sortByAudioSamplePath() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioSamplePath', Sort.asc);
@@ -3472,6 +3766,48 @@ extension TimelineItemQuerySortThenBy
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiUserConfirmedCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCause', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiUserConfirmedCauseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCause', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiUserConfirmedCry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCry', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiUserConfirmedCryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserConfirmedCry', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiUserCorrectedCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserCorrectedCause', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiUserCorrectedCauseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiUserCorrectedCause', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
   thenByAudioSamplePath() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioSamplePath', Sort.asc);
@@ -3759,6 +4095,30 @@ extension TimelineItemQueryWhereDistinct
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByAiUserConfirmedCause() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiUserConfirmedCause');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByAiUserConfirmedCry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'aiUserConfirmedCry');
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByAiUserCorrectedCause({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'aiUserCorrectedCause',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
   distinctByAudioSamplePath({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(
@@ -3933,6 +4293,27 @@ extension TimelineItemQueryProperty
   aiSignalsSerializedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'aiSignalsSerialized');
+    });
+  }
+
+  QueryBuilder<TimelineItem, bool?, QQueryOperations>
+  aiUserConfirmedCauseProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiUserConfirmedCause');
+    });
+  }
+
+  QueryBuilder<TimelineItem, bool?, QQueryOperations>
+  aiUserConfirmedCryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiUserConfirmedCry');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations>
+  aiUserCorrectedCauseProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiUserCorrectedCause');
     });
   }
 
