@@ -12,12 +12,12 @@ class MockCryDetectionService {
       cryingItem.audioSamplePath,
     );
 
-    if (!audio.hasUsableAudio) {
+    if (!audio.hasUsableAudio || audio.features == null) {
       return CryDetectionResult(
         hasUsableAudio: false,
         cryDetected: false,
         cryProbability: 0.0,
-        modelVersion: 'mock-audio-v2',
+        modelVersion: 'mock-audio-v3',
         signals: [
           if (cryingItem.audioSamplePath == null ||
               cryingItem.audioSamplePath!.trim().isEmpty)
@@ -25,62 +25,90 @@ class MockCryDetectionService {
           else if (!audio.fileExists)
             'audio soubor nebyl nalezen'
           else
-            'audio vzorek je příliš krátký nebo prázdný',
+            'audio vzorek není dostatečně použitelný',
         ],
       );
     }
 
-    double probability = 0.10;
+    final features = audio.features!;
+
+    double probability = 0.0;
     final signals = <String>[
-      'audio vzorek dostupný',
+      'audio vzorek analyzován ze signálu',
     ];
+
+    if (features.durationMs >= 700) {
+      probability += 0.08;
+      signals.add('dostatečná délka vzorku');
+    }
+
+    if (features.durationMs >= 1500) {
+      probability += 0.07;
+      signals.add('delší zachycený úsek');
+    }
+
+    if (features.rms >= 0.03) {
+      probability += 0.15;
+      signals.add('vyšší průměrná energie signálu');
+    } else {
+      signals.add('nízká průměrná energie signálu');
+    }
+
+    if (features.peakAmplitude >= 0.20) {
+      probability += 0.10;
+      signals.add('výrazné špičky hlasitosti');
+    }
+
+    if (features.activeFrameRatio >= 0.35) {
+      probability += 0.15;
+      signals.add('vyšší podíl aktivních rámců');
+    } else {
+      signals.add('vyšší podíl tichých částí');
+    }
+
+    if (features.zeroCrossingRate >= 0.03 &&
+        features.zeroCrossingRate <= 0.18) {
+      probability += 0.12;
+      signals.add('zero crossing rate v očekávaném rozsahu');
+    } else {
+      signals.add('zero crossing rate mimo očekávaný rozsah');
+    }
 
     final intensity = cryingItem.cryingIntensity;
     if (intensity != null) {
       if (intensity >= 4) {
-        probability += 0.15;
-        signals.add('velmi vysoká intenzita');
+        probability += 0.10;
+        signals.add('ručně zadaná vysoká intenzita');
       } else if (intensity == 3) {
         probability += 0.05;
-        signals.add('střední intenzita');
+        signals.add('ručně zadaná střední intenzita');
       }
     }
 
     final duration = cryingItem.cryingDurationMinutes;
-    if (duration != null) {
-      if (duration >= 3) {
-        probability += 0.10;
-        signals.add('pláč má delší trvání');
-      }
-      if (duration >= 10) {
-        probability += 0.15;
-        signals.add('výrazně delší epizoda');
-      }
-    }
-
-    if (audio.fileSizeBytes >= 32000) {
-      probability += 0.05;
-      signals.add('delší audio vzorek');
+    if (duration != null && duration >= 3) {
+      probability += 0.06;
+      signals.add('ručně zadané delší trvání');
     }
 
     if ((cryingItem.cryingResolved ?? false) == false) {
-      probability += 0.05;
+      probability += 0.04;
       signals.add('dítě se zatím neuklidnilo');
     }
 
-    probability = probability.clamp(0.0, 0.90).toDouble();
+    probability = probability.clamp(0.0, 0.95).toDouble();
 
-    final cryDetected = probability >= 0.70;
+    final cryDetected = probability >= 0.62;
 
     if (!cryDetected) {
-      signals.add('mock pipeline zatím nemá dost silných signálů pro potvrzení pláče');
+      signals.add('signál zatím není dost silný pro potvrzení pláče');
     }
 
     return CryDetectionResult(
       hasUsableAudio: true,
       cryDetected: cryDetected,
       cryProbability: probability,
-      modelVersion: 'mock-audio-v2',
+      modelVersion: 'mock-audio-v3',
       signals: signals,
     );
   }
