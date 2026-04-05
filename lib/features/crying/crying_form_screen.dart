@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
+
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
+import 'ai_crying_analysis_result.dart';
 import 'crying_source.dart';
 
 class CryingFormScreen extends StatefulWidget {
@@ -27,6 +29,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   bool _isRecording = false;
   bool _isAudioBusy = false;
   String? _audioStatus;
+
+  AiCryingAnalysisResult? _aiPreview;
+  bool _isAnalyzingAi = false;
+  String? _aiPreviewError;
 
   bool get _isEdit => widget.existingItem != null;
 
@@ -77,6 +83,28 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     return '$day.$month.$year $hour:$minute';
   }
 
+  String _cryingCauseLabel(String cause) {
+    switch (cause) {
+      case 'hunger':
+        return 'hlad';
+      case 'tired':
+        return 'únava';
+      case 'discomfort':
+        return 'diskomfort';
+      default:
+        return cause;
+    }
+  }
+
+  void _invalidateAiPreview() {
+    if (_aiPreview == null && _aiPreviewError == null) return;
+
+    setState(() {
+      _aiPreview = null;
+      _aiPreviewError = null;
+    });
+  }
+
   Future<void> _pickDateTime() async {
     final pickedDate = await showDatePicker(
       context: context,
@@ -103,6 +131,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
         pickedTime.minute,
       );
     });
+
+    _invalidateAiPreview();
   }
 
   String _buildSubtitle(int intensity, int? durationMinutes) {
@@ -112,6 +142,64 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     ];
 
     return parts.join(' • ');
+  }
+
+  TimelineItem _buildDraftItem() {
+    final durationText = _durationController.text.trim();
+    final durationMinutes =
+        durationText.isEmpty ? null : int.tryParse(durationText);
+
+    return TimelineItem()
+      ..id = widget.existingItem?.id ?? Isar.autoIncrement
+      ..type = EventType.crying
+      ..time = _selectedTime
+      ..title = 'Pláč'
+      ..subtitle = _buildSubtitle(_intensity.toInt(), durationMinutes)
+      ..cryingIntensity = _intensity.toInt()
+      ..cryingDurationMinutes = durationMinutes
+      ..soothingMethod = _soothingMethod
+      ..cryingResolved = _cryingResolved
+      ..cryingSource = widget.existingItem?.cryingSource ?? CryingSource.manual
+      ..aiCryProbability = widget.existingItem?.aiCryProbability
+      ..aiProbableCause = widget.existingItem?.aiProbableCause
+      ..aiConfidence = widget.existingItem?.aiConfidence
+      ..aiModelVersion = widget.existingItem?.aiModelVersion
+      ..aiAnalyzedAt = widget.existingItem?.aiAnalyzedAt
+      ..audioSamplePath = _audioSamplePath
+      ..aiSignalsSerialized = widget.existingItem?.aiSignalsSerialized;
+  }
+
+  Future<void> _analyzeAiPreview() async {
+    if (_isAnalyzingAi || _isRecording) return;
+
+    setState(() {
+      _isAnalyzingAi = true;
+      _aiPreviewError = null;
+    });
+
+    try {
+      final result = await AppServices.cryingAiService.analyzeCryingItem(
+        _buildDraftItem(),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _aiPreview = result;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _aiPreviewError = 'Nepodařilo se provést AI analýzu: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAnalyzingAi = false;
+        });
+      }
+    }
   }
 
   Future<void> _startRecording() async {
@@ -132,6 +220,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
         _audioSamplePath = path;
         _audioStatus = 'Nahrávání běží';
       });
+
+      _invalidateAiPreview();
     } catch (e) {
       if (!mounted) return;
 
@@ -166,6 +256,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
             ? 'Nahrávání bylo zastaveno'
             : 'Audio vzorek je uložen';
       });
+
+      _invalidateAiPreview();
     } catch (e) {
       if (!mounted) return;
 
@@ -206,39 +298,27 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       _audioSamplePath = null;
       _audioStatus = 'Audio vzorek byl odebrán';
     });
+
+    _invalidateAiPreview();
   }
 
   Future<void> _save() async {
-    final durationText = _durationController.text.trim();
-    final durationMinutes =
-        durationText.isEmpty ? null : int.tryParse(durationText);
+    if (_isRecording) return;
 
-    final item = TimelineItem()
-      ..id = widget.existingItem?.id ?? Isar.autoIncrement
-      ..type = EventType.crying
-      ..time = _selectedTime
-      ..title = 'Pláč'
-      ..subtitle = _buildSubtitle(_intensity.toInt(), durationMinutes)
-      ..cryingIntensity = _intensity.toInt()
-      ..cryingDurationMinutes = durationMinutes
-      ..soothingMethod = _soothingMethod
-      ..cryingResolved = _cryingResolved
-      ..cryingSource = widget.existingItem?.cryingSource ?? CryingSource.manual
-      ..aiCryProbability = widget.existingItem?.aiCryProbability
-      ..aiProbableCause = widget.existingItem?.aiProbableCause
-      ..aiConfidence = widget.existingItem?.aiConfidence
-      ..aiModelVersion = widget.existingItem?.aiModelVersion
-      ..aiAnalyzedAt = widget.existingItem?.aiAnalyzedAt
-      ..audioSamplePath = _audioSamplePath;
+    final item = _buildDraftItem();
 
-    final aiResult = await AppServices.cryingAiService.analyzeCryingItem(item);
+    final aiResult =
+        _aiPreview ??
+        await AppServices.cryingAiService.analyzeCryingItem(item);
 
     item
       ..aiCryProbability = aiResult.cryProbability
       ..aiProbableCause = aiResult.probableCause
       ..aiConfidence = aiResult.confidence
       ..aiModelVersion = aiResult.modelVersion
-      ..aiAnalyzedAt = DateTime.now();
+      ..aiAnalyzedAt = DateTime.now()
+      ..aiSignalsSerialized =
+          aiResult.signals.isEmpty ? null : aiResult.signals.join(' | ');
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);
@@ -295,6 +375,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           setState(() {
                             _intensity = value;
                           });
+                          _invalidateAiPreview();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -305,6 +386,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           labelText: 'Délka pláče (min)',
                           border: OutlineInputBorder(),
                         ),
+                        onChanged: (_) => _invalidateAiPreview(),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
@@ -335,6 +417,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           setState(() {
                             _soothingMethod = value;
                           });
+                          _invalidateAiPreview();
                         },
                         decoration: const InputDecoration(
                           labelText: 'Co pomohlo uklidnit',
@@ -350,6 +433,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           setState(() {
                             _cryingResolved = value;
                           });
+                          _invalidateAiPreview();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -398,6 +482,83 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                         ? 'Audio vzorek je připraven pro budoucí AI analýzu'
                                         : 'Zatím není nahrán žádný audio vzorek'),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'AI preview',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: (_isAnalyzingAi || _isRecording)
+                                      ? null
+                                      : _analyzeAiPreview,
+                                  child: Text(
+                                    _isAnalyzingAi
+                                        ? 'Probíhá analýza...'
+                                        : 'Analyzovat AI',
+                                  ),
+                                ),
+                              ),
+                              if (_aiPreviewError != null) ...[
+                                const SizedBox(height: 12),
+                                Text(_aiPreviewError!),
+                              ],
+                              if (_aiPreview != null) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Detekce pláče: ${_aiPreview!.cryDetected ? 'ano' : 'ne'}',
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Pravděpodobnost pláče: ${(_aiPreview!.cryProbability * 100).round()} %',
+                                ),
+                                if (_aiPreview!.probableCause != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Odhad příčiny: ${_cryingCauseLabel(_aiPreview!.probableCause!)}',
+                                  ),
+                                ],
+                                if (_aiPreview!.confidence != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Jistota příčiny: ${(_aiPreview!.confidence! * 100).round()} %',
+                                  ),
+                                ],
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Model: ${_aiPreview!.modelVersion}',
+                                ),
+                                if (_aiPreview!.signals.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    'Signály:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  ..._aiPreview!.signals.map(
+                                    (signal) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text('• $signal'),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ],
                           ),
                         ),

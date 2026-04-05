@@ -47,4 +47,5 @@ class TimelineItem {
   String? aiModelVersion;
   DateTime? aiAnalyzedAt;
   String? audioSamplePath;
+  String? aiSignalsSerialized;
 }

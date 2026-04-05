@@ -42,76 +42,81 @@ const TimelineItemSchema = CollectionSchema(
       name: r'aiProbableCause',
       type: IsarType.string,
     ),
-    r'audioSamplePath': PropertySchema(
+    r'aiSignalsSerialized': PropertySchema(
       id: 5,
+      name: r'aiSignalsSerialized',
+      type: IsarType.string,
+    ),
+    r'audioSamplePath': PropertySchema(
+      id: 6,
       name: r'audioSamplePath',
       type: IsarType.string,
     ),
     r'cryingDurationMinutes': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'cryingDurationMinutes',
       type: IsarType.long,
     ),
     r'cryingIntensity': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'cryingIntensity',
       type: IsarType.long,
     ),
     r'cryingResolved': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'cryingResolved',
       type: IsarType.bool,
     ),
     r'cryingSource': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'cryingSource',
       type: IsarType.string,
     ),
     r'diaperType': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'diaperType',
       type: IsarType.string,
     ),
     r'feedingAmountMl': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'feedingAmountMl',
       type: IsarType.long,
     ),
     r'feedingType': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'feedingType',
       type: IsarType.string,
     ),
-    r'note': PropertySchema(id: 13, name: r'note', type: IsarType.string),
+    r'note': PropertySchema(id: 14, name: r'note', type: IsarType.string),
     r'sleepDurationMinutes': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'sleepDurationMinutes',
       type: IsarType.long,
     ),
     r'sleepEnd': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'sleepEnd',
       type: IsarType.dateTime,
     ),
     r'sleepStart': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'sleepStart',
       type: IsarType.dateTime,
     ),
     r'soothingMethod': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'soothingMethod',
       type: IsarType.string,
     ),
     r'subtitle': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'subtitle',
       type: IsarType.string,
     ),
-    r'time': PropertySchema(id: 19, name: r'time', type: IsarType.dateTime),
-    r'title': PropertySchema(id: 20, name: r'title', type: IsarType.string),
+    r'time': PropertySchema(id: 20, name: r'time', type: IsarType.dateTime),
+    r'title': PropertySchema(id: 21, name: r'title', type: IsarType.string),
     r'type': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'type',
       type: IsarType.byte,
       enumMap: _TimelineItemtypeEnumValueMap,
@@ -147,6 +152,12 @@ int _timelineItemEstimateSize(
   }
   {
     final value = object.aiProbableCause;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.aiSignalsSerialized;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -203,23 +214,24 @@ void _timelineItemSerialize(
   writer.writeDouble(offsets[2], object.aiCryProbability);
   writer.writeString(offsets[3], object.aiModelVersion);
   writer.writeString(offsets[4], object.aiProbableCause);
-  writer.writeString(offsets[5], object.audioSamplePath);
-  writer.writeLong(offsets[6], object.cryingDurationMinutes);
-  writer.writeLong(offsets[7], object.cryingIntensity);
-  writer.writeBool(offsets[8], object.cryingResolved);
-  writer.writeString(offsets[9], object.cryingSource);
-  writer.writeString(offsets[10], object.diaperType);
-  writer.writeLong(offsets[11], object.feedingAmountMl);
-  writer.writeString(offsets[12], object.feedingType);
-  writer.writeString(offsets[13], object.note);
-  writer.writeLong(offsets[14], object.sleepDurationMinutes);
-  writer.writeDateTime(offsets[15], object.sleepEnd);
-  writer.writeDateTime(offsets[16], object.sleepStart);
-  writer.writeString(offsets[17], object.soothingMethod);
-  writer.writeString(offsets[18], object.subtitle);
-  writer.writeDateTime(offsets[19], object.time);
-  writer.writeString(offsets[20], object.title);
-  writer.writeByte(offsets[21], object.type.index);
+  writer.writeString(offsets[5], object.aiSignalsSerialized);
+  writer.writeString(offsets[6], object.audioSamplePath);
+  writer.writeLong(offsets[7], object.cryingDurationMinutes);
+  writer.writeLong(offsets[8], object.cryingIntensity);
+  writer.writeBool(offsets[9], object.cryingResolved);
+  writer.writeString(offsets[10], object.cryingSource);
+  writer.writeString(offsets[11], object.diaperType);
+  writer.writeLong(offsets[12], object.feedingAmountMl);
+  writer.writeString(offsets[13], object.feedingType);
+  writer.writeString(offsets[14], object.note);
+  writer.writeLong(offsets[15], object.sleepDurationMinutes);
+  writer.writeDateTime(offsets[16], object.sleepEnd);
+  writer.writeDateTime(offsets[17], object.sleepStart);
+  writer.writeString(offsets[18], object.soothingMethod);
+  writer.writeString(offsets[19], object.subtitle);
+  writer.writeDateTime(offsets[20], object.time);
+  writer.writeString(offsets[21], object.title);
+  writer.writeByte(offsets[22], object.type.index);
 }
 
 TimelineItem _timelineItemDeserialize(
@@ -234,25 +246,26 @@ TimelineItem _timelineItemDeserialize(
   object.aiCryProbability = reader.readDoubleOrNull(offsets[2]);
   object.aiModelVersion = reader.readStringOrNull(offsets[3]);
   object.aiProbableCause = reader.readStringOrNull(offsets[4]);
-  object.audioSamplePath = reader.readStringOrNull(offsets[5]);
-  object.cryingDurationMinutes = reader.readLongOrNull(offsets[6]);
-  object.cryingIntensity = reader.readLongOrNull(offsets[7]);
-  object.cryingResolved = reader.readBoolOrNull(offsets[8]);
-  object.cryingSource = reader.readStringOrNull(offsets[9]);
-  object.diaperType = reader.readStringOrNull(offsets[10]);
-  object.feedingAmountMl = reader.readLongOrNull(offsets[11]);
-  object.feedingType = reader.readStringOrNull(offsets[12]);
+  object.aiSignalsSerialized = reader.readStringOrNull(offsets[5]);
+  object.audioSamplePath = reader.readStringOrNull(offsets[6]);
+  object.cryingDurationMinutes = reader.readLongOrNull(offsets[7]);
+  object.cryingIntensity = reader.readLongOrNull(offsets[8]);
+  object.cryingResolved = reader.readBoolOrNull(offsets[9]);
+  object.cryingSource = reader.readStringOrNull(offsets[10]);
+  object.diaperType = reader.readStringOrNull(offsets[11]);
+  object.feedingAmountMl = reader.readLongOrNull(offsets[12]);
+  object.feedingType = reader.readStringOrNull(offsets[13]);
   object.id = id;
-  object.note = reader.readStringOrNull(offsets[13]);
-  object.sleepDurationMinutes = reader.readLongOrNull(offsets[14]);
-  object.sleepEnd = reader.readDateTimeOrNull(offsets[15]);
-  object.sleepStart = reader.readDateTimeOrNull(offsets[16]);
-  object.soothingMethod = reader.readStringOrNull(offsets[17]);
-  object.subtitle = reader.readString(offsets[18]);
-  object.time = reader.readDateTime(offsets[19]);
-  object.title = reader.readString(offsets[20]);
+  object.note = reader.readStringOrNull(offsets[14]);
+  object.sleepDurationMinutes = reader.readLongOrNull(offsets[15]);
+  object.sleepEnd = reader.readDateTimeOrNull(offsets[16]);
+  object.sleepStart = reader.readDateTimeOrNull(offsets[17]);
+  object.soothingMethod = reader.readStringOrNull(offsets[18]);
+  object.subtitle = reader.readString(offsets[19]);
+  object.time = reader.readDateTime(offsets[20]);
+  object.title = reader.readString(offsets[21]);
   object.type =
-      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[21])] ??
+      _TimelineItemtypeValueEnumMap[reader.readByteOrNull(offsets[22])] ??
       EventType.feeding;
   return object;
 }
@@ -277,36 +290,38 @@ P _timelineItemDeserializeProp<P>(
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 7:
       return (reader.readLongOrNull(offset)) as P;
     case 8:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 9:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readBoolOrNull(offset)) as P;
     case 10:
       return (reader.readStringOrNull(offset)) as P;
     case 11:
-      return (reader.readLongOrNull(offset)) as P;
-    case 12:
       return (reader.readStringOrNull(offset)) as P;
+    case 12:
+      return (reader.readLongOrNull(offset)) as P;
     case 13:
       return (reader.readStringOrNull(offset)) as P;
     case 14:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 15:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 16:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 17:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 18:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 19:
-      return (reader.readDateTime(offset)) as P;
-    case 20:
       return (reader.readString(offset)) as P;
+    case 20:
+      return (reader.readDateTime(offset)) as P;
     case 21:
+      return (reader.readString(offset)) as P;
+    case 22:
       return (_TimelineItemtypeValueEnumMap[reader.readByteOrNull(offset)] ??
               EventType.feeding)
           as P;
@@ -1001,6 +1016,168 @@ extension TimelineItemQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'aiProbableCause', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aiSignalsSerialized'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aiSignalsSerialized'),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aiSignalsSerialized',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aiSignalsSerialized',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aiSignalsSerialized',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aiSignalsSerialized',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'aiSignalsSerialized',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'aiSignalsSerialized',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'aiSignalsSerialized',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'aiSignalsSerialized',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aiSignalsSerialized', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterFilterCondition>
+  aiSignalsSerializedIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'aiSignalsSerialized',
+          value: '',
+        ),
       );
     });
   }
@@ -2974,6 +3151,20 @@ extension TimelineItemQuerySortBy
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiSignalsSerialized() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiSignalsSerialized', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  sortByAiSignalsSerializedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiSignalsSerialized', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
   sortByAudioSamplePath() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioSamplePath', Sort.asc);
@@ -3267,6 +3458,20 @@ extension TimelineItemQuerySortThenBy
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiSignalsSerialized() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiSignalsSerialized', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
+  thenByAiSignalsSerializedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'aiSignalsSerialized', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QAfterSortBy>
   thenByAudioSamplePath() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'audioSamplePath', Sort.asc);
@@ -3544,6 +3749,16 @@ extension TimelineItemQueryWhereDistinct
   }
 
   QueryBuilder<TimelineItem, TimelineItem, QDistinct>
+  distinctByAiSignalsSerialized({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'aiSignalsSerialized',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<TimelineItem, TimelineItem, QDistinct>
   distinctByAudioSamplePath({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(
@@ -3711,6 +3926,13 @@ extension TimelineItemQueryProperty
   aiProbableCauseProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'aiProbableCause');
+    });
+  }
+
+  QueryBuilder<TimelineItem, String?, QQueryOperations>
+  aiSignalsSerializedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'aiSignalsSerialized');
     });
   }
 

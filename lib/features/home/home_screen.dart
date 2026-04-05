@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_services.dart';
 import '../crying/crying_analysis_result.dart';
 import '../crying/crying_form_screen.dart';
@@ -147,6 +148,10 @@ class _HomeScreenState extends State<HomeScreen> {
         parts.add(CryingSource.label(item.cryingSource));
       }
 
+      if (item.audioSamplePath != null && item.audioSamplePath!.isNotEmpty) {
+        parts.add('Audio vzorek');
+      }
+
       if (item.aiProbableCause != null) {
         final cause = _cryingCauseLabel(item.aiProbableCause!);
         final confidence = item.aiConfidence;
@@ -156,6 +161,11 @@ class _HomeScreenState extends State<HomeScreen> {
         } else {
           parts.add('AI odhad: $cause');
         }
+      }
+
+      if (item.aiSignalsSerialized != null &&
+          item.aiSignalsSerialized!.trim().isNotEmpty) {
+        parts.add('AI signály uloženy');
       }
     }
 
