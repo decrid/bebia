@@ -15,6 +15,7 @@ class AudioPreprocessingService {
         fileSizeBytes: 0,
         hasUsableAudio: false,
         features: null,
+        normalizedSamples: null,
       );
     }
 
@@ -28,16 +29,22 @@ class AudioPreprocessingService {
         fileSizeBytes: 0,
         hasUsableAudio: false,
         features: null,
+        normalizedSamples: null,
       );
     }
 
     final bytes = await file.readAsBytes();
     final fileSizeBytes = bytes.length;
 
-    final features = _extractWavFeatures(bytes);
+    final extracted = _extractWavData(bytes);
+    final features = extracted?.features;
+    final normalizedSamples = extracted?.normalizedSamples;
+
     final hasUsableAudio =
         fileSizeBytes >= 1024 &&
         features != null &&
+        normalizedSamples != null &&
+        normalizedSamples.isNotEmpty &&
         features.sampleCount > 0 &&
         features.durationMs >= 300;
 
@@ -47,10 +54,11 @@ class AudioPreprocessingService {
       fileSizeBytes: fileSizeBytes,
       hasUsableAudio: hasUsableAudio,
       features: features,
+      normalizedSamples: normalizedSamples,
     );
   }
 
-  WavAudioFeatures? _extractWavFeatures(Uint8List bytes) {
+  _ExtractedWavData? _extractWavData(Uint8List bytes) {
     if (bytes.length < 44) return null;
 
     final riff = String.fromCharCodes(bytes.sublist(0, 4));
@@ -164,7 +172,7 @@ class AudioPreprocessingService {
     final activeFrameRatio = totalFrames > 0 ? activeFrames / totalFrames : 0.0;
     final durationMs = ((sampleCount / sampleRate) * 1000).round();
 
-    return WavAudioFeatures(
+    final features = WavAudioFeatures(
       sampleRate: sampleRate,
       channelCount: channelCount,
       bitsPerSample: bitsPerSample,
@@ -175,7 +183,22 @@ class AudioPreprocessingService {
       zeroCrossingRate: zeroCrossingRate,
       activeFrameRatio: activeFrameRatio,
     );
+
+    return _ExtractedWavData(
+      features: features,
+      normalizedSamples: normalizedSamples,
+    );
   }
+}
+
+class _ExtractedWavData {
+  const _ExtractedWavData({
+    required this.features,
+    required this.normalizedSamples,
+  });
+
+  final WavAudioFeatures features;
+  final List<double> normalizedSamples;
 }
 
 extension on double {

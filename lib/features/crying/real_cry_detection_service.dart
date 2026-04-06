@@ -2,16 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 import '../timeline/timeline_item.dart';
+import 'audio_preprocessing_service.dart';
 import 'cry_detection_result.dart';
 import 'cry_detection_service.dart';
 import 'mock_cry_detection_service.dart';
 
 class RealCryDetectionService implements CryDetectionService {
-  RealCryDetectionService(this._fallback);
+  RealCryDetectionService(
+    this._fallback,
+    this._audioPreprocessingService,
+  );
 
   static const String _modelAssetPath = 'assets/models/yamnet.tflite';
+  static const int _expectedInputLength = 15600;
+  static const int _expectedOutputClasses = 521;
 
   final MockCryDetectionService _fallback;
+  final AudioPreprocessingService _audioPreprocessingService;
 
   Interpreter? _interpreter;
   Future<void>? _initializationFuture;
@@ -104,11 +111,113 @@ class RealCryDetectionService implements CryDetectionService {
     try {
       await initialize();
     } catch (_) {
-      // První krok je pouze bootstrap modelu.
-      // Při chybě bezpečně padáme zpět na mock službu.
+      return _fallback.detect(cryingItem);
+    }
+
+    if (_interpreter == null) {
+      return _fallback.detect(cryingItem);
+    }
+
+    try {
+      final audio = await _audioPreprocessingService.prepare(
+        cryingItem.audioSamplePath,
+      );
+
+      if (!audio.hasUsableAudio ||
+          audio.features == null ||
+          audio.normalizedSamples == null) {
+        debugPrint(
+          'RealCryDetectionService: skipping inference - audio not usable.',
+        );
+        return _fallback.detect(cryingItem);
+      }
+
+      final features = audio.features!;
+      final normalizedSamples = audio.normalizedSamples!;
+
+      if (features.sampleRate != 16000) {
+        debugPrint(
+          'RealCryDetectionService: skipping inference - unsupported '
+          'sampleRate=${features.sampleRate}, expected 16000.',
+        );
+        return _fallback.detect(cryingItem);
+      }
+
+      final input = _buildModelInput(normalizedSamples);
+      final output = List.generate(
+        1,
+        (_) => List<double>.filled(_expectedOutputClasses, 0.0),
+      );
+
+      _interpreter!.run(input, output);
+
+      final scores = output.first;
+      final topPredictions = _topPredictions(scores, limit: 5);
+
+      debugPrint(
+        'RealCryDetectionService: inference completed for '
+        '${cryingItem.audioSamplePath}',
+      );
+      debugPrint(
+        'RealCryDetectionService: model input length=${input.length}, '
+        'source samples=${normalizedSamples.length}, '
+        'durationMs=${features.durationMs}',
+      );
+
+      for (final prediction in topPredictions) {
+        debugPrint(
+          'RealCryDetectionService: top class #${prediction.index} '
+          'score=${prediction.score.toStringAsFixed(4)}',
+        );
+      }
+    } catch (error, stackTrace) {
+      debugPrint(
+        'RealCryDetectionService: inference probe failed: $error',
+      );
+      debugPrintStack(stackTrace: stackTrace);
     }
 
     return _fallback.detect(cryingItem);
+  }
+
+  List<double> _buildModelInput(List<double> samples) {
+    if (samples.length == _expectedInputLength) {
+      return List<double>.from(samples);
+    }
+
+    if (samples.length > _expectedInputLength) {
+      return samples.sublist(0, _expectedInputLength);
+    }
+
+    final padded = List<double>.filled(_expectedInputLength, 0.0);
+    for (var i = 0; i < samples.length; i++) {
+      padded[i] = samples[i];
+    }
+    return padded;
+  }
+
+  List<_IndexedScore> _topPredictions(
+    List<double> scores, {
+    required int limit,
+  }) {
+    final indexed = <_IndexedScore>[];
+
+    for (var i = 0; i < scores.length; i++) {
+      indexed.add(
+        _IndexedScore(
+          index: i,
+          score: scores[i],
+        ),
+      );
+    }
+
+    indexed.sort((a, b) => b.score.compareTo(a.score));
+
+    if (indexed.length <= limit) {
+      return indexed;
+    }
+
+    return indexed.sublist(0, limit);
   }
 
   void dispose() {
@@ -117,4 +226,14 @@ class RealCryDetectionService implements CryDetectionService {
     _initializationFuture = null;
     _initializationFailed = false;
   }
+}
+
+class _IndexedScore {
+  const _IndexedScore({
+    required this.index,
+    required this.score,
+  });
+
+  final int index;
+  final double score;
 }

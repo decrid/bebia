@@ -30,6 +30,7 @@ class AppServices {
   static final RealCryDetectionService realCryDetectionService =
       RealCryDetectionService(
         mockCryDetectionService,
+        audioPreprocessingService,
       );
 
   static final TimelineController timelineController =

@@ -7,6 +7,7 @@ class AudioPreprocessingResult {
     required this.fileSizeBytes,
     required this.hasUsableAudio,
     required this.features,
+    required this.normalizedSamples,
   });
 
   final String? filePath;
@@ -14,4 +15,5 @@ class AudioPreprocessingResult {
   final int fileSizeBytes;
   final bool hasUsableAudio;
   final WavAudioFeatures? features;
+  final List<double>? normalizedSamples;
 }
