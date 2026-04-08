@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
+
 import '../../core/app_services.dart';
-import 'feeding_model.dart';
 import '../timeline/timeline_item.dart';
+import 'feeding_model.dart';
 
 class FeedingFormScreen extends StatefulWidget {
-  const FeedingFormScreen({
-    super.key,
-    this.existingItem,
-  });
+  const FeedingFormScreen({super.key, this.existingItem});
 
   final TimelineItem? existingItem;
 
@@ -37,8 +35,6 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
         _type = existingItem.feedingType!;
       } else if (existingItem.title == 'Lahvička') {
         _type = 'bottle';
-      } else {
-        _type = 'breast';
       }
 
       if (existingItem.feedingAmountMl != null) {
@@ -137,9 +133,7 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Upravit krmení' : 'Krmení'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Upravit krmení' : 'Krmení')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -148,7 +142,16 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _FormIntroCard(
+                        title: _isEdit
+                            ? 'Upravit záznam krmení'
+                            : 'Nové krmení',
+                        subtitle:
+                            'Zapiš jen to podstatné. Množství i poznámka jsou volitelné.',
+                      ),
+                      const SizedBox(height: 14),
                       Card(
                         child: ListTile(
                           title: const Text('Čas události'),
@@ -159,38 +162,44 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: _type,
-                        items: const [
-                          DropdownMenuItem(value: 'breast', child: Text('Kojení')),
-                          DropdownMenuItem(value: 'bottle', child: Text('Lahvička')),
+                      const SizedBox(height: 14),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                            value: 'breast',
+                            icon: Icon(Icons.favorite_border),
+                            label: Text('Kojení'),
+                          ),
+                          ButtonSegment(
+                            value: 'bottle',
+                            icon: Icon(Icons.local_drink_outlined),
+                            label: Text('Lahvička'),
+                          ),
                         ],
-                        onChanged: (value) {
+                        selected: {_type},
+                        onSelectionChanged: (selection) {
                           setState(() {
-                            _type = value!;
+                            _type = selection.first;
                           });
                         },
-                        decoration: const InputDecoration(
-                          labelText: 'Typ krmení',
-                          border: OutlineInputBorder(),
-                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: _amountController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'Množství (ml)',
-                          border: OutlineInputBorder(),
+                          hintText: 'Např. 90',
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: _noteController,
+                        minLines: 2,
+                        maxLines: 4,
                         decoration: const InputDecoration(
                           labelText: 'Poznámka',
-                          border: OutlineInputBorder(),
+                          hintText: 'Např. klidné krmení nebo horší pití',
                         ),
                       ),
                     ],
@@ -211,6 +220,42 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FormIntroCard extends StatelessWidget {
+  const _FormIntroCard({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF0F9F7), Color(0xFFFFFFFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle),
+        ],
       ),
     );
   }

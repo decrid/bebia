@@ -7,10 +7,7 @@ import 'ai_crying_analysis_result.dart';
 import 'crying_source.dart';
 
 class CryingFormScreen extends StatefulWidget {
-  const CryingFormScreen({
-    super.key,
-    this.existingItem,
-  });
+  const CryingFormScreen({super.key, this.existingItem});
 
   final TimelineItem? existingItem;
 
@@ -63,8 +60,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       }
 
       if (existingItem.cryingDurationMinutes != null) {
-        _durationController.text =
-            existingItem.cryingDurationMinutes.toString();
+        _durationController.text = existingItem.cryingDurationMinutes
+            .toString();
       }
 
       _soothingMethod = existingItem.soothingMethod;
@@ -105,6 +102,12 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       default:
         return cause;
     }
+  }
+
+  String _confidenceLabel(double confidence) {
+    if (confidence >= 0.8) return 'Vysoká jistota';
+    if (confidence >= 0.55) return 'Střední jistota';
+    return 'Nižší jistota';
   }
 
   void _invalidateAiPreview() {
@@ -166,8 +169,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
   TimelineItem _buildDraftItem() {
     final durationText = _durationController.text.trim();
-    final durationMinutes =
-        durationText.isEmpty ? null : int.tryParse(durationText);
+    final durationMinutes = durationText.isEmpty
+        ? null
+        : int.tryParse(durationText);
 
     return TimelineItem()
       ..id = widget.existingItem?.id ?? Isar.autoIncrement
@@ -337,8 +341,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     final item = _buildDraftItem();
 
     final aiResult =
-        _aiPreview ??
-        await AppServices.cryingAiService.analyzeCryingItem(item);
+        _aiPreview ?? await AppServices.cryingAiService.analyzeCryingItem(item);
 
     item
       ..aiCryProbability = aiResult.cryProbability
@@ -346,8 +349,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       ..aiConfidence = aiResult.confidence
       ..aiModelVersion = aiResult.modelVersion
       ..aiAnalyzedAt = DateTime.now()
-      ..aiSignalsSerialized =
-          aiResult.signals.isEmpty ? null : aiResult.signals.join(' | ');
+      ..aiSignalsSerialized = aiResult.signals.isEmpty
+          ? null
+          : aiResult.signals.join(' | ');
 
     if (_isEdit) {
       await AppServices.timelineController.update(item);
@@ -372,11 +376,13 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
         _aiPreview != null &&
         _aiPreview!.probableCause != null &&
         _aiUserConfirmedCry != false;
+    final usableConfidence = _aiPreview?.confidence;
+    final sourceLabel = CryingSource.label(
+      widget.existingItem?.cryingSource ?? CryingSource.manual,
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Upravit pláč' : 'Pláč'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Upravit pláč' : 'Pláč')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -385,7 +391,22 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _IntroCard(
+                        title: _isEdit
+                            ? 'Upravit záznam pláče'
+                            : 'Nový záznam pláče',
+                        subtitle:
+                            'Nejdřív zapiš základ. Audio i AI můžeš přidat hned nebo až podle potřeby.',
+                        trailingLabel: sourceLabel,
+                      ),
+                      const SizedBox(height: 14),
+                      _SectionTitle(
+                        title: 'Základ záznamu',
+                        subtitle: 'Jen to nejdůležitější o situaci.',
+                      ),
+                      const SizedBox(height: 10),
                       Card(
                         child: ListTile(
                           title: const Text('Čas události'),
@@ -397,20 +418,41 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('Intenzita pláče'),
-                      Slider(
-                        value: _intensity,
-                        min: 1,
-                        max: 5,
-                        divisions: 4,
-                        label: _intensity.toInt().toString(),
-                        onChanged: (value) {
-                          setState(() {
-                            _intensity = value;
-                          });
-                          _invalidateAiPreview();
-                          _resetAiFeedback();
-                        },
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Intenzita pláče',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Chip(label: Text('${_intensity.toInt()}/5')),
+                                ],
+                              ),
+                              Slider(
+                                value: _intensity,
+                                min: 1,
+                                max: 5,
+                                divisions: 4,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _intensity = value;
+                                  });
+                                  _invalidateAiPreview();
+                                  _resetAiFeedback();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -418,7 +460,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           labelText: 'Délka pláče (min)',
-                          border: OutlineInputBorder(),
+                          hintText: 'Např. 8',
                         ),
                         onChanged: (_) {
                           _invalidateAiPreview();
@@ -445,10 +487,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                             value: 'pacifier',
                             child: Text('Dudlík'),
                           ),
-                          DropdownMenuItem(
-                            value: 'other',
-                            child: Text('Jiné'),
-                          ),
+                          DropdownMenuItem(value: 'other', child: Text('Jiné')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -459,10 +498,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                         },
                         decoration: const InputDecoration(
                           labelText: 'Co pomohlo uklidnit',
-                          border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Dítě se uklidnilo'),
@@ -475,38 +513,42 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           _resetAiFeedback();
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
+                      _SectionTitle(
+                        title: 'Audio',
+                        subtitle:
+                            'Volitelné. Pomůže budoucí i aktuální AI analýze.',
+                      ),
+                      const SizedBox(height: 10),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Audio vzorek',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  ElevatedButton(
+                                  ElevatedButton.icon(
                                     onPressed: (_isRecording || _isAudioBusy)
                                         ? null
                                         : _startRecording,
-                                    child: const Text('Spustit nahrávání'),
+                                    icon: const Icon(Icons.mic_none_rounded),
+                                    label: const Text('Spustit nahrávání'),
                                   ),
-                                  ElevatedButton(
+                                  ElevatedButton.icon(
                                     onPressed: (!_isRecording || _isAudioBusy)
                                         ? null
                                         : _stopRecording,
-                                    child: const Text('Zastavit nahrávání'),
+                                    icon: const Icon(
+                                      Icons.stop_circle_outlined,
+                                    ),
+                                    label: const Text('Zastavit'),
                                   ),
                                   TextButton(
-                                    onPressed: (!hasAudio && !_isRecording) ||
+                                    onPressed:
+                                        (!hasAudio && !_isRecording) ||
                                             _isAudioBusy
                                         ? null
                                         : _clearRecording,
@@ -514,31 +556,30 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Text(
                                 _audioStatus ??
                                     (hasAudio
-                                        ? 'Audio vzorek je připraven pro budoucí AI analýzu'
-                                        : 'Zatím není nahrán žádný audio vzorek'),
+                                        ? 'Audio vzorek je připraven pro AI analýzu.'
+                                        : 'Zatím není nahrán žádný audio vzorek.'),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
+                      _SectionTitle(
+                        title: 'AI výstup',
+                        subtitle:
+                            'Nejprve zkus odhad, potom můžeš výsledek potvrdit.',
+                      ),
+                      const SizedBox(height: 10),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'AI preview',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -548,7 +589,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                   child: Text(
                                     _isAnalyzingAi
                                         ? 'Probíhá analýza...'
-                                        : 'Analyzovat AI',
+                                        : 'Spustit AI analýzu',
                                   ),
                                 ),
                               ),
@@ -557,46 +598,23 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                 Text(_aiPreviewError!),
                               ],
                               if (_aiPreview != null) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Detekce pláče: ${_aiPreview!.cryDetected ? 'ano' : 'ne'}',
+                                const SizedBox(height: 14),
+                                _AiResultSummary(
+                                  cryDetected: _aiPreview!.cryDetected,
+                                  cryProbability: _aiPreview!.cryProbability,
+                                  probableCause:
+                                      _aiPreview!.probableCause == null
+                                      ? null
+                                      : _cryingCauseLabel(
+                                          _aiPreview!.probableCause!,
+                                        ),
+                                  confidence: usableConfidence,
+                                  confidenceLabel: usableConfidence == null
+                                      ? null
+                                      : _confidenceLabel(usableConfidence),
+                                  modelVersion: _aiPreview!.modelVersion,
+                                  signals: _aiPreview!.signals,
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Pravděpodobnost pláče: ${(_aiPreview!.cryProbability * 100).round()} %',
-                                ),
-                                if (_aiPreview!.probableCause != null) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Odhad příčiny: ${_cryingCauseLabel(_aiPreview!.probableCause!)}',
-                                  ),
-                                ],
-                                if (_aiPreview!.confidence != null) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Jistota příčiny: ${(_aiPreview!.confidence! * 100).round()} %',
-                                  ),
-                                ],
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Model: ${_aiPreview!.modelVersion}',
-                                ),
-                                if (_aiPreview!.signals.isNotEmpty) ...[
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Signály:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  ..._aiPreview!.signals.map(
-                                    (signal) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: Text('• $signal'),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ],
                           ),
@@ -611,10 +629,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'AI validace',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  'Potvrzení výsledku',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 12),
                                 const Text('Je to opravdu pláč?'),
@@ -705,7 +721,6 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                       },
                                       decoration: const InputDecoration(
                                         labelText: 'Správná příčina',
-                                        border: OutlineInputBorder(),
                                       ),
                                     ),
                                   ],
@@ -734,6 +749,152 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _IntroCard extends StatelessWidget {
+  const _IntroCard({
+    required this.title,
+    required this.subtitle,
+    required this.trailingLabel,
+  });
+
+  final String title;
+  final String subtitle;
+  final String trailingLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF1F1), Color(0xFFFFFFFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Chip(label: Text(trailingLabel)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(subtitle),
+      ],
+    );
+  }
+}
+
+class _AiResultSummary extends StatelessWidget {
+  const _AiResultSummary({
+    required this.cryDetected,
+    required this.cryProbability,
+    required this.probableCause,
+    required this.confidence,
+    required this.confidenceLabel,
+    required this.modelVersion,
+    required this.signals,
+  });
+
+  final bool cryDetected;
+  final double cryProbability;
+  final String? probableCause;
+  final double? confidence;
+  final String? confidenceLabel;
+  final String modelVersion;
+  final List<String> signals;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(
+              label: Text(cryDetected ? 'Pláč detekován' : 'Pláč nepotvrzen'),
+            ),
+            Chip(
+              label: Text(
+                'Pravděpodobnost ${(cryProbability * 100).round()} %',
+              ),
+            ),
+            if (probableCause != null)
+              Chip(label: Text('Příčina: $probableCause')),
+            if (confidence != null)
+              Chip(
+                label: Text(
+                  '${confidenceLabel!} ${(confidence! * 100).round()} %',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text('Model: $modelVersion'),
+        if (signals.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'Hlavní signály',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: signals
+                .map(
+                  (signal) => Chip(
+                    label: Text(signal),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ],
     );
   }
 }

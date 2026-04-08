@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_services.dart';
+import '../predictions/prediction_model.dart';
 import 'recommendation_model.dart';
 
 class RecommendationsScreen extends StatefulWidget {
@@ -12,60 +14,74 @@ class RecommendationsScreen extends StatefulWidget {
 }
 
 class _RecommendationsScreenState extends State<RecommendationsScreen> {
-  late Future<List<Recommendation>> _futureRecommendations;
+  late Future<_RecommendationsData> _futureData;
 
   @override
   void initState() {
     super.initState();
-    _loadRecommendations();
+    _loadData();
   }
 
-  void _loadRecommendations() {
-    _futureRecommendations =
-        AppServices.recommendationService.getRecommendations();
+  void _loadData() {
+    _futureData = _fetchData();
+  }
+
+  Future<_RecommendationsData> _fetchData() async {
+    final recommendationsFuture = AppServices.recommendationService
+        .getRecommendations();
+    final predictionsFuture = AppServices.predictionService.getPredictions();
+
+    final recommendations = await recommendationsFuture;
+    final predictions = await predictionsFuture;
+
+    return _RecommendationsData(
+      recommendations: recommendations,
+      predictions: predictions,
+    );
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _loadRecommendations();
-    });
-    await _futureRecommendations;
+    setState(_loadData);
+    await _futureData;
   }
 
   Color _scoreColor(double score) {
-    if (score >= 0.8) return Colors.red;
-    if (score >= 0.5) return Colors.orange;
-    return Colors.blue;
+    if (score >= 0.8) return Colors.redAccent;
+    if (score >= 0.55) return Colors.orange;
+    return Colors.blueGrey;
   }
 
   String _scoreLabel(double score) {
     if (score >= 0.8) return 'Vysoká priorita';
-    if (score >= 0.5) return 'Střední priorita';
-    return 'Informace';
+    if (score >= 0.55) return 'Střední priorita';
+    return 'Nízká priorita';
   }
 
-  Color _withAlpha(Color color, double opacity) {
-    return Color.fromARGB(
-      (opacity * 255).round(),
-      (color.r * 255).round().clamp(0, 255),
-      (color.g * 255).round().clamp(0, 255),
-      (color.b * 255).round().clamp(0, 255),
-    );
+  String _timeLabel(DateTime? time) {
+    if (time == null) return 'Bez odhadu';
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _windowLabel(DateTime? time) {
+    if (time == null) return 'Později';
+
+    final minutes = time.difference(DateTime.now()).inMinutes;
+    if (minutes <= 15) return 'Teď';
+    if (minutes <= 60) return 'Do hodiny';
+    return 'Později';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Doporučení'),
-      ),
-      body: FutureBuilder<List<Recommendation>>(
-        future: _futureRecommendations,
+      appBar: AppBar(title: const Text('Asistent doporučení')),
+      body: FutureBuilder<_RecommendationsData>(
+        future: _futureData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -73,77 +89,41 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
                 children: [
                   const SizedBox(height: 120),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 56,
-                          color: Colors.redAccent,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Nepodařilo se načíst doporučení',
-                          style: Theme.of(context).textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${snapshot.error}',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _loadRecommendations();
-                            });
-                          },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Zkusit znovu'),
-                        ),
-                      ],
-                    ),
+                  const Icon(Icons.error_outline, size: 52),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Nepodařilo se načíst asistenta doporučení.',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 8),
+                  Text('${snapshot.error}', textAlign: TextAlign.center),
                 ],
               ),
             );
           }
 
-          final recommendations = snapshot.data ?? [];
+          final data = snapshot.data;
+          final recommendations =
+              data?.recommendations ?? const <Recommendation>[];
+          final predictions = data?.predictions ?? const <Prediction>[];
 
-          if (recommendations.isEmpty) {
+          if (recommendations.isEmpty && predictions.isEmpty) {
             return RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  const SizedBox(height: 140),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline,
-                          size: 56,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Zatím žádná doporučení',
-                          style: Theme.of(context).textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Jakmile přidáš více událostí do časové osy, začnou se zde zobrazovat doporučení.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                padding: const EdgeInsets.all(24),
+                children: const [
+                  SizedBox(height: 120),
+                  Icon(Icons.lightbulb_outline, size: 56),
+                  SizedBox(height: 12),
+                  Text(
+                    'Zatím nejsou k dispozici doporučení ani predikce.',
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -152,71 +132,157 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
           return RefreshIndicator(
             onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: recommendations.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final item = recommendations[index];
-                final color = _scoreColor(item.score);
-
-                return Card(
-                  elevation: 2,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: _withAlpha(color, 0.12),
-                              foregroundColor: color,
-                              child: const Icon(Icons.tips_and_updates_outlined),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                item.title,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
+                      children: const [
                         Text(
-                          item.description,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          'Co bude následovat a co udělat teď',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Chip(
-                              label: Text(_scoreLabel(item.score)),
-                              avatar: Icon(
-                                Icons.flag_outlined,
-                                size: 18,
-                                color: color,
-                              ),
-                            ),
-                            Chip(
-                              label: Text(
-                                'Skóre: ${item.score.toStringAsFixed(2)}',
-                              ),
-                            ),
-                          ],
+                        SizedBox(height: 6),
+                        Text(
+                          'Nejdříve odhady událostí, potom konkrétní kroky podle priority.',
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+                if (predictions.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _SectionTitle(title: 'Nejbližší odhady'),
+                  const SizedBox(height: 8),
+                  ...predictions
+                      .take(3)
+                      .map(
+                        (prediction) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _InfoCard(
+                            icon: Icons.schedule_outlined,
+                            title: prediction.title,
+                            subtitle:
+                                'Čas ${_timeLabel(prediction.predictedTime)} • jistota ${(prediction.confidence * 100).round()} %',
+                            badge: _windowLabel(prediction.predictedTime),
+                            color: Colors.teal,
+                          ),
+                        ),
+                      ),
+                ],
+                if (recommendations.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _SectionTitle(title: 'Doporučené kroky'),
+                  const SizedBox(height: 8),
+                  ...recommendations.map((item) {
+                    final color = _scoreColor(item.score);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _InfoCard(
+                        icon: Icons.tips_and_updates_outlined,
+                        title: item.title,
+                        subtitle: item.description,
+                        badge: _scoreLabel(item.score),
+                        color: color,
+                      ),
+                    );
+                  }),
+                ],
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _RecommendationsData {
+  const _RecommendationsData({
+    required this.recommendations,
+    required this.predictions,
+  });
+
+  final List<Recommendation> recommendations;
+  final List<Prediction> predictions;
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.badge,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String badge;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withValues(alpha: 0.12),
+              foregroundColor: color,
+              child: Icon(icon),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(subtitle),
+                  const SizedBox(height: 8),
+                  Chip(
+                    label: Text(badge),
+                    visualDensity: VisualDensity.compact,
+                    side: BorderSide.none,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

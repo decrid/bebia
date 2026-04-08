@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
+
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'diaper_model.dart';
 
 class DiaperFormScreen extends StatefulWidget {
-  const DiaperFormScreen({
-    super.key,
-    this.existingItem,
-  });
+  const DiaperFormScreen({super.key, this.existingItem});
 
   final TimelineItem? existingItem;
 
@@ -102,8 +100,8 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
     final diaperLabel = _type == 'wet'
         ? 'Mokrá'
         : _type == 'poop'
-            ? 'Stolice'
-            : 'Oboje';
+        ? 'Stolice'
+        : 'Oboje';
 
     final item = TimelineItem()
       ..id = widget.existingItem?.id ?? Isar.autoIncrement
@@ -133,9 +131,7 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -144,7 +140,14 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _FormIntroCard(
+                        title: _isEdit ? 'Upravit přebalení' : 'Nové přebalení',
+                        subtitle:
+                            'Vyber typ a případně doplň krátkou poznámku. Rychlé zapsání má přednost.',
+                      ),
+                      const SizedBox(height: 14),
                       Card(
                         child: ListTile(
                           title: const Text('Čas události'),
@@ -155,33 +158,41 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: _type,
-                        items: const [
-                          DropdownMenuItem(value: 'wet', child: Text('Mokrá')),
-                          DropdownMenuItem(
-                            value: 'poop',
-                            child: Text('Stolice'),
+                      const SizedBox(height: 14),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                            value: 'wet',
+                            icon: Icon(Icons.water_drop_outlined),
+                            label: Text('Mokrá'),
                           ),
-                          DropdownMenuItem(value: 'both', child: Text('Oboje')),
+                          ButtonSegment(
+                            value: 'poop',
+                            icon: Icon(Icons.circle_outlined),
+                            label: Text('Stolice'),
+                          ),
+                          ButtonSegment(
+                            value: 'both',
+                            icon: Icon(Icons.done_all),
+                            label: Text('Oboje'),
+                          ),
                         ],
-                        onChanged: (value) {
+                        selected: {_type},
+                        onSelectionChanged: (selection) {
                           setState(() {
-                            _type = value!;
+                            _type = selection.first;
                           });
                         },
-                        decoration: const InputDecoration(
-                          labelText: 'Typ přebalení',
-                          border: OutlineInputBorder(),
-                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: _noteController,
+                        minLines: 2,
+                        maxLines: 4,
                         decoration: const InputDecoration(
                           labelText: 'Poznámka',
-                          border: OutlineInputBorder(),
+                          hintText:
+                              'Např. zarudnutí nebo změna oproti běžnému stavu',
                         ),
                       ),
                     ],
@@ -202,6 +213,42 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FormIntroCard extends StatelessWidget {
+  const _FormIntroCard({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF7EE), Color(0xFFFFFFFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle),
+        ],
       ),
     );
   }

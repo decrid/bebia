@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 
@@ -141,99 +142,436 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _future = _loadStats();
+    });
+    await _future;
+  }
+
+  String _formatTime(TimelineItem? item) {
+    if (item == null) return '-';
+
+    final hour = item.time.hour.toString().padLeft(2, '0');
+    final minute = item.time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Statistiky')),
       body: FutureBuilder<_Stats>(
         future: _future,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 52),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Statistiky se nepodařilo načíst.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _refresh,
+                      child: const Text('Zkusit znovu'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final stats = snapshot.data!;
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _sectionTitle('Dnes'),
-              _statTile('Krmení', stats.feedingCount.toString()),
-              _statTile('Spánek', stats.sleepCount.toString()),
-              _statTile('Přebalení', stats.diaperCount.toString()),
-              _statTile('Pláč', stats.cryingCount.toString()),
-              const SizedBox(height: 16),
-              _sectionTitle('Souhrn'),
-              _statTile('Celkem ml', '${stats.totalMl} ml'),
-              _statTile('Spánek', '${stats.totalSleepMinutes} min'),
-              _statTile(
-                'Průměrná délka pláče',
-                stats.averageCryingDurationMinutes == null
-                    ? '-'
-                    : '${stats.averageCryingDurationMinutes} min',
+          if (stats.isEmptyDay) {
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.7,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dnes ještě není nic zapsané',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Začni jedním jednoduchým záznamem. Statistiky se budou doplňovat průběžně a bez zahlcení.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              _statTile(
-                'Uklidněné pláče',
-                stats.cryingResolvedCount.toString(),
-              ),
-              _statTile(
-                'Neuklidněné pláče',
-                stats.cryingUnresolvedCount.toString(),
-              ),
-              _statTile(
-                'Úspěšnost uklidnění',
-                stats.cryingResolvedRate == null
-                    ? '-'
-                    : '${stats.cryingResolvedRate} %',
-              ),
-              const SizedBox(height: 16),
-              _sectionTitle('Co pomáhalo uklidnit'),
-              _statTile('Krmení', stats.soothingFeedingCount.toString()),
-              _statTile('Houpání', stats.soothingRockingCount.toString()),
-              _statTile('Nošení', stats.soothingCarryingCount.toString()),
-              _statTile('Dudlík', stats.soothingPacifierCount.toString()),
-              _statTile('Jiné', stats.soothingOtherCount.toString()),
-              const SizedBox(height: 16),
-              _sectionTitle('Poslední události'),
-              _lastItem('Krmení', stats.lastFeeding),
-              _lastItem('Spánek', stats.lastSleep),
-              _lastItem('Přebalení', stats.lastDiaper),
-              _lastItem('Pláč', stats.lastCrying),
-            ],
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFD8F2EF), Color(0xFFF6FBF9)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dnešní rytmus',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Rychlý přehled bez zbytečných detailů. Když potřebuješ, níž najdeš i souhrn pláče a poslední události.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 18),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _HighlightChip(
+                            label: 'Krmení',
+                            value: stats.feedingCount.toString(),
+                          ),
+                          _HighlightChip(
+                            label: 'Spánek',
+                            value: stats.sleepCount.toString(),
+                          ),
+                          _HighlightChip(
+                            label: 'Přebalení',
+                            value: stats.diaperCount.toString(),
+                          ),
+                          _HighlightChip(
+                            label: 'Pláč',
+                            value: stats.cryingCount.toString(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _SectionTitle(
+                  title: 'Dnes',
+                  subtitle: 'To nejdůležitější na první pohled.',
+                ),
+                const SizedBox(height: 10),
+                GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.15,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _MetricCard(
+                      label: 'Celkem ml',
+                      value: '${stats.totalMl}',
+                      suffix: 'ml',
+                      icon: Icons.local_drink_outlined,
+                    ),
+                    _MetricCard(
+                      label: 'Spánek',
+                      value: '${stats.totalSleepMinutes}',
+                      suffix: 'min',
+                      icon: Icons.bedtime_outlined,
+                    ),
+                    _MetricCard(
+                      label: 'Průměr pláče',
+                      value:
+                          stats.averageCryingDurationMinutes?.toString() ?? '-',
+                      suffix: stats.averageCryingDurationMinutes == null
+                          ? ''
+                          : 'min',
+                      icon: Icons.campaign_outlined,
+                    ),
+                    _MetricCard(
+                      label: 'Uklidnění',
+                      value: stats.cryingResolvedRate?.toString() ?? '-',
+                      suffix: stats.cryingResolvedRate == null ? '' : '%',
+                      icon: Icons.favorite_border,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _SectionTitle(
+                  title: 'Co dnes pomáhalo',
+                  subtitle: 'Jen metody, které se objevily v záznamech pláče.',
+                ),
+                const SizedBox(height: 10),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (stats.soothingFeedingCount > 0)
+                          _CalmChip(
+                            label: 'Krmení',
+                            count: stats.soothingFeedingCount,
+                          ),
+                        if (stats.soothingRockingCount > 0)
+                          _CalmChip(
+                            label: 'Houpání',
+                            count: stats.soothingRockingCount,
+                          ),
+                        if (stats.soothingCarryingCount > 0)
+                          _CalmChip(
+                            label: 'Nošení',
+                            count: stats.soothingCarryingCount,
+                          ),
+                        if (stats.soothingPacifierCount > 0)
+                          _CalmChip(
+                            label: 'Dudlík',
+                            count: stats.soothingPacifierCount,
+                          ),
+                        if (stats.soothingOtherCount > 0)
+                          _CalmChip(
+                            label: 'Jiné',
+                            count: stats.soothingOtherCount,
+                          ),
+                        if (stats.soothingFeedingCount == 0 &&
+                            stats.soothingRockingCount == 0 &&
+                            stats.soothingCarryingCount == 0 &&
+                            stats.soothingPacifierCount == 0 &&
+                            stats.soothingOtherCount == 0)
+                          const Text(
+                            'Zatím nejsou k dispozici data o uklidnění.',
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _SectionTitle(
+                  title: 'Poslední události',
+                  subtitle: 'Užitečné, když se chceš rychle zorientovat.',
+                ),
+                const SizedBox(height: 10),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      children: [
+                        _LastEventTile(
+                          label: 'Krmení',
+                          time: _formatTime(stats.lastFeeding),
+                        ),
+                        _LastEventTile(
+                          label: 'Spánek',
+                          time: _formatTime(stats.lastSleep),
+                        ),
+                        _LastEventTile(
+                          label: 'Přebalení',
+                          time: _formatTime(stats.lastDiaper),
+                        ),
+                        _LastEventTile(
+                          label: 'Pláč',
+                          time: _formatTime(stats.lastCrying),
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
     );
   }
+}
 
-  Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-      ),
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+      ],
     );
   }
+}
 
-  Widget _statTile(String title, String value) {
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.suffix,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final String suffix;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Card(
-      child: ListTile(
-        title: Text(title),
-        trailing: Text(value),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              backgroundColor: colorScheme.primaryContainer,
+              foregroundColor: colorScheme.onPrimaryContainer,
+              child: Icon(icon),
+            ),
+            const Spacer(),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 6),
+            RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+                children: [
+                  TextSpan(text: value),
+                  if (suffix.isNotEmpty)
+                    TextSpan(
+                      text: ' $suffix',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _lastItem(String label, TimelineItem? item) {
-    if (item == null) {
-      return _statTile(label, '-');
-    }
+class _HighlightChip extends StatelessWidget {
+  const _HighlightChip({required this.label, required this.value});
 
-    final time =
-        '${item.time.hour.toString().padLeft(2, '0')}:${item.time.minute.toString().padLeft(2, '0')}';
+  final String label;
+  final String value;
 
-    return _statTile(label, time);
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Text(
+        '$label $value',
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _CalmChip extends StatelessWidget {
+  const _CalmChip({required this.label, required this.count});
+
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(label: Text('$label $count×'));
+  }
+}
+
+class _LastEventTile extends StatelessWidget {
+  const _LastEventTile({
+    required this.label,
+    required this.time,
+    this.isLast = false,
+  });
+
+  final String label;
+  final String time;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+      ),
+      child: ListTile(
+        dense: true,
+        title: Text(label),
+        trailing: Text(
+          time,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
   }
 }
 
@@ -282,4 +620,10 @@ class _Stats {
     required this.soothingPacifierCount,
     required this.soothingOtherCount,
   });
+
+  bool get isEmptyDay =>
+      feedingCount == 0 &&
+      sleepCount == 0 &&
+      diaperCount == 0 &&
+      cryingCount == 0;
 }

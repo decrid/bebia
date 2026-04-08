@@ -28,10 +28,7 @@ class RecommendationService {
     return recommendations.take(3).toList();
   }
 
-  _RecommendationContext _buildContext(
-    List<TimelineItem> items,
-    DateTime now,
-  ) {
+  _RecommendationContext _buildContext(List<TimelineItem> items, DateTime now) {
     final recentCryings = _insights.getRecentEventsByType(
       items,
       EventType.crying,
@@ -255,9 +252,7 @@ class RecommendationService {
     );
   }
 
-  Recommendation? _buildSoothingRecommendation(
-    _RecommendationContext context,
-  ) {
+  Recommendation? _buildSoothingRecommendation(_RecommendationContext context) {
     double score = 0.0;
     final reasons = <String>[];
 
@@ -382,13 +377,11 @@ class _RecommendationContext {
     return duration != null && duration >= 10;
   });
 
-  bool get hasUnresolvedRecentCrying => recentCryings.any(
-        (item) => item.cryingResolved == false,
-      );
+  bool get hasUnresolvedRecentCrying =>
+      recentCryings.any((item) => item.cryingResolved == false);
 
-  int get fullyResolvedRecentCryingsCount => recentCryingHistory
-      .where((item) => item.cryingResolved == true)
-      .length;
+  int get fullyResolvedRecentCryingsCount =>
+      recentCryingHistory.where((item) => item.cryingResolved == true).length;
 
   bool get lastCryingUsedFeedingAndResolved {
     if (recentCryingHistory.isEmpty) return false;

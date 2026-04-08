@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
+
 import '../../core/app_services.dart';
 import '../timeline/timeline_item.dart';
 import 'sleep_model.dart';
 
 class SleepFormScreen extends StatefulWidget {
-  const SleepFormScreen({
-    super.key,
-    this.existingItem,
-  });
+  const SleepFormScreen({super.key, this.existingItem});
 
   final TimelineItem? existingItem;
 
@@ -159,7 +157,9 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
       note: note,
     );
 
-    final durationMinutes = record.endTime.difference(record.startTime).inMinutes;
+    final durationMinutes = record.endTime
+        .difference(record.startTime)
+        .inMinutes;
 
     final item = TimelineItem()
       ..id = widget.existingItem?.id ?? Isar.autoIncrement
@@ -191,9 +191,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Upravit spánek' : 'Spánek'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Upravit spánek' : 'Spánek')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -202,7 +200,14 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _FormIntroCard(
+                        title: _isEdit ? 'Upravit spánek' : 'Nový spánek',
+                        subtitle:
+                            'Stačí zapsat začátek a konec. Délka se dopočítá automaticky.',
+                      ),
+                      const SizedBox(height: 14),
                       Card(
                         child: ListTile(
                           title: const Text('Začátek spánku'),
@@ -231,12 +236,14 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
                           subtitle: Text(_formatDuration(_durationMinutes)),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: _noteController,
+                        minLines: 2,
+                        maxLines: 4,
                         decoration: const InputDecoration(
                           labelText: 'Poznámka',
-                          border: OutlineInputBorder(),
+                          hintText: 'Např. usnul rychle nebo se budil',
                         ),
                       ),
                     ],
@@ -257,6 +264,42 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FormIntroCard extends StatelessWidget {
+  const _FormIntroCard({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF3F7FF), Color(0xFFFFFFFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle),
+        ],
       ),
     );
   }

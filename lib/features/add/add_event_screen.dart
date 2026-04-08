@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
+import '../crying/crying_form_screen.dart';
+import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../sleep/sleep_form_screen.dart';
-import '../diaper/diaper_form_screen.dart';
-import '../crying/crying_form_screen.dart';
 
 class AddEventScreen extends StatelessWidget {
   static const routeName = '/add';
@@ -12,7 +13,7 @@ class AddEventScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(title: const Text('Přidat záznam')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -21,13 +22,11 @@ class AddEventScreen extends StatelessWidget {
               title: 'Krmení',
               icon: Icons.local_drink_outlined,
               onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FeedingFormScreen(),
-                    ),
-                  );
-                },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FeedingFormScreen()),
+                );
+              },
             ),
             const SizedBox(height: 12),
             _AddEventButton(
@@ -36,9 +35,7 @@ class AddEventScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const SleepFormScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const SleepFormScreen()),
                 );
               },
             ),
@@ -49,9 +46,7 @@ class AddEventScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const DiaperFormScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const DiaperFormScreen()),
                 );
               },
             ),
@@ -62,9 +57,7 @@ class AddEventScreen extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const CryingFormScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CryingFormScreen()),
                 );
               },
             ),
@@ -76,15 +69,15 @@ class AddEventScreen extends StatelessWidget {
 }
 
 class _AddEventButton extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-
   const _AddEventButton({
     required this.title,
     required this.icon,
     required this.onTap,
   });
+
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +85,7 @@ class _AddEventButton extends StatelessWidget {
       width: double.infinity,
       child: Card(
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(20),

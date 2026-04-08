@@ -51,9 +51,7 @@ class CryingAiService {
     double tiredScore = 0;
     double diaperScore = 0;
 
-    final signals = <String>[
-      ...audioDetection.signals,
-    ];
+    final signals = <String>[...audioDetection.signals];
 
     if (lastFeeding != null) {
       final diff = referenceTime.difference(lastFeeding.time).inMinutes;
@@ -106,8 +104,7 @@ class CryingAiService {
     if (feedingSoothingCount >= 2) {
       hungerScore += 0.20;
       signals.add('krmení opakovaně pomohlo uklidnit');
-    } else if (
-        cryingItem.soothingMethod == 'feeding' &&
+    } else if (cryingItem.soothingMethod == 'feeding' &&
         (cryingItem.cryingResolved ?? false)) {
       hungerScore += 0.10;
       signals.add('krmení pomohlo při tomto pláči');
@@ -123,8 +120,7 @@ class CryingAiService {
 
     if (soothingResponsiveCount >= 2) {
       signals.add('dítě reaguje na houpání nebo nošení');
-    } else if (
-        (cryingItem.soothingMethod == 'rocking' ||
+    } else if ((cryingItem.soothingMethod == 'rocking' ||
             cryingItem.soothingMethod == 'carrying') &&
         (cryingItem.cryingResolved ?? false)) {
       signals.add('pomohlo houpání nebo nošení');

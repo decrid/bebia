@@ -84,8 +84,7 @@ class CryingAnalysisService {
     if (feedingSoothingCount >= 2) {
       hungerScore += 0.20;
       signals.add('krmení opakovaně pomohlo uklidnit');
-    } else if (
-        lastCrying.soothingMethod == 'feeding' &&
+    } else if (lastCrying.soothingMethod == 'feeding' &&
         (lastCrying.cryingResolved ?? false)) {
       hungerScore += 0.10;
       signals.add('krmení pomohlo při posledním pláči');
@@ -101,8 +100,7 @@ class CryingAnalysisService {
 
     if (soothingResponsiveCount >= 2) {
       signals.add('dítě reaguje na houpání nebo nošení');
-    } else if (
-        (lastCrying.soothingMethod == 'rocking' ||
+    } else if ((lastCrying.soothingMethod == 'rocking' ||
             lastCrying.soothingMethod == 'carrying') &&
         (lastCrying.cryingResolved ?? false)) {
       signals.add('posledně pomohlo houpání nebo nošení');
@@ -146,10 +144,56 @@ class CryingAnalysisService {
       signals.add('pláč se v poslední době dařilo uklidnit');
     }
 
+    final nextStep = _buildNextStep(best.key);
+
     return CryingAnalysisResult(
       probableCause: best.key,
       confidence: confidence.clamp(0.0, 1.0),
       signals: signals,
+      nextStepType: nextStep.type,
+      nextStepTitle: nextStep.title,
+      nextStepDescription: nextStep.description,
     );
   }
+
+  _CryingNextStep _buildNextStep(String probableCause) {
+    switch (probableCause) {
+      case 'hunger':
+        return const _CryingNextStep(
+          type: CryingNextStepType.feeding,
+          title: 'Zkusit krmení',
+          description: 'Nabídni mléko nebo rovnou zapiš krmení.',
+        );
+      case 'tired':
+        return const _CryingNextStep(
+          type: CryingNextStepType.sleep,
+          title: 'Připravit spánek',
+          description: 'Zkus klidné prostředí a jemné uspávání.',
+        );
+      case 'discomfort':
+        return const _CryingNextStep(
+          type: CryingNextStepType.diaper,
+          title: 'Zkontrolovat plenku',
+          description: 'Ověř komfort a případně proveď přebalení.',
+        );
+      default:
+        return const _CryingNextStep(
+          type: CryingNextStepType.soothing,
+          title: 'Uklidnění a kontakt',
+          description: 'Zkus chování, nošení nebo jemné houpání.',
+        );
+    }
+  }
+}
+
+class _CryingNextStep {
+  const _CryingNextStep({
+    required this.type,
+    required this.title,
+    required this.description,
+  });
+
+  final CryingNextStepType type;
+  final String title;
+  final String description;
 }
