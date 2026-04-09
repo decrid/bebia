@@ -20,7 +20,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void initState() {
     super.initState();
-    AppServices.timelineController.load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      AppServices.timelineController.load();
+    });
   }
 
   Future<void> _openEditForm(TimelineItem item) async {

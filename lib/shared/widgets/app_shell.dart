@@ -55,9 +55,9 @@ class _AppShellState extends State<AppShell> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openQuickAddSheet,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Přidat záznam'),
+        label: const Text('Přidat událost'),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
@@ -112,67 +112,71 @@ class _QuickAddSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 5,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(999),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12, 0, 12, 12 + bottomInset),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
-              ),
-              Text(
-                'Co chceš zapsat?',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Vyber jen jednu událost. Zbytek můžeš doplnit později.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 18),
-              _QuickAddTile(
-                icon: Icons.local_drink_outlined,
-                title: 'Krmení',
-                subtitle: 'čas, typ a případně množství',
-                onTap: () => _open(context, const FeedingFormScreen()),
-              ),
-              const SizedBox(height: 10),
-              _QuickAddTile(
-                icon: Icons.bedtime_outlined,
-                title: 'Spánek',
-                subtitle: 'začátek, konec a délka',
-                onTap: () => _open(context, const SleepFormScreen()),
-              ),
-              const SizedBox(height: 10),
-              _QuickAddTile(
-                icon: Icons.baby_changing_station_outlined,
-                title: 'Přebalení',
-                subtitle: 'rychlý záznam bez zbytečných kroků',
-                onTap: () => _open(context, const DiaperFormScreen()),
-              ),
-              const SizedBox(height: 10),
-              _QuickAddTile(
-                icon: Icons.campaign_outlined,
-                title: 'Pláč',
-                subtitle: 'včetně audio vzorku a AI analýzy',
-                onTap: () => _open(context, const CryingFormScreen()),
-              ),
-            ],
+                Text(
+                  'Co chceš zapsat?',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Vyber jen jednu událost. Zbytek můžeš doplnit později.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 18),
+                _QuickAddTile(
+                  icon: Icons.local_drink_outlined,
+                  title: 'Krmení',
+                  subtitle: 'čas, typ a případně množství',
+                  onTap: () => _open(context, const FeedingFormScreen()),
+                ),
+                const SizedBox(height: 10),
+                _QuickAddTile(
+                  icon: Icons.bedtime_outlined,
+                  title: 'Spánek',
+                  subtitle: 'začátek, konec a délka',
+                  onTap: () => _open(context, const SleepFormScreen()),
+                ),
+                const SizedBox(height: 10),
+                _QuickAddTile(
+                  icon: Icons.baby_changing_station_outlined,
+                  title: 'Přebalení',
+                  subtitle: 'rychlý záznam bez zbytečných kroků',
+                  onTap: () => _open(context, const DiaperFormScreen()),
+                ),
+                const SizedBox(height: 10),
+                _QuickAddTile(
+                  icon: Icons.campaign_outlined,
+                  title: 'Pláč',
+                  subtitle: 'včetně audio vzorku a AI analýzy',
+                  onTap: () => _open(context, const CryingFormScreen()),
+                ),
+              ],
+            ),
           ),
         ),
       ),

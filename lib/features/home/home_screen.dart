@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../crying/crying_analysis_result.dart';
-import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../predictions/prediction_model.dart';
@@ -245,60 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFD7F1ED), Color(0xFFF6FBF8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Klidný přehled dne',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Nejdřív uvidíš to důležité. Detailnější doporučení a historii máš hned níž.',
-                  ),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      _QuickActionPill(
-                        label: 'Krmení',
-                        icon: Icons.local_drink_outlined,
-                        onTap: () => _openForm(const FeedingFormScreen()),
-                      ),
-                      _QuickActionPill(
-                        label: 'Spánek',
-                        icon: Icons.bedtime_outlined,
-                        onTap: () => _openForm(const SleepFormScreen()),
-                      ),
-                      _QuickActionPill(
-                        label: 'Přebalení',
-                        icon: Icons.baby_changing_station_outlined,
-                        onTap: () => _openForm(const DiaperFormScreen()),
-                      ),
-                      _QuickActionPill(
-                        label: 'Pláč',
-                        icon: Icons.campaign_outlined,
-                        onTap: () => _openForm(const CryingFormScreen()),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             const _SectionHeader(
               title: 'Co je teď důležité',
               subtitle: 'AI pohled na poslední pláč a nejbližší očekávání.',
@@ -745,41 +691,6 @@ class _AssistantAgendaCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Chip(visualDensity: VisualDensity.compact, label: Text(item.badge)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionPill extends StatelessWidget {
-  const _QuickActionPill({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
           ],
         ),
       ),
