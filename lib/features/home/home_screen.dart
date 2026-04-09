@@ -5,6 +5,8 @@ import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../predictions/prediction_model.dart';
+import '../profile/child_profile.dart';
+import '../profile/child_profile_screen.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
@@ -22,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Recommendation>> _futureRecommendations;
   late Future<CryingAnalysisResult?> _futureCryingAnalysis;
   late Future<List<Prediction>> _futurePredictions;
+  bool _didOfferProfileCreation = false;
 
   @override
   void initState() {
@@ -29,6 +32,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecommendations();
     _loadCryingAnalysis();
     _loadPredictions();
+    AppServices.childProfileController.activeProfileId.addListener(
+      _handleChildProfileChanged,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeOfferProfileCreation();
+    });
+  }
+
+  @override
+  void dispose() {
+    AppServices.childProfileController.activeProfileId.removeListener(
+      _handleChildProfileChanged,
+    );
+    super.dispose();
   }
 
   void _loadRecommendations() {
@@ -57,6 +74,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _futureCryingAnalysis,
       _futurePredictions,
     ]);
+  }
+
+  void _handleChildProfileChanged() {
+    if (!mounted) return;
+    _refresh();
   }
 
   Future<void> _openForm(Widget screen) async {
@@ -153,21 +175,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _openChildProfile() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChildProfileScreen()),
+    );
+
+    if (!mounted) return;
+    await _refresh();
+  }
+
+  Future<void> _maybeOfferProfileCreation() async {
+    if (_didOfferProfileCreation || !mounted) return;
+    if (AppServices.childProfileController.hasProfiles) return;
+
+    _didOfferProfileCreation = true;
+
+    final createProfile = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vytvořit profil dítěte?'),
+        content: const Text(
+          'Když profil vytvoříš teď, nové události se budou ukládat rovnou k tomuto dítěti.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Teď ne'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Vytvořit profil'),
+          ),
+        ],
+      ),
+    );
+
+    if (createProfile == true && mounted) {
+      await _openChildProfile();
+    }
+  }
+
+  String _ageLabel(DateTime dateOfBirth) {
+    final now = DateTime.now();
+    int months =
+        (now.year - dateOfBirth.year) * 12 + now.month - dateOfBirth.month;
+    if (now.day < dateOfBirth.day) {
+      months -= 1;
+    }
+
+    if (months <= 0) {
+      final days = now.difference(dateOfBirth).inDays.clamp(0, 31);
+      return '$days dní';
+    }
+
+    final years = months ~/ 12;
+    final remainingMonths = months % 12;
+
+    if (years == 0) {
+      return '$months měs.';
+    }
+
+    if (remainingMonths == 0) {
+      return '$years r.';
+    }
+
+    return '$years r. $remainingMonths měs.';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final profile = AppServices.childProfileController.activeProfile;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Bebia')),
+      appBar: AppBar(
+        title: const Text('Bebia'),
+        actions: [
+          IconButton(
+            tooltip: 'Profil dítěte',
+            onPressed: _openChildProfile,
+            icon: const Icon(Icons.child_care_outlined),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
           children: [
-            const SizedBox(height: 12),
-            const _SectionHeader(
+            _HeroPanel(
+              eyebrow: profile == null ? 'Dnes' : profile.name,
               title: 'Co je teď důležité',
-              subtitle: 'AI pohled na poslední pláč a nejbližší očekávání.',
+              subtitle: _heroSubtitle(profile),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             FutureBuilder<CryingAnalysisResult?>(
               future: _futureCryingAnalysis,
               builder: (context, snapshot) {
@@ -193,13 +294,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 final analysis = snapshot.data;
                 if (analysis == null) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(18),
-                      child: Text(
-                        'Jakmile přidáš záznam pláče, zobrazí se tady stručný AI souhrn.',
-                      ),
-                    ),
+                  return const _EmptyInsightCard(
+                    text:
+                        'Jakmile přidáš záznam pláče, zobrazí se tady AI souhrn.',
                   );
                 }
 
@@ -218,6 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CircleAvatar(
+                              radius: 25,
                               backgroundColor: confidenceColor.withValues(
                                 alpha: 0.14,
                               ),
@@ -232,7 +330,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text(
                                     'Pravděpodobná příčina: ${_cryingCauseLabel(analysis.probableCause)}',
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 16,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -251,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 16),
                           const Text(
                             'Rozhodující signály',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
                           _buildSignalChips(analysis.signals.take(4).toList()),
@@ -259,13 +358,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(18),
                             color: Theme.of(context)
                                 .colorScheme
                                 .primaryContainer
-                                .withValues(alpha: 0.4),
+                                .withValues(alpha: 0.42),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,12 +372,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               Text(
                                 analysis.nextStepTitle,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(analysis.nextStepDescription),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 12),
                               Align(
                                 alignment: Alignment.centerLeft,
                                 child: FilledButton.tonalIcon(
@@ -297,14 +396,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 const Expanded(
                   child: _SectionHeader(
                     title: 'Asistent dne',
-                    subtitle: 'Krátké kroky, které mají teď největší smysl.',
+                    subtitle: 'Doporučení a nejbližší odhady pro dnešek.',
                   ),
                 ),
                 TextButton(
@@ -374,6 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           badge: _predictionWindowLabel(
                             prediction.predictedTime,
                           ),
+                          tint: const Color(0xFFE6F7F4),
                         ),
                       ),
                       ...recommendations.map(
@@ -384,34 +485,41 @@ class _HomeScreenState extends State<HomeScreen> {
                           badge: _recommendationPriorityLabel(
                             recommendation.score,
                           ),
+                          tint: const Color(0xFFFFF3E7),
                         ),
                       ),
                     ];
 
                     if (items.isEmpty) {
-                      return const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(18),
-                          child: Text(
-                            'Zatím nejsou k dispozici žádné kroky asistenta.',
-                          ),
-                        ),
+                      return const _EmptyInsightCard(
+                        text: 'Zatím nejsou k dispozici žádné kroky asistenta.',
                       );
                     }
 
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          children: items
-                              .map(
-                                (item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: _AssistantAgendaCard(item: item),
-                                ),
-                              )
-                              .toList(),
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF5FBFA), Colors.white],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outlineVariant.withValues(alpha: 0.16),
+                        ),
+                      ),
+                      child: Column(
+                        children: items
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _AssistantAgendaCard(item: item),
+                              ),
+                            )
+                            .toList(),
                       ),
                     );
                   },
@@ -421,6 +529,75 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  String _heroSubtitle(ChildProfile? profile) {
+    if (profile == null) {
+      return 'AI pohled na poslední pláč a nejbližší očekávání.';
+    }
+
+    return 'Věk ${_ageLabel(profile.dateOfBirth)} • aktivní profil dítěte.';
+  }
+}
+
+class _HeroPanel extends StatelessWidget {
+  const _HeroPanel({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFDFF6F3), Color(0xFFFAFBF8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyInsightCard extends StatelessWidget {
+  const _EmptyInsightCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(padding: const EdgeInsets.all(18), child: Text(text)),
     );
   }
 }
@@ -440,7 +617,7 @@ class _SectionHeader extends StatelessWidget {
           title,
           style: Theme.of(
             context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
@@ -455,12 +632,14 @@ class _AssistantAgendaItem {
     required this.title,
     required this.subtitle,
     required this.badge,
+    required this.tint,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final String badge;
+  final Color tint;
 }
 
 class _AssistantAgendaCard extends StatelessWidget {
@@ -474,17 +653,20 @@ class _AssistantAgendaCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(22),
+        color: Colors.white,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.16),
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              backgroundColor: colorScheme.primaryContainer,
-              foregroundColor: colorScheme.onPrimaryContainer,
+              backgroundColor: item.tint,
+              foregroundColor: colorScheme.primary,
               child: Icon(item.icon),
             ),
             const SizedBox(width: 12),
@@ -494,7 +676,7 @@ class _AssistantAgendaCard extends StatelessWidget {
                 children: [
                   Text(
                     item.title,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 4),
                   Text(item.subtitle),
@@ -502,7 +684,20 @@ class _AssistantAgendaCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Chip(visualDensity: VisualDensity.compact, label: Text(item.badge)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: const Color(0xFFF8F7F2),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.16),
+                ),
+              ),
+              child: Text(
+                item.badge,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
       ),

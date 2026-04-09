@@ -1,4 +1,8 @@
 import 'audio_capture_service.dart';
+import '../data/local/child_profile_store.dart';
+import '../data/local/event_assignment_store.dart';
+import '../data/repositories/child_profile_repository.dart';
+import '../data/repositories/event_assignment_repository.dart';
 import '../data/repositories/timeline_repository.dart';
 import '../features/crying/audio_preprocessing_service.dart';
 import '../features/crying/crying_ai_service.dart';
@@ -8,11 +12,21 @@ import '../features/crying/real_cry_detection_service.dart';
 import '../features/intelligence/infant_insights_service.dart';
 import '../features/predictions/prediction_service.dart';
 import '../features/predictions/rhythm_profile_service.dart';
+import '../features/profile/child_profile_controller.dart';
 import '../features/recommendations/recommendation_service.dart';
 import '../features/timeline/timeline_controller.dart';
 
 class AppServices {
-  static final TimelineRepository timelineRepository = TimelineRepository();
+  static final ChildProfileRepository childProfileRepository =
+      ChildProfileRepository(ChildProfileStore());
+  static final EventAssignmentRepository eventAssignmentRepository =
+      EventAssignmentRepository(EventAssignmentStore());
+  static final TimelineRepository timelineRepository = TimelineRepository(
+    eventAssignmentRepository,
+  );
+
+  static final ChildProfileController childProfileController =
+      ChildProfileController(childProfileRepository, timelineRepository);
 
   static final InfantInsightsService infantInsightsService =
       InfantInsightsService();
@@ -23,9 +37,7 @@ class AppServices {
       const AudioPreprocessingService();
 
   static final MockCryDetectionService mockCryDetectionService =
-      MockCryDetectionService(
-        audioPreprocessingService,
-      );
+      MockCryDetectionService(audioPreprocessingService);
 
   static final RealCryDetectionService realCryDetectionService =
       RealCryDetectionService(
@@ -33,35 +45,41 @@ class AppServices {
         audioPreprocessingService,
       );
 
-  static final TimelineController timelineController =
-      TimelineController(timelineRepository);
+  static final TimelineController timelineController = TimelineController(
+    timelineRepository,
+    childProfileController,
+  );
 
   static final RecommendationService recommendationService =
       RecommendationService(
         timelineRepository,
         infantInsightsService,
+        childProfileController,
       );
 
   static final CryingAnalysisService cryingAnalysisService =
       CryingAnalysisService(
         timelineRepository,
         infantInsightsService,
+        childProfileController,
       );
 
   static final CryingAiService cryingAiService = CryingAiService(
     timelineRepository,
     realCryDetectionService,
+    childProfileController,
   );
 
-  static final RhythmProfileService rhythmProfileService =
-      RhythmProfileService(
-        timelineRepository,
-        infantInsightsService,
-      );
+  static final RhythmProfileService rhythmProfileService = RhythmProfileService(
+    timelineRepository,
+    infantInsightsService,
+    childProfileController,
+  );
 
   static final PredictionService predictionService = PredictionService(
     timelineRepository,
     rhythmProfileService,
     infantInsightsService,
+    childProfileController,
   );
 }

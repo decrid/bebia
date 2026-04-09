@@ -12,7 +12,7 @@ class BebiaApp extends StatelessWidget {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF0F8B8D),
       brightness: Brightness.light,
-      surface: const Color(0xFFF8FAF8),
+      surface: const Color(0xFFFCFCFA),
     );
 
     return MaterialApp(
@@ -21,7 +21,7 @@ class BebiaApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xFFF4F7F4),
+        scaffoldBackgroundColor: const Color(0xFFF7F6F2),
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.transparent,
           foregroundColor: colorScheme.onSurface,
@@ -29,30 +29,32 @@ class BebiaApp extends StatelessWidget {
           centerTitle: false,
           titleTextStyle: TextStyle(
             color: colorScheme.onSurface,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
           ),
         ),
         cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
+          surfaceTintColor: Colors.transparent,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
             side: BorderSide(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+              color: colorScheme.outlineVariant.withValues(alpha: 0.22),
             ),
           ),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
-          indicatorColor: colorScheme.primaryContainer,
-          height: 72,
+          indicatorColor: colorScheme.primaryContainer.withValues(alpha: 0.9),
+          height: 68,
+          surfaceTintColor: Colors.transparent,
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             final selected = states.contains(WidgetState.selected);
             return TextStyle(
               fontSize: 12,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
             );
           }),
         ),
@@ -61,12 +63,13 @@ class BebiaApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.22),
           ),
           backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           labelStyle: TextStyle(
             color: colorScheme.onSurface,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -89,6 +92,19 @@ class BebiaApp extends StatelessWidget {
             borderSide: BorderSide(color: colorScheme.primary, width: 1.4),
           ),
         ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          elevation: 0,
+          highlightElevation: 0,
+          backgroundColor: const Color(0xFF88ECEC),
+          foregroundColor: const Color(0xFF143B3C),
+          extendedTextStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             elevation: 0,
@@ -104,6 +120,10 @@ class BebiaApp extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
         ),
       ),
       home: homeOverride ?? const AppShell(),

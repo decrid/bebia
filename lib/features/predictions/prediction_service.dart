@@ -1,5 +1,6 @@
 import '../../data/repositories/timeline_repository.dart';
 import '../intelligence/infant_insights_service.dart';
+import '../profile/child_profile_controller.dart';
 import '../timeline/timeline_item.dart';
 import 'prediction_model.dart';
 import 'rhythm_profile_service.dart';
@@ -9,14 +10,18 @@ class PredictionService {
     this._repository,
     this._rhythmProfileService,
     this._insights,
+    this._childProfileController,
   );
 
   final TimelineRepository _repository;
   final RhythmProfileService _rhythmProfileService;
   final InfantInsightsService _insights;
+  final ChildProfileController _childProfileController;
 
   Future<List<Prediction>> getPredictions() async {
-    final items = await _repository.getAll();
+    final items = await _repository.getAll(
+      childId: _childProfileController.activeProfileId.value,
+    );
 
     if (items.isEmpty) return [];
 

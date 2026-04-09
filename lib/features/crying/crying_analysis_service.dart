@@ -1,16 +1,24 @@
 import '../../data/repositories/timeline_repository.dart';
 import '../intelligence/infant_insights_service.dart';
+import '../profile/child_profile_controller.dart';
 import '../timeline/timeline_item.dart';
 import 'crying_analysis_result.dart';
 
 class CryingAnalysisService {
-  CryingAnalysisService(this._repository, this._insights);
+  CryingAnalysisService(
+    this._repository,
+    this._insights,
+    this._childProfileController,
+  );
 
   final TimelineRepository _repository;
   final InfantInsightsService _insights;
+  final ChildProfileController _childProfileController;
 
   Future<CryingAnalysisResult?> analyzeLatestCrying() async {
-    final items = await _repository.getAll();
+    final items = await _repository.getAll(
+      childId: _childProfileController.activeProfileId.value,
+    );
 
     final lastCrying = _insights.getLastByType(items, EventType.crying);
     final lastFeeding = _insights.getLastByType(items, EventType.feeding);

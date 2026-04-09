@@ -313,12 +313,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Jemný denní přehled',
+                    'Denní přehled',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Klepnutím záznam upravíš. U pláče uvidíš přímo i stručný AI kontext.',
+                    'Klepnutím záznam upravíš. U pláče uvidíš i AI kontext.',
                   ),
                 ],
               ),

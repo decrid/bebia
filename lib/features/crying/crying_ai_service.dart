@@ -1,19 +1,27 @@
 import '../../data/repositories/timeline_repository.dart';
+import '../profile/child_profile_controller.dart';
 import '../timeline/timeline_item.dart';
 import 'ai_crying_analysis_result.dart';
 import 'cry_detection_service.dart';
 
 class CryingAiService {
-  CryingAiService(this._repository, this._cryDetectionService);
+  CryingAiService(
+    this._repository,
+    this._cryDetectionService,
+    this._childProfileController,
+  );
 
   final TimelineRepository _repository;
   final CryDetectionService _cryDetectionService;
+  final ChildProfileController _childProfileController;
 
   Future<AiCryingAnalysisResult> analyzeCryingItem(
     TimelineItem cryingItem,
   ) async {
     final audioDetection = await _cryDetectionService.detect(cryingItem);
-    final items = await _repository.getAll();
+    final items = await _repository.getAll(
+      childId: _childProfileController.activeProfileId.value,
+    );
 
     final mergedItems = <TimelineItem>[
       cryingItem,
@@ -123,15 +131,11 @@ class CryingAiService {
     } else if ((cryingItem.soothingMethod == 'rocking' ||
             cryingItem.soothingMethod == 'carrying') &&
         (cryingItem.cryingResolved ?? false)) {
-      signals.add('pomohlo houpání nebo nošení');
+      signals.add('houpání nebo nošení pomohlo při tomto pláči');
     }
 
     final unresolvedCount = recentCryings
         .where((item) => item.cryingResolved == false)
-        .length;
-
-    final resolvedCount = recentCryings
-        .where((item) => item.cryingResolved == true)
         .length;
 
     final scores = {
@@ -140,29 +144,19 @@ class CryingAiService {
       'discomfort': diaperScore,
     };
 
+    if (audioDetection.hasUsableAudio) {
+      final audioBoost = (audioDetection.cryProbability * 0.2).clamp(0.0, 0.2);
+      scores.updateAll((key, value) => value + audioBoost);
+    }
+
+    if (!audioDetection.cryDetected && audioDetection.hasUsableAudio) {
+      signals.add('audio zatím pláč nepotvrdilo s vysokou jistotou');
+    }
+
     final sorted = scores.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
     final best = sorted.first;
-
-    final combinedCryProbability = audioDetection.hasUsableAudio
-        ? audioDetection.cryProbability
-        : 1.0;
-
-    if (best.value == 0) {
-      return AiCryingAnalysisResult(
-        cryDetected: audioDetection.hasUsableAudio
-            ? audioDetection.cryDetected
-            : true,
-        cryProbability: combinedCryProbability,
-        probableCause: null,
-        confidence: null,
-        signals: signals,
-        modelVersion: audioDetection.hasUsableAudio
-            ? '${audioDetection.modelVersion}+context-v1'
-            : 'context-v1',
-      );
-    }
 
     double confidence = best.value;
 
@@ -176,22 +170,15 @@ class CryingAiService {
       signals.add('opakovaně se nedaří rychle uklidnit');
     }
 
-    if (resolvedCount >= 3 && unresolvedCount == 0) {
-      confidence -= 0.05;
-      signals.add('pláč se v poslední době dařilo uklidnit');
-    }
+    confidence = confidence.clamp(0.0, 1.0);
 
     return AiCryingAnalysisResult(
-      cryDetected: audioDetection.hasUsableAudio
-          ? audioDetection.cryDetected
-          : true,
-      cryProbability: combinedCryProbability,
+      cryDetected: audioDetection.cryDetected,
+      cryProbability: audioDetection.cryProbability,
       probableCause: best.key,
-      confidence: confidence.clamp(0.0, 1.0),
+      confidence: confidence,
       signals: signals,
-      modelVersion: audioDetection.hasUsableAudio
-          ? '${audioDetection.modelVersion}+context-v1'
-          : 'context-v1',
+      modelVersion: audioDetection.modelVersion,
     );
   }
 
@@ -205,7 +192,6 @@ class CryingAiService {
         return item;
       }
     }
-
     return null;
   }
 }

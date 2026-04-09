@@ -17,10 +17,23 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   void initState() {
     super.initState();
     _future = _loadStats();
+    AppServices.childProfileController.activeProfileId.addListener(
+      _handleChildProfileChanged,
+    );
+  }
+
+  @override
+  void dispose() {
+    AppServices.childProfileController.activeProfileId.removeListener(
+      _handleChildProfileChanged,
+    );
+    super.dispose();
   }
 
   Future<_Stats> _loadStats() async {
-    final items = await AppServices.timelineRepository.getAll();
+    final items = await AppServices.timelineRepository.getAll(
+      childId: AppServices.childProfileController.activeProfileId.value,
+    );
 
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
@@ -60,7 +73,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           }
           lastFeeding ??= item;
           break;
-
         case EventType.sleep:
           sleepCount++;
           if (item.sleepDurationMinutes != null) {
@@ -68,12 +80,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           }
           lastSleep ??= item;
           break;
-
         case EventType.diaper:
           diaperCount++;
           lastDiaper ??= item;
           break;
-
         case EventType.crying:
           cryingCount++;
           lastCrying ??= item;
@@ -149,6 +159,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     await _future;
   }
 
+  void _handleChildProfileChanged() {
+    if (!mounted) return;
+    _refresh();
+  }
+
   String _formatTime(TimelineItem? item) {
     if (item == null) return '-';
 
@@ -205,10 +220,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(
-                        alpha: 0.7,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFDFF6F3), Color(0xFFFBFBF8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,11 +233,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         Text(
                           'Dnes ještě není nic zapsané',
                           style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          'Začni jedním jednoduchým záznamem. Statistiky se budou doplňovat průběžně a bez zahlcení.',
+                          'Začni prvním záznamem a statistiky se začnou postupně doplňovat.',
                         ),
                       ],
                     ),
@@ -238,9 +255,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(30),
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFD8F2EF), Color(0xFFF6FBF9)],
+                      colors: [Color(0xFFDFF6F3), Color(0xFFF9FBF8)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -251,11 +268,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       Text(
                         'Dnešní rytmus',
                         style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Rychlý přehled bez zbytečných detailů. Když potřebuješ, níž najdeš i souhrn pláče a poslední události.',
+                        'Souhrn dnešních záznamů a základních metrik.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 18),
@@ -284,17 +301,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 _SectionTitle(
                   title: 'Dnes',
-                  subtitle: 'To nejdůležitější na první pohled.',
+                  subtitle: 'Souhrn hlavních metrik za dnešek.',
                 ),
                 const SizedBox(height: 10),
                 GridView.count(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 1.15,
+                  childAspectRatio: 1.06,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
@@ -303,12 +320,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       value: '${stats.totalMl}',
                       suffix: 'ml',
                       icon: Icons.local_drink_outlined,
+                      tint: const Color(0xFFEAF8F7),
                     ),
                     _MetricCard(
                       label: 'Spánek',
                       value: '${stats.totalSleepMinutes}',
                       suffix: 'min',
                       icon: Icons.bedtime_outlined,
+                      tint: const Color(0xFFE9F3FB),
                     ),
                     _MetricCard(
                       label: 'Průměr pláče',
@@ -318,16 +337,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           ? ''
                           : 'min',
                       icon: Icons.campaign_outlined,
+                      tint: const Color(0xFFFFF1E8),
                     ),
                     _MetricCard(
                       label: 'Uklidnění',
                       value: stats.cryingResolvedRate?.toString() ?? '-',
                       suffix: stats.cryingResolvedRate == null ? '' : '%',
                       icon: Icons.favorite_border,
+                      tint: const Color(0xFFF4F0FF),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 _SectionTitle(
                   title: 'Co dnes pomáhalo',
                   subtitle: 'Jen metody, které se objevily v záznamech pláče.',
@@ -377,36 +398,41 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 _SectionTitle(
-                  title: 'Poslední události',
-                  subtitle: 'Užitečné, když se chceš rychle zorientovat.',
+                  title: 'Naposledy zapsáno',
+                  subtitle: 'Krátká orientace bez otevírání celé historie.',
                 ),
                 const SizedBox(height: 10),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      children: [
-                        _LastEventTile(
-                          label: 'Krmení',
-                          time: _formatTime(stats.lastFeeding),
-                        ),
-                        _LastEventTile(
-                          label: 'Spánek',
-                          time: _formatTime(stats.lastSleep),
-                        ),
-                        _LastEventTile(
-                          label: 'Přebalení',
-                          time: _formatTime(stats.lastDiaper),
-                        ),
-                        _LastEventTile(
-                          label: 'Pláč',
-                          time: _formatTime(stats.lastCrying),
-                          isLast: true,
-                        ),
-                      ],
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    color: Colors.white,
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.16),
                     ),
+                  ),
+                  child: Column(
+                    children: [
+                      _LastEventTile(
+                        label: 'Krmení',
+                        time: _formatTime(stats.lastFeeding),
+                      ),
+                      _LastEventTile(
+                        label: 'Spánek',
+                        time: _formatTime(stats.lastSleep),
+                      ),
+                      _LastEventTile(
+                        label: 'Přebalení',
+                        time: _formatTime(stats.lastDiaper),
+                      ),
+                      _LastEventTile(
+                        label: 'Pláč',
+                        time: _formatTime(stats.lastCrying),
+                        isLast: true,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -433,7 +459,7 @@ class _SectionTitle extends StatelessWidget {
           title,
           style: Theme.of(
             context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
@@ -448,12 +474,14 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.suffix,
     required this.icon,
+    required this.tint,
   });
 
   final String label;
   final String value;
   final String suffix;
   final IconData icon;
+  final Color tint;
 
   @override
   Widget build(BuildContext context) {
@@ -466,8 +494,8 @@ class _MetricCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
-              backgroundColor: colorScheme.primaryContainer,
-              foregroundColor: colorScheme.onPrimaryContainer,
+              backgroundColor: tint,
+              foregroundColor: colorScheme.primary,
               child: Icon(icon),
             ),
             const Spacer(),
@@ -486,7 +514,7 @@ class _MetricCard extends StatelessWidget {
                       text: ' $suffix',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                 ],
@@ -515,12 +543,12 @@ class _HighlightChip extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.24),
         ),
       ),
       child: Text(
         '$label $value',
-        style: const TextStyle(fontWeight: FontWeight.w700),
+        style: const TextStyle(fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -559,7 +587,7 @@ class _LastEventTile extends StatelessWidget {
             ? null
             : Border(
                 bottom: BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.22),
                 ),
               ),
       ),
@@ -568,7 +596,7 @@ class _LastEventTile extends StatelessWidget {
         title: Text(label),
         trailing: Text(
           time,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
     );

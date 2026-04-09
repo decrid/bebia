@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
 
 import '../../data/repositories/timeline_repository.dart';
+import '../profile/child_profile_controller.dart';
 import 'timeline_item.dart';
 
 class TimelineController {
-  TimelineController(this._repository);
+  TimelineController(this._repository, this._childProfileController) {
+    _childProfileController.activeProfileId.addListener(_handleChildChange);
+  }
 
   final TimelineRepository _repository;
+  final ChildProfileController _childProfileController;
 
   final ValueNotifier<List<TimelineItem>> items =
       ValueNotifier<List<TimelineItem>>([]);
@@ -15,6 +19,12 @@ class TimelineController {
   final ValueNotifier<EventType?> selectedFilter = ValueNotifier<EventType?>(
     null,
   );
+
+  String? get _activeChildId => _childProfileController.activeProfileId.value;
+
+  void _handleChildChange() {
+    load(selectedFilter.value);
+  }
 
   Future<void> load([EventType? type]) async {
     isLoading.value = true;
@@ -25,10 +35,10 @@ class TimelineController {
     }
 
     try {
-      final data = await _repository.getFiltered(type);
+      final data = await _repository.getFiltered(type, childId: _activeChildId);
       items.value = data;
     } catch (e) {
-      error.value = 'Nepodařilo se načíst timeline: $e';
+      error.value = 'Nepodařilo se načíst přehled: $e';
     } finally {
       isLoading.value = false;
     }
@@ -42,7 +52,7 @@ class TimelineController {
     error.value = null;
 
     try {
-      await _repository.addItem(item);
+      await _repository.addItem(item, childId: _activeChildId);
       await reloadCurrent();
     } catch (e) {
       error.value = 'Nepodařilo se uložit záznam: $e';
@@ -53,7 +63,7 @@ class TimelineController {
     error.value = null;
 
     try {
-      await _repository.updateItem(item);
+      await _repository.updateItem(item, fallbackChildId: _activeChildId);
       await reloadCurrent();
     } catch (e) {
       error.value = 'Nepodařilo se upravit záznam: $e';
@@ -72,6 +82,7 @@ class TimelineController {
   }
 
   void dispose() {
+    _childProfileController.activeProfileId.removeListener(_handleChildChange);
     items.dispose();
     isLoading.dispose();
     error.dispose();
