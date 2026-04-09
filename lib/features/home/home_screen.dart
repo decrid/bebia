@@ -8,7 +8,6 @@ import '../predictions/prediction_model.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
-import '../timeline/timeline_item.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -30,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecommendations();
     _loadCryingAnalysis();
     _loadPredictions();
-    AppServices.timelineController.load();
   }
 
   void _loadRecommendations() {
@@ -48,8 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _refresh() async {
-    await AppServices.timelineController.load();
-
     setState(() {
       _loadRecommendations();
       _loadCryingAnalysis();
@@ -68,12 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     await _refresh();
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
   }
 
   String _formatPredictionTime(DateTime? time) {
@@ -116,36 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _eventTypeLabel(EventType type) {
-    switch (type) {
-      case EventType.feeding:
-        return 'Krmení';
-      case EventType.sleep:
-        return 'Spánek';
-      case EventType.diaper:
-        return 'Přebalení';
-      case EventType.crying:
-        return 'Pláč';
-    }
-  }
-
-  String? _soothingMethodLabel(String? method) {
-    switch (method) {
-      case 'rocking':
-        return 'Houpání';
-      case 'feeding':
-        return 'Krmení';
-      case 'carrying':
-        return 'Nošení';
-      case 'pacifier':
-        return 'Dudlík';
-      case 'other':
-        return 'Jiné';
-      default:
-        return null;
-    }
-  }
-
   String _confidenceLabel(double confidence) {
     if (confidence >= 0.8) return 'Vysoká jistota';
     if (confidence >= 0.55) return 'Střední jistota';
@@ -180,46 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<String> _buildTimelineSummary(TimelineItem item) {
-    final parts = <String>[];
-
-    if (item.type == EventType.crying) {
-      if (item.aiProbableCause != null) {
-        parts.add('AI: ${_cryingCauseLabel(item.aiProbableCause!)}');
-      }
-
-      if (item.cryingResolved != null) {
-        parts.add(item.cryingResolved! ? 'Uklidněno' : 'Bez uklidnění');
-      }
-
-      if (item.cryingDurationMinutes != null) {
-        parts.add('${item.cryingDurationMinutes} min');
-      }
-
-      final soothingLabel = _soothingMethodLabel(item.soothingMethod);
-      if (soothingLabel != null) {
-        parts.add('Pomohlo: $soothingLabel');
-      }
-    } else if (item.subtitle.isNotEmpty) {
-      parts.add(item.subtitle);
-    }
-
-    return parts.take(3).toList();
-  }
-
-  IconData _eventIcon(EventType type) {
-    switch (type) {
-      case EventType.feeding:
-        return Icons.local_drink_outlined;
-      case EventType.sleep:
-        return Icons.bedtime_outlined;
-      case EventType.diaper:
-        return Icons.baby_changing_station_outlined;
-      case EventType.crying:
-        return Icons.campaign_outlined;
-    }
-  }
-
   Widget _buildSignalChips(List<String> signals) {
     return Wrap(
       spacing: 8,
@@ -235,8 +155,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Bebia')),
       body: RefreshIndicator(
@@ -495,112 +413,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               .toList(),
                         ),
                       ),
-                    );
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 10),
-            const _SectionHeader(
-              title: 'Poslední záznamy',
-              subtitle: 'Jen to nejnovější, ať se rychle zorientuješ.',
-            ),
-            const SizedBox(height: 10),
-            ValueListenableBuilder<bool>(
-              valueListenable: AppServices.timelineController.isLoading,
-              builder: (context, isLoading, child) {
-                if (isLoading) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  );
-                }
-
-                return ValueListenableBuilder<String?>(
-                  valueListenable: AppServices.timelineController.error,
-                  builder: (context, error, child) {
-                    if (error != null) {
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Text(error),
-                        ),
-                      );
-                    }
-
-                    return ValueListenableBuilder<List<TimelineItem>>(
-                      valueListenable: AppServices.timelineController.items,
-                      builder: (context, items, child) {
-                        if (items.isEmpty) {
-                          return const Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(18),
-                              child: Text('Zatím nemáš žádné události.'),
-                            ),
-                          );
-                        }
-
-                        final recentItems = items.take(4).toList();
-
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Column(
-                              children: recentItems.map((item) {
-                                final summary = _buildTimelineSummary(item);
-                                final isLast = identical(
-                                  item,
-                                  recentItems.last,
-                                );
-
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    border: isLast
-                                        ? null
-                                        : Border(
-                                            bottom: BorderSide(
-                                              color: colorScheme.outlineVariant
-                                                  .withValues(alpha: 0.30),
-                                            ),
-                                          ),
-                                  ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    leading: CircleAvatar(
-                                      backgroundColor: colorScheme
-                                          .secondaryContainer
-                                          .withValues(alpha: 0.9),
-                                      foregroundColor:
-                                          colorScheme.onSecondaryContainer,
-                                      child: Icon(_eventIcon(item.type)),
-                                    ),
-                                    title: Text(_eventTypeLabel(item.type)),
-                                    subtitle: summary.isEmpty
-                                        ? null
-                                        : Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 2,
-                                            ),
-                                            child: Text(summary.join(' • ')),
-                                          ),
-                                    trailing: Text(
-                                      _formatTime(item.time),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        );
-                      },
                     );
                   },
                 );

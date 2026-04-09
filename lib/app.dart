@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'shared/widgets/app_shell.dart';
 
 class BebiaApp extends StatelessWidget {
-  const BebiaApp({super.key});
+  const BebiaApp({super.key, this.homeOverride});
+
+  final Widget? homeOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +106,7 @@ class BebiaApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AppShell(),
+      home: homeOverride ?? const AppShell(),
     );
   }
 }
