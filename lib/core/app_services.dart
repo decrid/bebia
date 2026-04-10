@@ -1,15 +1,18 @@
 import 'audio_capture_service.dart';
 import '../data/local/child_profile_store.dart';
 import '../data/local/event_assignment_store.dart';
+import '../data/local/family_connection_store.dart';
 import '../data/local/onboarding_store.dart';
 import '../data/repositories/child_profile_repository.dart';
 import '../data/repositories/event_assignment_repository.dart';
+import '../data/repositories/family_connection_repository.dart';
 import '../data/repositories/timeline_repository.dart';
 import '../features/crying/audio_preprocessing_service.dart';
 import '../features/crying/crying_ai_service.dart';
 import '../features/crying/crying_analysis_service.dart';
 import '../features/crying/mock_cry_detection_service.dart';
 import '../features/crying/real_cry_detection_service.dart';
+import '../features/family/family_connection_controller.dart';
 import '../features/intelligence/infant_insights_service.dart';
 import '../features/predictions/prediction_service.dart';
 import '../features/predictions/rhythm_profile_service.dart';
@@ -27,9 +30,13 @@ class AppServices {
   static final TimelineRepository timelineRepository = TimelineRepository(
     eventAssignmentRepository,
   );
+  static final FamilyConnectionRepository familyConnectionRepository =
+      FamilyConnectionRepository(FamilyConnectionStore());
 
   static final ChildProfileController childProfileController =
       ChildProfileController(childProfileRepository, timelineRepository);
+  static final FamilyConnectionController familyConnectionController =
+      FamilyConnectionController(familyConnectionRepository);
 
   static final InfantInsightsService infantInsightsService =
       InfantInsightsService();

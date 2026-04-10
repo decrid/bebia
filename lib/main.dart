@@ -7,5 +7,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await IsarService.open();
   await AppServices.childProfileController.load();
+  await AppServices.familyConnectionController.load();
   runApp(const BebiaApp());
 }

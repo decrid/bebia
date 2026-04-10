@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
+import '../family/family_sharing_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../onboarding/onboarding_flow.dart';
 import '../predictions/prediction_model.dart';
@@ -196,6 +197,19 @@ class _HomeScreenState extends State<HomeScreen> {
     await _refresh();
   }
 
+  Future<void> _openFamilySharing() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const FamilySharingScreen(),
+    );
+
+    if (!mounted) return;
+    await _refresh();
+  }
+
   Future<void> _openOnboarding({bool markCompleted = false}) async {
     await Navigator.push<void>(
       context,
@@ -212,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onConnectParent: () {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _showConnectParentPlaceholder();
+                _openFamilySharing();
               }
             });
           },
@@ -238,14 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await _openOnboarding(markCompleted: true);
   }
 
-  void _showConnectParentPlaceholder() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Propojení s druhým rodičem připravíme v další iteraci.'),
-      ),
-    );
-  }
-
   void _handleMenuAction(_HomeMenuAction action) {
     switch (action) {
       case _HomeMenuAction.profiles:
@@ -255,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _openOnboarding();
         return;
       case _HomeMenuAction.connectParent:
-        _showConnectParentPlaceholder();
+        _openFamilySharing();
         return;
     }
   }
