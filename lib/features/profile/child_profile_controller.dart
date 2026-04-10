@@ -53,13 +53,17 @@ class ChildProfileController {
         (item) => item.id == profile.id,
       );
 
+      final isCreating = existingIndex < 0;
+
       if (existingIndex >= 0) {
         updatedProfiles[existingIndex] = profile;
       } else {
         updatedProfiles.add(profile);
       }
 
-      final nextActiveId = activeProfileId.value ?? profile.id;
+      final nextActiveId = isCreating
+          ? profile.id
+          : (activeProfileId.value ?? profile.id);
       await _persist(updatedProfiles, nextActiveId);
     } catch (e) {
       error.value = 'Nepodařilo se uložit profil dítěte: $e';

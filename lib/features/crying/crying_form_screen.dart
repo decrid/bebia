@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/info_label.dart';
 import '../timeline/timeline_item.dart';
 import 'ai_crying_analysis_result.dart';
 import 'crying_source.dart';
@@ -434,7 +435,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  Chip(label: Text('${_intensity.toInt()}/5')),
+                                  InfoLabel(label: '${_intensity.toInt()}/5'),
                                 ],
                               ),
                               Slider(
@@ -791,7 +792,7 @@ class _IntroCard extends StatelessWidget {
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
-              Chip(label: Text(trailingLabel)),
+              InfoLabel(label: trailingLabel),
             ],
           ),
           const SizedBox(height: 6),
@@ -854,21 +855,17 @@ class _AiResultSummary extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            Chip(
-              label: Text(cryDetected ? 'Pláč detekován' : 'Pláč nepotvrzen'),
+            InfoLabel(
+              label: cryDetected ? 'Pláč detekován' : 'Pláč nepotvrzen',
             ),
-            Chip(
-              label: Text(
-                'Pravděpodobnost ${(cryProbability * 100).round()} %',
-              ),
+            InfoLabel(
+              label: 'Pravděpodobnost ${(cryProbability * 100).round()} %',
             ),
             if (probableCause != null)
-              Chip(label: Text('Příčina: $probableCause')),
+              InfoLabel(label: 'Příčina: $probableCause'),
             if (confidence != null)
-              Chip(
-                label: Text(
-                  '${confidenceLabel!} ${(confidence! * 100).round()} %',
-                ),
+              InfoLabel(
+                label: '${confidenceLabel!} ${(confidence! * 100).round()} %',
               ),
           ],
         ),
@@ -885,12 +882,7 @@ class _AiResultSummary extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: signals
-                .map(
-                  (signal) => Chip(
-                    label: Text(signal),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                )
+                .map((signal) => InfoLabel(label: signal))
                 .toList(),
           ),
         ],

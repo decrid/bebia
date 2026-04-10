@@ -4,12 +4,16 @@ import '../../core/app_services.dart';
 import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
+import '../onboarding/onboarding_flow.dart';
 import '../predictions/prediction_model.dart';
 import '../profile/child_profile.dart';
 import '../profile/child_profile_screen.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
+import '../../shared/widgets/info_label.dart';
+
+enum _HomeMenuAction { profiles, onboarding, connectParent }
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -24,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Recommendation>> _futureRecommendations;
   late Future<CryingAnalysisResult?> _futureCryingAnalysis;
   late Future<List<Prediction>> _futurePredictions;
-  bool _didOfferProfileCreation = false;
+  bool _didCheckOnboarding = false;
 
   @override
   void initState() {
@@ -35,8 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
     AppServices.childProfileController.activeProfileId.addListener(
       _handleChildProfileChanged,
     );
+    AppServices.timelineController.revision.addListener(_handleTimelineChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybeOfferProfileCreation();
+      _maybeOpenOnboarding();
     });
   }
 
@@ -44,6 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     AppServices.childProfileController.activeProfileId.removeListener(
       _handleChildProfileChanged,
+    );
+    AppServices.timelineController.revision.removeListener(
+      _handleTimelineChanged,
     );
     super.dispose();
   }
@@ -77,6 +85,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleChildProfileChanged() {
+    if (!mounted) return;
+    _refresh();
+  }
+
+  void _handleTimelineChanged() {
     if (!mounted) return;
     _refresh();
   }
@@ -166,53 +179,84 @@ class _HomeScreenState extends State<HomeScreen> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: signals
-          .map(
-            (signal) =>
-                Chip(label: Text(signal), visualDensity: VisualDensity.compact),
-          )
-          .toList(),
+      children: signals.map((signal) => InfoLabel(label: signal)).toList(),
     );
   }
 
   Future<void> _openChildProfile() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ChildProfileScreen()),
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ChildProfileScreen(),
     );
 
     if (!mounted) return;
     await _refresh();
   }
 
-  Future<void> _maybeOfferProfileCreation() async {
-    if (_didOfferProfileCreation || !mounted) return;
-    if (AppServices.childProfileController.hasProfiles) return;
-
-    _didOfferProfileCreation = true;
-
-    final createProfile = await showDialog<bool>(
+  Future<void> _openOnboarding({bool markCompleted = false}) async {
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Vytvořit profil dítěte?'),
-        content: const Text(
-          'Když profil vytvoříš teď, nové události se budou ukládat rovnou k tomuto dítěti.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Teď ne'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Vytvořit profil'),
-          ),
-        ],
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => OnboardingFlow(
+        onCreateProfile: () {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _openChildProfile();
+            }
+          });
+        },
+        onConnectParent: () {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _showConnectParentPlaceholder();
+            }
+          });
+        },
       ),
     );
 
-    if (createProfile == true && mounted) {
-      await _openChildProfile();
+    if (markCompleted) {
+      await AppServices.onboardingStore.setCompleted(true);
+    }
+
+    if (!mounted) return;
+    await _refresh();
+  }
+
+  Future<void> _maybeOpenOnboarding() async {
+    if (_didCheckOnboarding || !mounted) return;
+    _didCheckOnboarding = true;
+
+    final completed = await AppServices.onboardingStore.isCompleted();
+    if (!mounted || completed) return;
+
+    await _openOnboarding(markCompleted: true);
+  }
+
+  void _showConnectParentPlaceholder() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Propojení s druhým rodičem připravíme v další iteraci.'),
+      ),
+    );
+  }
+
+  void _handleMenuAction(_HomeMenuAction action) {
+    switch (action) {
+      case _HomeMenuAction.profiles:
+        _openChildProfile();
+        return;
+      case _HomeMenuAction.onboarding:
+        _openOnboarding();
+        return;
+      case _HomeMenuAction.connectParent:
+        _showConnectParentPlaceholder();
+        return;
     }
   }
 
@@ -251,10 +295,32 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Bebia'),
         actions: [
-          IconButton(
-            tooltip: 'Profil dítěte',
-            onPressed: _openChildProfile,
-            icon: const Icon(Icons.child_care_outlined),
+          PopupMenuButton<_HomeMenuAction>(
+            tooltip: 'Menu',
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: _HomeMenuAction.profiles,
+                child: ListTile(
+                  leading: Icon(Icons.child_care_outlined),
+                  title: Text('Profily'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.onboarding,
+                child: ListTile(
+                  leading: Icon(Icons.map_outlined),
+                  title: Text('Průvodce'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.connectParent,
+                child: ListTile(
+                  leading: Icon(Icons.group_add_outlined),
+                  title: Text('Připojení s druhým rodičem'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -684,20 +750,7 @@ class _AssistantAgendaCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                color: const Color(0xFFF8F7F2),
-                border: Border.all(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.16),
-                ),
-              ),
-              child: Text(
-                item.badge,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
+            InfoLabel(label: item.badge),
           ],
         ),
       ),

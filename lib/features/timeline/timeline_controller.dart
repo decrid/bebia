@@ -16,6 +16,7 @@ class TimelineController {
       ValueNotifier<List<TimelineItem>>([]);
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
   final ValueNotifier<String?> error = ValueNotifier<String?>(null);
+  final ValueNotifier<int> revision = ValueNotifier<int>(0);
   final ValueNotifier<EventType?> selectedFilter = ValueNotifier<EventType?>(
     null,
   );
@@ -54,6 +55,7 @@ class TimelineController {
     try {
       await _repository.addItem(item, childId: _activeChildId);
       await reloadCurrent();
+      revision.value++;
     } catch (e) {
       error.value = 'Nepodařilo se uložit záznam: $e';
     }
@@ -65,6 +67,7 @@ class TimelineController {
     try {
       await _repository.updateItem(item, fallbackChildId: _activeChildId);
       await reloadCurrent();
+      revision.value++;
     } catch (e) {
       error.value = 'Nepodařilo se upravit záznam: $e';
     }
@@ -76,6 +79,7 @@ class TimelineController {
     try {
       await _repository.deleteItem(id);
       await reloadCurrent();
+      revision.value++;
     } catch (e) {
       error.value = 'Nepodařilo se smazat záznam: $e';
     }
@@ -86,6 +90,7 @@ class TimelineController {
     items.dispose();
     isLoading.dispose();
     error.dispose();
+    revision.dispose();
     selectedFilter.dispose();
   }
 }

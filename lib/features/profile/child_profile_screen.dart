@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/info_label.dart';
 import 'child_profile.dart';
 
 class ChildProfileScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     super.initState();
     final active = AppServices.childProfileController.activeProfile;
     if (active != null) {
-      _loadIntoForm(active);
+      _loadIntoForm(active, notify: false);
     }
   }
 
@@ -31,13 +32,19 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     super.dispose();
   }
 
-  void _loadIntoForm(ChildProfile profile) {
-    setState(() {
+  void _loadIntoForm(ChildProfile profile, {bool notify = true}) {
+    void update() {
       _editingProfile = profile;
       _nameController.text = profile.name;
       _dateOfBirth = profile.dateOfBirth;
       _sex = profile.sex;
-    });
+    }
+
+    if (notify) {
+      setState(update);
+    } else {
+      update();
+    }
   }
 
   void _resetForm() {
@@ -107,6 +114,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       return;
     }
 
+    final isCreating = _editingProfile == null;
     final profile = ChildProfile(
       id:
           _editingProfile?.id ??
@@ -119,6 +127,12 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     await AppServices.childProfileController.saveProfile(profile);
 
     if (!mounted) return;
+
+    if (isCreating) {
+      Navigator.pop(context);
+      return;
+    }
+
     _loadIntoForm(profile);
   }
 
@@ -129,38 +143,31 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   }
 
   Future<void> _deleteProfile(ChildProfile profile) async {
-    final action = await showDialog<_DeleteProfileAction>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Smazat profil ${profile.name}?'),
         content: const Text(
-          'Můžeš smazat i jeho události, nebo je ponechat jako nepřiřazené.',
+          'Smaže se profil dítěte i všechny události, které k němu patří.',
         ),
         actions: [
           TextButton(
-            onPressed: () =>
-                Navigator.pop(context, _DeleteProfileAction.cancel),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Zrušit'),
           ),
           TextButton(
-            onPressed: () =>
-                Navigator.pop(context, _DeleteProfileAction.keepEvents),
-            child: const Text('Ponechat události'),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.pop(context, _DeleteProfileAction.deleteEvents),
-            child: const Text('Smazat i události'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Smazat'),
           ),
         ],
       ),
     );
 
-    if (action == null || action == _DeleteProfileAction.cancel) return;
+    if (confirmed != true) return;
 
     await AppServices.childProfileController.deleteProfile(
       profile.id,
-      deleteEvents: action == _DeleteProfileAction.deleteEvents,
+      deleteEvents: true,
     );
 
     if (!mounted) return;
@@ -178,140 +185,195 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     final controller = AppServices.childProfileController;
     final profiles = controller.profiles.value;
     final activeProfileId = controller.activeProfileId.value;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Děti a profily')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFE2F5F1), Color(0xFFFFFFFF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Aktivní dítě',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    controller.activeProfile == null
-                        ? 'Zatím není vybraný žádný profil. Nové události se budou ukládat jako nepřiřazené.'
-                        : '${controller.activeProfile!.name} • ${_ageLabel(controller.activeProfile!.dateOfBirth)}',
-                  ),
-                ],
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(10, 0, 10, 6 + bottomInset),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.97,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.16),
               ),
             ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                Text(
-                  'Profily dětí',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                TextButton.icon(
-                  onPressed: _resetForm,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Nové dítě'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (profiles.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(18),
-                  child: Text('Zatím není vytvořený žádný profil dítěte.'),
-                ),
-              )
-            else
-              ...profiles.map(
-                (profile) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ChildProfileTile(
-                    profile: profile,
-                    isActive: profile.id == activeProfileId,
-                    onActivate: () => _setActive(profile),
-                    onEdit: () => _loadIntoForm(profile),
-                    onDelete: () => _deleteProfile(profile),
-                    ageLabel: _ageLabel(profile.dateOfBirth),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Děti a profily',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            const SizedBox(height: 18),
-            Text(
-              _editingProfile == null ? 'Nový profil dítěte' : 'Upravit profil',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Jméno dítěte',
-                hintText: 'Např. Ema',
-              ),
-            ),
-            const SizedBox(height: 14),
-            Card(
-              child: ListTile(
-                title: const Text('Datum narození'),
-                subtitle: Text(
-                  '${_formatDate(_dateOfBirth)} • ${_ageLabel(_dateOfBirth)}',
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFE2F5F1), Color(0xFFFFFFFF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Aktivní dítě',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              controller.activeProfile == null
+                                  ? 'Nové události se zatím ukládají jako nepřiřazené.'
+                                  : '${controller.activeProfile!.name} • ${_ageLabel(controller.activeProfile!.dateOfBirth)}',
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Profily dětí',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          if (profiles.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: _resetForm,
+                              icon: const Icon(Icons.add_rounded),
+                              label: const Text('Nové dítě'),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (profiles.isEmpty)
+                        const Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(18),
+                            child: Text(
+                              'Zatím není vytvořený žádný profil dítěte.',
+                            ),
+                          ),
+                        )
+                      else
+                        ...profiles.map(
+                          (profile) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _ChildProfileTile(
+                              profile: profile,
+                              isActive: profile.id == activeProfileId,
+                              onActivate: () => _setActive(profile),
+                              onEdit: () => _loadIntoForm(profile),
+                              onDelete: () => _deleteProfile(profile),
+                              ageLabel: _ageLabel(profile.dateOfBirth),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 18),
+                      Text(
+                        _editingProfile == null
+                            ? 'Nový profil dítěte'
+                            : 'Upravit profil',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Jméno dítěte',
+                          hintText: 'Např. Ema',
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Card(
+                        child: ListTile(
+                          title: const Text('Datum narození'),
+                          subtitle: Text(
+                            '${_formatDate(_dateOfBirth)} • ${_ageLabel(_dateOfBirth)}',
+                          ),
+                          trailing: TextButton(
+                            onPressed: _pickDate,
+                            child: const Text('Změnit'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String?>(
+                        key: ValueKey(
+                          "${_editingProfile?.id ?? 'new'}-${_sex ?? 'none'}",
+                        ),
+                        initialValue: _sex,
+                        decoration: const InputDecoration(
+                          labelText: 'Pohlaví (volitelné)',
+                        ),
+                        items: const [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Nezadáno'),
+                          ),
+                          DropdownMenuItem<String?>(
+                            value: 'girl',
+                            child: Text('Dívka'),
+                          ),
+                          DropdownMenuItem<String?>(
+                            value: 'boy',
+                            child: Text('Chlapec'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _sex = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _save,
+                          child: Text(
+                            _editingProfile == null
+                                ? 'Vytvořit profil'
+                                : 'Uložit změny',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                trailing: TextButton(
-                  onPressed: _pickDate,
-                  child: const Text('Změnit'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String?>(
-              key: ValueKey(
-                "${_editingProfile?.id ?? 'new'}-${_sex ?? 'none'}",
-              ),
-              initialValue: _sex,
-              decoration: const InputDecoration(
-                labelText: 'Pohlaví (volitelné)',
-              ),
-              items: const [
-                DropdownMenuItem<String?>(value: null, child: Text('Nezadáno')),
-                DropdownMenuItem<String?>(value: 'girl', child: Text('Dívka')),
-                DropdownMenuItem<String?>(value: 'boy', child: Text('Chlapec')),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _sex = value;
-                });
-              },
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _save,
-                child: Text(
-                  _editingProfile == null ? 'Vytvořit profil' : 'Uložit změny',
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -361,11 +423,7 @@ class _ChildProfileTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (isActive)
-                  const Chip(
-                    label: Text('Aktivní'),
-                    visualDensity: VisualDensity.compact,
-                  ),
+                if (isActive) const InfoLabel(label: 'Aktivní'),
               ],
             ),
             const SizedBox(height: 12),
@@ -390,5 +448,3 @@ class _ChildProfileTile extends StatelessWidget {
     );
   }
 }
-
-enum _DeleteProfileAction { cancel, keepEvents, deleteEvents }

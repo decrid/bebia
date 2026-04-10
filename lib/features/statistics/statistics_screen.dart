@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/info_label.dart';
 import '../timeline/timeline_item.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -20,12 +21,16 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     AppServices.childProfileController.activeProfileId.addListener(
       _handleChildProfileChanged,
     );
+    AppServices.timelineController.revision.addListener(_handleTimelineChanged);
   }
 
   @override
   void dispose() {
     AppServices.childProfileController.activeProfileId.removeListener(
       _handleChildProfileChanged,
+    );
+    AppServices.timelineController.revision.removeListener(
+      _handleTimelineChanged,
     );
     super.dispose();
   }
@@ -48,11 +53,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     int totalMl = 0;
     int totalSleepMinutes = 0;
 
-    TimelineItem? lastFeeding;
-    TimelineItem? lastSleep;
-    TimelineItem? lastDiaper;
-    TimelineItem? lastCrying;
-
     int totalCryingDurationMinutes = 0;
     int cryingDurationCount = 0;
     int cryingResolvedCount = 0;
@@ -71,22 +71,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           if (item.feedingAmountMl != null) {
             totalMl += item.feedingAmountMl!;
           }
-          lastFeeding ??= item;
           break;
         case EventType.sleep:
           sleepCount++;
           if (item.sleepDurationMinutes != null) {
             totalSleepMinutes += item.sleepDurationMinutes!;
           }
-          lastSleep ??= item;
           break;
         case EventType.diaper:
           diaperCount++;
-          lastDiaper ??= item;
           break;
         case EventType.crying:
           cryingCount++;
-          lastCrying ??= item;
 
           if (item.cryingDurationMinutes != null) {
             totalCryingDurationMinutes += item.cryingDurationMinutes!;
@@ -136,10 +132,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       cryingCount: cryingCount,
       totalMl: totalMl,
       totalSleepMinutes: totalSleepMinutes,
-      lastFeeding: lastFeeding,
-      lastSleep: lastSleep,
-      lastDiaper: lastDiaper,
-      lastCrying: lastCrying,
       averageCryingDurationMinutes: averageCryingDurationMinutes,
       cryingResolvedCount: cryingResolvedCount,
       cryingUnresolvedCount: cryingUnresolvedCount,
@@ -164,18 +156,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _refresh();
   }
 
-  String _formatTime(TimelineItem? item) {
-    if (item == null) return '-';
-
-    final hour = item.time.hour.toString().padLeft(2, '0');
-    final minute = item.time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+  void _handleTimelineChanged() {
+    if (!mounted) return;
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Statistiky')),
       body: FutureBuilder<_Stats>(
@@ -266,13 +253,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Dnešní rytmus',
+                        'Vzorce a trendy',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Souhrn dnešních záznamů a základních metrik.',
+                        'Vyhodnocení dne. Surovou historii a úpravy najdeš v Přehledu.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 18),
@@ -398,43 +385,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                _SectionTitle(
-                  title: 'Naposledy zapsáno',
-                  subtitle: 'Krátká orientace bez otevírání celé historie.',
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    color: Colors.white,
-                    border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.16),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      _LastEventTile(
-                        label: 'Krmení',
-                        time: _formatTime(stats.lastFeeding),
-                      ),
-                      _LastEventTile(
-                        label: 'Spánek',
-                        time: _formatTime(stats.lastSleep),
-                      ),
-                      _LastEventTile(
-                        label: 'Přebalení',
-                        time: _formatTime(stats.lastDiaper),
-                      ),
-                      _LastEventTile(
-                        label: 'Pláč',
-                        time: _formatTime(stats.lastCrying),
-                        isLast: true,
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           );
@@ -535,22 +485,7 @@ class _HighlightChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.24),
-        ),
-      ),
-      child: Text(
-        '$label $value',
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
-    );
+    return InfoLabel(label: '$label $value', fontWeight: FontWeight.w800);
   }
 }
 
@@ -562,44 +497,7 @@ class _CalmChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(label: Text('$label $count×'));
-  }
-}
-
-class _LastEventTile extends StatelessWidget {
-  const _LastEventTile({
-    required this.label,
-    required this.time,
-    this.isLast = false,
-  });
-
-  final String label;
-  final String time;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : Border(
-                bottom: BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.22),
-                ),
-              ),
-      ),
-      child: ListTile(
-        dense: true,
-        title: Text(label),
-        trailing: Text(
-          time,
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-      ),
-    );
+    return InfoLabel(label: '$label $count×');
   }
 }
 
@@ -610,11 +508,6 @@ class _Stats {
   final int cryingCount;
   final int totalMl;
   final int totalSleepMinutes;
-
-  final TimelineItem? lastFeeding;
-  final TimelineItem? lastSleep;
-  final TimelineItem? lastDiaper;
-  final TimelineItem? lastCrying;
 
   final int? averageCryingDurationMinutes;
   final int cryingResolvedCount;
@@ -634,10 +527,6 @@ class _Stats {
     required this.cryingCount,
     required this.totalMl,
     required this.totalSleepMinutes,
-    required this.lastFeeding,
-    required this.lastSleep,
-    required this.lastDiaper,
-    required this.lastCrying,
     required this.averageCryingDurationMinutes,
     required this.cryingResolvedCount,
     required this.cryingUnresolvedCount,

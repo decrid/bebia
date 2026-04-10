@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/info_label.dart';
 import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
@@ -293,7 +294,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Přehled událostí')),
+      appBar: AppBar(title: const Text('Přehled')),
       body: Column(
         children: [
           Padding(
@@ -313,12 +314,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Denní přehled',
+                    'Historie událostí',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Klepnutím záznam upravíš. U pláče uvidíš i AI kontext.',
+                    'Surová data, filtry a editace. Tady se díváš na to, co se přesně stalo a kdy.',
                   ),
                 ],
               ),
@@ -508,11 +509,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                               runSpacing: 8,
                                               children: subtitleParts
                                                   .map(
-                                                    (part) => Chip(
-                                                      label: Text(part),
-                                                      visualDensity:
-                                                          VisualDensity.compact,
-                                                    ),
+                                                    (part) =>
+                                                        InfoLabel(label: part),
                                                   )
                                                   .toList(),
                                             ),
@@ -596,23 +594,11 @@ class _TimelineSummaryCard extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            Chip(
-              label: Text('Dnes ${summary.totalEvents} záznamů'),
-              visualDensity: VisualDensity.compact,
-            ),
-            Chip(
-              label: Text('Pláč ${summary.cryingEvents}x'),
-              visualDensity: VisualDensity.compact,
-            ),
-            Chip(
-              label: Text('Neuklidněno ${summary.unresolvedCryings}x'),
-              visualDensity: VisualDensity.compact,
-            ),
+            InfoLabel(label: 'Dnes ${summary.totalEvents} záznamů'),
+            InfoLabel(label: 'Pláč ${summary.cryingEvents}x'),
+            InfoLabel(label: 'Neuklidněno ${summary.unresolvedCryings}x'),
             if (confidence != null)
-              Chip(
-                label: Text('AI jistota ${(confidence * 100).round()} %'),
-                visualDensity: VisualDensity.compact,
-              ),
+              InfoLabel(label: 'AI jistota ${(confidence * 100).round()} %'),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'audio_capture_service.dart';
 import '../data/local/child_profile_store.dart';
 import '../data/local/event_assignment_store.dart';
+import '../data/local/onboarding_store.dart';
 import '../data/repositories/child_profile_repository.dart';
 import '../data/repositories/event_assignment_repository.dart';
 import '../data/repositories/timeline_repository.dart';
@@ -17,6 +18,8 @@ import '../features/recommendations/recommendation_service.dart';
 import '../features/timeline/timeline_controller.dart';
 
 class AppServices {
+  static final OnboardingStore onboardingStore = OnboardingStore();
+
   static final ChildProfileRepository childProfileRepository =
       ChildProfileRepository(ChildProfileStore());
   static final EventAssignmentRepository eventAssignmentRepository =

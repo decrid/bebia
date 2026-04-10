@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/info_label.dart';
 import '../predictions/prediction_model.dart';
 import 'recommendation_model.dart';
 
@@ -247,8 +248,6 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -272,12 +271,7 @@ class _InfoCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(subtitle),
                   const SizedBox(height: 8),
-                  Chip(
-                    label: Text(badge),
-                    visualDensity: VisualDensity.compact,
-                    side: BorderSide.none,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                  ),
+                  InfoLabel(label: badge, color: color),
                 ],
               ),
             ),

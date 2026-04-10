@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_services.dart';
 import '../../features/crying/crying_form_screen.dart';
 import '../../features/diaper/diaper_form_screen.dart';
 import '../../features/feeding/feeding_form_screen.dart';
@@ -25,7 +26,7 @@ class _AppShellState extends State<AppShell> {
   ];
 
   Future<void> _openQuickAddSheet() async {
-    await showModalBottomSheet<void>(
+    final screen = await showModalBottomSheet<Widget>(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
@@ -33,9 +34,13 @@ class _AppShellState extends State<AppShell> {
       builder: (context) => const _QuickAddSheet(),
     );
 
-    if (mounted) {
-      setState(() {});
-    }
+    if (!mounted || screen == null) return;
+
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+
+    if (!mounted) return;
+    await AppServices.timelineController.reloadCurrent();
+    setState(() {});
   }
 
   @override
@@ -125,9 +130,8 @@ class _AppShellState extends State<AppShell> {
 class _QuickAddSheet extends StatelessWidget {
   const _QuickAddSheet();
 
-  Future<void> _open(BuildContext context, Widget screen) async {
-    Navigator.pop(context);
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  void _select(BuildContext context, Widget screen) {
+    Navigator.pop(context, screen);
   }
 
   @override
@@ -189,28 +193,28 @@ class _QuickAddSheet extends StatelessWidget {
                     icon: Icons.local_drink_outlined,
                     title: 'Krmení',
                     subtitle: 'čas, typ a případně množství',
-                    onTap: () => _open(context, const FeedingFormScreen()),
+                    onTap: () => _select(context, const FeedingFormScreen()),
                   ),
                   const SizedBox(height: 10),
                   _QuickAddTile(
                     icon: Icons.bedtime_outlined,
                     title: 'Spánek',
                     subtitle: 'začátek, konec a délka',
-                    onTap: () => _open(context, const SleepFormScreen()),
+                    onTap: () => _select(context, const SleepFormScreen()),
                   ),
                   const SizedBox(height: 10),
                   _QuickAddTile(
                     icon: Icons.baby_changing_station_outlined,
                     title: 'Přebalení',
                     subtitle: 'rychlý záznam bez zbytečných kroků',
-                    onTap: () => _open(context, const DiaperFormScreen()),
+                    onTap: () => _select(context, const DiaperFormScreen()),
                   ),
                   const SizedBox(height: 10),
                   _QuickAddTile(
                     icon: Icons.campaign_outlined,
                     title: 'Pláč',
                     subtitle: 'včetně audio vzorku a AI analýzy',
-                    onTap: () => _open(context, const CryingFormScreen()),
+                    onTap: () => _select(context, const CryingFormScreen()),
                   ),
                 ],
               ),
