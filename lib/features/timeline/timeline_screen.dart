@@ -304,8 +304,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFF1F9F7), Color(0xFFFFFFFF)],
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.32),
+                    colorScheme.surface,
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

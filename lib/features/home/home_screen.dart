@@ -197,26 +197,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openOnboarding({bool markCompleted = false}) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => OnboardingFlow(
-        onCreateProfile: () {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _openChildProfile();
-            }
-          });
-        },
-        onConnectParent: () {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _showConnectParentPlaceholder();
-            }
-          });
-        },
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => OnboardingFlow(
+          onCreateProfile: () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _openChildProfile();
+              }
+            });
+          },
+          onConnectParent: () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _showConnectParentPlaceholder();
+              }
+            });
+          },
+        ),
       ),
     );
 
@@ -562,12 +562,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
 
+                    final colorScheme = Theme.of(context).colorScheme;
+
                     return Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(30),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFF5FBFA), Colors.white],
+                        gradient: LinearGradient(
+                          colors: [
+                            colorScheme.primaryContainer.withValues(
+                              alpha: 0.22,
+                            ),
+                            colorScheme.surface,
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -620,12 +627,17 @@ class _HeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFDFF6F3), Color(0xFFFAFBF8)],
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.primaryContainer.withValues(alpha: 0.62),
+            colorScheme.surface,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -637,7 +649,7 @@ class _HeroPanel extends StatelessWidget {
             eyebrow,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.primary,
+              color: colorScheme.primary,
             ),
           ),
           const SizedBox(height: 8),

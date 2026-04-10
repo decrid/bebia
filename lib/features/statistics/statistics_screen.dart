@@ -163,6 +163,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Statistiky')),
       body: FutureBuilder<_Stats>(
@@ -207,8 +209,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFDFF6F3), Color(0xFFFBFBF8)],
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primaryContainer.withValues(alpha: 0.55),
+                          colorScheme.surface,
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -243,8 +248,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(30),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFDFF6F3), Color(0xFFF9FBF8)],
+                    gradient: LinearGradient(
+                      colors: [
+                        colorScheme.primaryContainer.withValues(alpha: 0.55),
+                        colorScheme.surface,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),

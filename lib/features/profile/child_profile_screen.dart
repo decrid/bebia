@@ -186,6 +186,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
     final profiles = controller.profiles.value;
     final activeProfileId = controller.activeProfileId.value;
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return SafeArea(
       top: false,
@@ -233,8 +234,13 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFE2F5F1), Color(0xFFFFFFFF)],
+                          gradient: LinearGradient(
+                            colors: [
+                              colorScheme.primaryContainer.withValues(
+                                alpha: 0.58,
+                              ),
+                              colorScheme.surface,
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
