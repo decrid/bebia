@@ -2,12 +2,7 @@ import 'package:isar_community/isar.dart';
 
 part 'timeline_item.g.dart';
 
-enum EventType {
-  feeding,
-  sleep,
-  diaper,
-  crying,
-}
+enum EventType { feeding, sleep, diaper, crying }
 
 @collection
 class TimelineItem {

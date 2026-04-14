@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import 'monetization_feature.dart';
@@ -34,9 +34,9 @@ class MonetizationPlanScreen extends StatelessWidget {
               children: [
                 Text(
                   service.plusName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -57,7 +57,10 @@ class MonetizationPlanScreen extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.check_circle_outline_rounded, size: 18),
+                        const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(child: Text(item)),
                       ],
@@ -70,7 +73,8 @@ class MonetizationPlanScreen extends StatelessWidget {
           const SizedBox(height: 18),
           const _SectionHeader(
             title: 'Konkrétní výbava Bebia Plus',
-            subtitle: 'Toto je navržený balík placené hodnoty, do kterého by měla Bebia dorůst.',
+            subtitle:
+                'Toto je navržený balík placené hodnoty, do kterého by měla Bebia dorůst.',
           ),
           const SizedBox(height: 10),
           ...service.premiumFeatures.map(
@@ -108,7 +112,8 @@ class MonetizationPlanScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const _SectionHeader(
             title: 'Co má zůstat zdarma',
-            subtitle: 'Tyto části musí zůstat otevřené, aby mohl růst návyk i důvěra.',
+            subtitle:
+                'Tyto části musí zůstat otevřené, aby mohl růst návyk i důvěra.',
           ),
           const SizedBox(height: 10),
           ...service.freeFeatures.map(
@@ -162,9 +167,9 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         Text(subtitle),

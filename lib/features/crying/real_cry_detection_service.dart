@@ -8,10 +8,7 @@ import 'cry_detection_service.dart';
 import 'mock_cry_detection_service.dart';
 
 class RealCryDetectionService implements CryDetectionService {
-  RealCryDetectionService(
-    this._fallback,
-    this._audioPreprocessingService,
-  );
+  RealCryDetectionService(this._fallback, this._audioPreprocessingService);
 
   static const String _modelAssetPath = 'assets/models/yamnet.tflite';
   static const int _expectedInputLength = 15600;
@@ -61,9 +58,7 @@ class RealCryDetectionService implements CryDetectionService {
       final inputTensors = interpreter.getInputTensors();
       final outputTensors = interpreter.getOutputTensors();
 
-      debugPrint(
-        'RealCryDetectionService: TFLite model loaded successfully.',
-      );
+      debugPrint('RealCryDetectionService: TFLite model loaded successfully.');
       debugPrint(
         'RealCryDetectionService: input tensors count = '
         '${inputTensors.length}',
@@ -171,9 +166,7 @@ class RealCryDetectionService implements CryDetectionService {
         );
       }
     } catch (error, stackTrace) {
-      debugPrint(
-        'RealCryDetectionService: inference probe failed: $error',
-      );
+      debugPrint('RealCryDetectionService: inference probe failed: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
 
@@ -203,12 +196,7 @@ class RealCryDetectionService implements CryDetectionService {
     final indexed = <_IndexedScore>[];
 
     for (var i = 0; i < scores.length; i++) {
-      indexed.add(
-        _IndexedScore(
-          index: i,
-          score: scores[i],
-        ),
-      );
+      indexed.add(_IndexedScore(index: i, score: scores[i]));
     }
 
     indexed.sort((a, b) => b.score.compareTo(a.score));
@@ -229,10 +217,7 @@ class RealCryDetectionService implements CryDetectionService {
 }
 
 class _IndexedScore {
-  const _IndexedScore({
-    required this.index,
-    required this.score,
-  });
+  const _IndexedScore({required this.index, required this.score});
 
   final int index;
   final double score;

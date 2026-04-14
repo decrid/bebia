@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
@@ -50,8 +50,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _reloadData() {
-    _futureRecommendations = AppServices.recommendationService.getRecommendations();
-    _futureCryingAnalysis = AppServices.cryingAnalysisService.analyzeLatestCrying();
+    _futureRecommendations = AppServices.recommendationService
+        .getRecommendations();
+    _futureCryingAnalysis = AppServices.cryingAnalysisService
+        .analyzeLatestCrying();
     _futurePredictions = AppServices.predictionService.getPredictions();
     _futureOverview = _buildOverview();
   }
@@ -62,7 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final todayItems = items.where((item) => !item.time.isBefore(todayStart)).toList();
+    final todayItems = items
+        .where((item) => !item.time.isBefore(todayStart))
+        .toList();
 
     String readinessTitle;
     String readinessText;
@@ -82,10 +86,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return _HomeOverview(
       totalToday: todayItems.length,
-      feedingsToday: todayItems.where((item) => item.type == EventType.feeding).length,
-      sleepsToday: todayItems.where((item) => item.type == EventType.sleep).length,
-      diapersToday: todayItems.where((item) => item.type == EventType.diaper).length,
-      cryingsToday: todayItems.where((item) => item.type == EventType.crying).length,
+      feedingsToday: todayItems
+          .where((item) => item.type == EventType.feeding)
+          .length,
+      sleepsToday: todayItems
+          .where((item) => item.type == EventType.sleep)
+          .length,
+      diapersToday: todayItems
+          .where((item) => item.type == EventType.diaper)
+          .length,
+      cryingsToday: todayItems
+          .where((item) => item.type == EventType.crying)
+          .length,
       lastEventTime: items.isEmpty ? null : items.first.time,
       readinessTitle: readinessTitle,
       readinessText: readinessText,
@@ -360,7 +372,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
                 return _TodayOverviewCard(
                   overview: snapshot.data!,
-                  ageLabel: profile == null ? null : _ageLabel(profile.dateOfBirth),
+                  ageLabel: profile == null
+                      ? null
+                      : _ageLabel(profile.dateOfBirth),
                   formatTime: _formatTime,
                 );
               },
@@ -393,11 +407,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 final analysis = snapshot.data;
                 if (analysis == null) {
                   return const _EmptyInsightCard(
-                    text: 'Jakmile přidáš záznam pláče, zobrazí se tady AI souhrn.',
+                    text:
+                        'Jakmile přidáš záznam pláče, zobrazí se tady AI souhrn.',
                   );
                 }
 
-                final confidenceColor = _confidenceColor(context, analysis.confidence);
+                final confidenceColor = _confidenceColor(
+                  context,
+                  analysis.confidence,
+                );
 
                 return Card(
                   child: Padding(
@@ -410,7 +428,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             CircleAvatar(
                               radius: 25,
-                              backgroundColor: confidenceColor.withValues(alpha: 0.14),
+                              backgroundColor: confidenceColor.withValues(
+                                alpha: 0.14,
+                              ),
                               foregroundColor: confidenceColor,
                               child: const Icon(Icons.psychology_alt_outlined),
                             ),
@@ -467,13 +487,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text(
                                 analysis.nextStepTitle,
-                                style: const TextStyle(fontWeight: FontWeight.w800),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(analysis.nextStepDescription),
                               const SizedBox(height: 12),
                               FilledButton.tonalIcon(
-                                onPressed: () => _handleAnalysisNextStep(analysis),
+                                onPressed: () =>
+                                    _handleAnalysisNextStep(analysis),
                                 icon: const Icon(Icons.arrow_forward_rounded),
                                 label: const Text('Provést krok'),
                               ),
@@ -501,7 +524,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const RecommendationsScreen(),
+                      ),
                     );
                   },
                   child: const Text('Všechna'),
@@ -512,19 +537,24 @@ class _HomeScreenState extends State<HomeScreen> {
             FutureBuilder<List<Prediction>>(
               future: _futurePredictions,
               builder: (context, predictionSnapshot) {
-                if (predictionSnapshot.connectionState == ConnectionState.waiting) {
+                if (predictionSnapshot.connectionState ==
+                    ConnectionState.waiting) {
                   return const _LoadingCard();
                 }
 
                 return FutureBuilder<List<Recommendation>>(
                   future: _futureRecommendations,
                   builder: (context, recommendationSnapshot) {
-                    if (recommendationSnapshot.connectionState == ConnectionState.waiting) {
+                    if (recommendationSnapshot.connectionState ==
+                        ConnectionState.waiting) {
                       return const _LoadingCard();
                     }
 
-                    if (predictionSnapshot.hasError || recommendationSnapshot.hasError) {
-                      final error = predictionSnapshot.error ?? recommendationSnapshot.error;
+                    if (predictionSnapshot.hasError ||
+                        recommendationSnapshot.hasError) {
+                      final error =
+                          predictionSnapshot.error ??
+                          recommendationSnapshot.error;
                       return Card(
                         child: Padding(
                           padding: const EdgeInsets.all(18),
@@ -534,22 +564,30 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
 
                     final items = <_AssistantAgendaItem>[
-                      ...(predictionSnapshot.data ?? []).take(2).map(
+                      ...(predictionSnapshot.data ?? [])
+                          .take(2)
+                          .map(
                             (prediction) => _AssistantAgendaItem(
                               icon: Icons.schedule_outlined,
                               title: prediction.title,
                               subtitle:
                                   'Odhad ${_formatTime(prediction.predictedTime)} • jistota ${(prediction.confidence * 100).round()} %',
-                              badge: _predictionWindowLabel(prediction.predictedTime),
+                              badge: _predictionWindowLabel(
+                                prediction.predictedTime,
+                              ),
                               tint: const Color(0xFFE6F7F4),
                             ),
                           ),
-                      ...(recommendationSnapshot.data ?? []).take(2).map(
+                      ...(recommendationSnapshot.data ?? [])
+                          .take(2)
+                          .map(
                             (recommendation) => _AssistantAgendaItem(
                               icon: Icons.lightbulb_outline,
                               title: recommendation.title,
                               subtitle: recommendation.description,
-                              badge: _recommendationPriorityLabel(recommendation.score),
+                              badge: _recommendationPriorityLabel(
+                                recommendation.score,
+                              ),
                               tint: const Color(0xFFFFF3E7),
                             ),
                           ),
@@ -568,14 +606,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(30),
                         gradient: LinearGradient(
                           colors: [
-                            colorScheme.primaryContainer.withValues(alpha: 0.22),
+                            colorScheme.primaryContainer.withValues(
+                              alpha: 0.22,
+                            ),
                             colorScheme.surface,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.16),
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.16,
+                          ),
                         ),
                       ),
                       child: Column(
@@ -643,16 +685,16 @@ class _TodayOverviewCard extends StatelessWidget {
           children: [
             Text(
               'Pulse dne',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
               overview.readinessTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(overview.readinessText),
@@ -663,7 +705,9 @@ class _TodayOverviewCard extends StatelessWidget {
               children: [
                 if (ageLabel != null) InfoLabel(label: 'Věk $ageLabel'),
                 InfoLabel(label: 'Dnes ${overview.totalToday} záznamů'),
-                InfoLabel(label: 'Poslední zápis ${formatTime(overview.lastEventTime)}'),
+                InfoLabel(
+                  label: 'Poslední zápis ${formatTime(overview.lastEventTime)}',
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -755,9 +799,9 @@ class _MiniMetricCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '$value',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -806,9 +850,9 @@ class _HeroPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
@@ -840,10 +884,7 @@ class _EmptyInsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Text(text),
-      ),
+      child: Padding(padding: const EdgeInsets.all(18), child: Text(text)),
     );
   }
 }
@@ -861,9 +902,9 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),

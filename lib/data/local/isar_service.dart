@@ -23,7 +23,9 @@ class IsarService {
   static Isar get instance {
     final db = _isar;
     if (db == null) {
-      throw StateError('Isar není inicializovaný. Zavolej nejdřív IsarService.open().');
+      throw StateError(
+        'Isar není inicializovaný. Zavolej nejdřív IsarService.open().',
+      );
     }
     return db;
   }

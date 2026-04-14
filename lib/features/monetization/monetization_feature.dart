@@ -1,7 +1,4 @@
-enum BebiaPlan {
-  free,
-  plus,
-}
+enum BebiaPlan { free, plus }
 
 class MonetizationFeature {
   const MonetizationFeature({

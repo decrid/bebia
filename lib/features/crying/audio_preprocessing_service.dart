@@ -167,8 +167,9 @@ class AudioPreprocessingService {
     }
 
     final rms = (sumSquares / sampleCount).sqrtApprox();
-    final zeroCrossingRate =
-        sampleCount > 1 ? zeroCrossings / (sampleCount - 1) : 0.0;
+    final zeroCrossingRate = sampleCount > 1
+        ? zeroCrossings / (sampleCount - 1)
+        : 0.0;
     final activeFrameRatio = totalFrames > 0 ? activeFrames / totalFrames : 0.0;
     final durationMs = ((sampleCount / sampleRate) * 1000).round();
 

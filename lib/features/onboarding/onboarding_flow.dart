@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({
@@ -215,9 +215,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   const SizedBox(width: 8),
                   FilledButton(
                     onPressed: _next,
-                    child: Text(
-                      _page == _pageCount - 1 ? 'Dokončit' : 'Další',
-                    ),
+                    child: Text(_page == _pageCount - 1 ? 'Dokončit' : 'Další'),
                   ),
                 ],
               ),

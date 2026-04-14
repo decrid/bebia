@@ -35,9 +35,7 @@ class MockCryDetectionService implements CryDetectionService {
     final features = audio.features!;
 
     double probability = 0.0;
-    final signals = <String>[
-      'audio vzorek analyzován ze signálu',
-    ];
+    final signals = <String>['audio vzorek analyzován ze signálu'];
 
     if (features.durationMs >= 700) {
       probability += 0.08;
