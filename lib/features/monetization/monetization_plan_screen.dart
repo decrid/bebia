@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import 'monetization_feature.dart';
@@ -12,7 +12,7 @@ class MonetizationPlanScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Monetization plan')),
+      appBar: AppBar(title: const Text('Bebia Plus')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -69,8 +69,8 @@ class MonetizationPlanScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           const _SectionHeader(
-            title: 'Concrete Plus feature set',
-            subtitle: 'This is the proposed premium package Bebia should grow into.',
+            title: 'Konkrétní výbava Bebia Plus',
+            subtitle: 'Toto je navržený balík placené hodnoty, do kterého by měla Bebia dorůst.',
           ),
           const SizedBox(height: 10),
           ...service.premiumFeatures.map(
@@ -91,7 +91,7 @@ class MonetizationPlanScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Upgrade timing',
+                    'Nejlepší moment pro nabídku upgradu',
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
@@ -107,8 +107,8 @@ class MonetizationPlanScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _SectionHeader(
-            title: 'Free forever',
-            subtitle: 'These parts should stay open so the habit loop and trust can grow.',
+            title: 'Co má zůstat zdarma',
+            subtitle: 'Tyto části musí zůstat otevřené, aby mohl růst návyk i důvěra.',
           ),
           const SizedBox(height: 10),
           ...service.freeFeatures.map(
@@ -117,7 +117,7 @@ class MonetizationPlanScreen extends StatelessWidget {
               child: _FeatureCard(
                 feature: feature,
                 tint: const Color(0xFFEAF8F7),
-                badge: 'Free',
+                badge: 'Zdarma',
               ),
             ),
           ),
@@ -128,8 +128,8 @@ class MonetizationPlanScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Rollout plan',
+                  const Text(
+                    'Plán nasazení',
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
@@ -162,9 +162,9 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 4),
         Text(subtitle),

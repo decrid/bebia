@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/info_label.dart';
 import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../family/family_sharing_screen.dart';
@@ -8,15 +9,13 @@ import '../feeding/feeding_form_screen.dart';
 import '../monetization/monetization_plan_screen.dart';
 import '../onboarding/onboarding_flow.dart';
 import '../predictions/prediction_model.dart';
-import '../profile/child_profile.dart';
 import '../profile/child_profile_screen.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
 import '../timeline/timeline_item.dart';
-import '../../shared/widgets/info_label.dart';
 
-enum _HomeMenuAction { profiles, onboarding, connectParent, monetization }
+enum _HomeMenuAction { profiles, onboarding, connectParent, plus }
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -37,45 +36,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadRecommendations();
-    _loadCryingAnalysis();
-    _loadPredictions();
-    _loadOverview();
-    AppServices.childProfileController.activeProfileId.addListener(
-      _handleChildProfileChanged,
-    );
-    AppServices.timelineController.revision.addListener(_handleTimelineChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybeOpenOnboarding();
-    });
+    _reloadData();
+    AppServices.childProfileController.activeProfileId.addListener(_refresh);
+    AppServices.timelineController.revision.addListener(_refresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOpenOnboarding());
   }
 
   @override
   void dispose() {
-    AppServices.childProfileController.activeProfileId.removeListener(
-      _handleChildProfileChanged,
-    );
-    AppServices.timelineController.revision.removeListener(
-      _handleTimelineChanged,
-    );
+    AppServices.childProfileController.activeProfileId.removeListener(_refresh);
+    AppServices.timelineController.revision.removeListener(_refresh);
     super.dispose();
   }
 
-  void _loadRecommendations() {
-    _futureRecommendations = AppServices.recommendationService
-        .getRecommendations();
-  }
-
-  void _loadCryingAnalysis() {
-    _futureCryingAnalysis = AppServices.cryingAnalysisService
-        .analyzeLatestCrying();
-  }
-
-  void _loadPredictions() {
+  void _reloadData() {
+    _futureRecommendations = AppServices.recommendationService.getRecommendations();
+    _futureCryingAnalysis = AppServices.cryingAnalysisService.analyzeLatestCrying();
     _futurePredictions = AppServices.predictionService.getPredictions();
-  }
-
-  void _loadOverview() {
     _futureOverview = _buildOverview();
   }
 
@@ -85,11 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final todayItems = items
-        .where((item) => !item.time.isBefore(todayStart))
-        .toList();
-    final family = AppServices.familyConnectionController.state.value;
-    final profile = AppServices.childProfileController.activeProfile;
+    final todayItems = items.where((item) => !item.time.isBefore(todayStart)).toList();
 
     String readinessTitle;
     String readinessText;
@@ -109,35 +82,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return _HomeOverview(
       totalToday: todayItems.length,
-      feedingsToday: todayItems
-          .where((item) => item.type == EventType.feeding)
-          .length,
-      sleepsToday:
-          todayItems.where((item) => item.type == EventType.sleep).length,
-      diapersToday:
-          todayItems.where((item) => item.type == EventType.diaper).length,
-      cryingsToday:
-          todayItems.where((item) => item.type == EventType.crying).length,
+      feedingsToday: todayItems.where((item) => item.type == EventType.feeding).length,
+      sleepsToday: todayItems.where((item) => item.type == EventType.sleep).length,
+      diapersToday: todayItems.where((item) => item.type == EventType.diaper).length,
+      cryingsToday: todayItems.where((item) => item.type == EventType.crying).length,
       lastEventTime: items.isEmpty ? null : items.first.time,
       readinessTitle: readinessTitle,
       readinessText: readinessText,
-      setupProgress: [
-        profile != null,
-        todayItems.isNotEmpty,
-        family.isConnected || family.caregivers.length >= 2,
-      ].where((done) => done).length,
-      hasProfile: profile != null,
-      hasFamilyPrepared: family.isConnected || family.hasInvite,
     );
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _loadRecommendations();
-      _loadCryingAnalysis();
-      _loadPredictions();
-    });
-
+    if (!mounted) return;
+    setState(_reloadData);
     await Future.wait([
       _futureRecommendations,
       _futureCryingAnalysis,
@@ -146,34 +103,125 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  void _handleChildProfileChanged() {
-    if (!mounted) return;
-    _refresh();
-  }
-
-  void _handleTimelineChanged() {
-    if (!mounted) return;
-    _refresh();
-  }
-
   Future<void> _openForm(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    if (!mounted) return;
+    await _refresh();
+  }
+
+  Future<void> _openChildProfile() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ChildProfileScreen(),
+    );
+    if (!mounted) return;
+    await _refresh();
+  }
+
+  Future<void> _openFamilySharing() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const FamilySharingScreen(),
+    );
+    if (!mounted) return;
+    await _refresh();
+  }
+
+  Future<void> _openOnboarding({bool markCompleted = false}) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => OnboardingFlow(
+          onCreateProfile: () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _openChildProfile();
+            });
+          },
+          onConnectParent: () {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _openFamilySharing();
+            });
+          },
+        ),
+      ),
+    );
+
+    if (markCompleted) {
+      await AppServices.onboardingStore.setCompleted(true);
+    }
 
     if (!mounted) return;
     await _refresh();
   }
 
-  String _formatPredictionTime(DateTime? time) {
-    if (time == null) return '-';
+  Future<void> _maybeOpenOnboarding() async {
+    if (_didCheckOnboarding || !mounted) return;
+    _didCheckOnboarding = true;
 
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
+    final completed = await AppServices.onboardingStore.isCompleted();
+    if (!mounted || completed) return;
+
+    await _openOnboarding(markCompleted: true);
+  }
+
+  Future<void> _openPlusScreen() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MonetizationPlanScreen()),
+    );
+  }
+
+  void _handleMenuAction(_HomeMenuAction action) {
+    switch (action) {
+      case _HomeMenuAction.profiles:
+        _openChildProfile();
+        return;
+      case _HomeMenuAction.onboarding:
+        _openOnboarding();
+        return;
+      case _HomeMenuAction.connectParent:
+        _openFamilySharing();
+        return;
+      case _HomeMenuAction.plus:
+        _openPlusScreen();
+        return;
+    }
+  }
+
+  String _formatTime(DateTime? value) {
+    if (value == null) return '-';
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  String _ageLabel(DateTime dateOfBirth) {
+    final now = DateTime.now();
+    int months =
+        (now.year - dateOfBirth.year) * 12 + now.month - dateOfBirth.month;
+    if (now.day < dateOfBirth.day) months -= 1;
+
+    if (months <= 0) {
+      final days = now.difference(dateOfBirth).inDays.clamp(0, 31);
+      return '$days dní';
+    }
+
+    final years = months ~/ 12;
+    final remainingMonths = months % 12;
+    if (years == 0) return '$months měs.';
+    if (remainingMonths == 0) return '$years r.';
+    return '$years r. $remainingMonths měs.';
   }
 
   String _predictionWindowLabel(DateTime? time) {
     if (time == null) return 'Bez odhadu';
-
     final diff = time.difference(DateTime.now()).inMinutes;
     if (diff <= 15) return 'Teď';
     if (diff <= 60) return 'Do hodiny';
@@ -237,133 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildSignalChips(List<String> signals) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: signals.map((signal) => InfoLabel(label: signal)).toList(),
-    );
-  }
-
-  Future<void> _openChildProfile() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const ChildProfileScreen(),
-    );
-
-    if (!mounted) return;
-    await _refresh();
-  }
-
-  Future<void> _openFamilySharing() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const FamilySharingScreen(),
-    );
-
-    if (!mounted) return;
-    await _refresh();
-  }
-
-  Future<void> _openOnboarding({bool markCompleted = false}) async {
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => OnboardingFlow(
-          onCreateProfile: () {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _openChildProfile();
-              }
-            });
-          },
-          onConnectParent: () {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _openFamilySharing();
-              }
-            });
-          },
-        ),
-      ),
-    );
-
-    if (markCompleted) {
-      await AppServices.onboardingStore.setCompleted(true);
-    }
-
-    if (!mounted) return;
-    await _refresh();
-  }
-
-  Future<void> _maybeOpenOnboarding() async {
-    if (_didCheckOnboarding || !mounted) return;
-    _didCheckOnboarding = true;
-
-    final completed = await AppServices.onboardingStore.isCompleted();
-    if (!mounted || completed) return;
-
-    await _openOnboarding(markCompleted: true);
-  }
-
-  Future<void> _openMonetizationPlan() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const MonetizationPlanScreen()),
-    );
-  }
-
-  void _handleMenuAction(_HomeMenuAction action) {
-    switch (action) {
-      case _HomeMenuAction.profiles:
-        _openChildProfile();
-        return;
-      case _HomeMenuAction.onboarding:
-        _openOnboarding();
-        return;
-      case _HomeMenuAction.connectParent:
-        _openFamilySharing();
-        return;
-      case _HomeMenuAction.monetization:
-        _openMonetizationPlan();
-        return;
-    }
-  }
-
-  String _ageLabel(DateTime dateOfBirth) {
-    final now = DateTime.now();
-    int months =
-        (now.year - dateOfBirth.year) * 12 + now.month - dateOfBirth.month;
-    if (now.day < dateOfBirth.day) {
-      months -= 1;
-    }
-
-    if (months <= 0) {
-      final days = now.difference(dateOfBirth).inDays.clamp(0, 31);
-      return '$days dní';
-    }
-
-    final years = months ~/ 12;
-    final remainingMonths = months % 12;
-
-    if (years == 0) {
-      return '$months měs.';
-    }
-
-    if (remainingMonths == 0) {
-      return '$years r.';
-    }
-
-    return '$years r. $remainingMonths měs.';
-  }
-
   @override
   Widget build(BuildContext context) {
     final profile = AppServices.childProfileController.activeProfile;
@@ -398,10 +319,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               PopupMenuItem(
-                value: _HomeMenuAction.monetization,
+                value: _HomeMenuAction.plus,
                 child: ListTile(
                   leading: Icon(Icons.workspace_premium_outlined),
-                  title: Text('Monetization plan'),
+                  title: Text('Bebia Plus'),
                 ),
               ),
             ],
@@ -416,78 +337,48 @@ class _HomeScreenState extends State<HomeScreen> {
             _HeroPanel(
               eyebrow: profile == null ? 'Dnes' : profile.name,
               title: 'Co je teď důležité',
-              subtitle: _heroSubtitle(profile),
+              subtitle: profile == null
+                  ? 'AI pohled na poslední pláč a nejbližší očekávání.'
+                  : 'Věk ${_ageLabel(profile.dateOfBirth)} • aktivní profil dítěte.',
             ),
             const SizedBox(height: 14),
             FutureBuilder<_HomeOverview>(
               future: _futureOverview,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  );
+                  return const _LoadingCard();
                 }
-
                 if (snapshot.hasError) {
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(18),
                       child: Text(
-                        'Souhrn dne se nepodarilo nacist: ${snapshot.error}',
+                        'Souhrn dne se nepodařilo načíst: ${snapshot.error}',
                       ),
                     ),
                   );
                 }
-
-                final overview = snapshot.data!;
-
-                return Column(
-                  children: [
-                    _TodayOverviewCard(
-                      overview: overview,
-                      ageLabel: profile == null
-                          ? null
-                          : _ageLabel(profile.dateOfBirth),
-                    ),
-                    const SizedBox(height: 14),
-                    _QuickHomeActions(
-                      onFeedingTap: () => _openForm(const FeedingFormScreen()),
-                      onSleepTap: () => _openForm(const SleepFormScreen()),
-                      onDiaperTap: () => _openForm(const DiaperFormScreen()),
-                      onFamilyTap: _openFamilySharing,
-                    ),
-                    if (overview.setupProgress < 3) ...[
-                      const SizedBox(height: 14),
-                      _SetupNudgeCard(
-                        overview: overview,
-                        onOpenProfiles: _openChildProfile,
-                        onOpenFamily: _openFamilySharing,
-                        onOpenFeeding: () =>
-                            _openForm(const FeedingFormScreen()),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    _MonetizationNudgeCard(onTap: _openMonetizationPlan),
-                    const SizedBox(height: 22),
-                  ],
+                return _TodayOverviewCard(
+                  overview: snapshot.data!,
+                  ageLabel: profile == null ? null : _ageLabel(profile.dateOfBirth),
+                  formatTime: _formatTime,
                 );
               },
             ),
+            const SizedBox(height: 22),
+            _SectionHeader(
+              title: 'AI přehled',
+              subtitle: profile == null
+                  ? 'Funguje i bez profilu, ale s profilem budou odhady přesnější.'
+                  : 'Poslední AI signály a doporučený další krok.',
+            ),
+            const SizedBox(height: 10),
             FutureBuilder<CryingAnalysisResult?>(
               future: _futureCryingAnalysis,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  );
+                  return const _LoadingCard();
                 }
-
                 if (snapshot.hasError) {
                   return Card(
                     child: Padding(
@@ -502,15 +393,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 final analysis = snapshot.data;
                 if (analysis == null) {
                   return const _EmptyInsightCard(
-                    text:
-                        'Jakmile pridas zaznam place, zobrazi se tady AI souhrn.',
+                    text: 'Jakmile přidáš záznam pláče, zobrazí se tady AI souhrn.',
                   );
                 }
 
-                final confidenceColor = _confidenceColor(
-                  context,
-                  analysis.confidence,
-                );
+                final confidenceColor = _confidenceColor(context, analysis.confidence);
 
                 return Card(
                   child: Padding(
@@ -523,9 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             CircleAvatar(
                               radius: 25,
-                              backgroundColor: confidenceColor.withValues(
-                                alpha: 0.14,
-                              ),
+                              backgroundColor: confidenceColor.withValues(alpha: 0.14),
                               foregroundColor: confidenceColor,
                               child: const Icon(Icons.psychology_alt_outlined),
                             ),
@@ -544,9 +429,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     'Jistota ${(analysis.confidence * 100).round()} % • ${_confidenceLabel(analysis.confidence)}',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
                                   ),
                                 ],
                               ),
@@ -560,7 +442,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
-                          _buildSignalChips(analysis.signals.take(4).toList()),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: analysis.signals
+                                .take(4)
+                                .map((signal) => InfoLabel(label: signal))
+                                .toList(),
+                          ),
                         ],
                         const SizedBox(height: 16),
                         Container(
@@ -578,21 +467,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text(
                                 analysis.nextStepTitle,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                                style: const TextStyle(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: 4),
                               Text(analysis.nextStepDescription),
                               const SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: FilledButton.tonalIcon(
-                                  onPressed: () =>
-                                      _handleAnalysisNextStep(analysis),
-                                  icon: const Icon(Icons.arrow_forward_rounded),
-                                  label: const Text('Provést krok'),
-                                ),
+                              FilledButton.tonalIcon(
+                                onPressed: () => _handleAnalysisNextStep(analysis),
+                                icon: const Icon(Icons.arrow_forward_rounded),
+                                label: const Text('Provést krok'),
                               ),
                             ],
                           ),
@@ -618,9 +501,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const RecommendationsScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
                     );
                   },
                   child: const Text('Všechna'),
@@ -631,34 +512,19 @@ class _HomeScreenState extends State<HomeScreen> {
             FutureBuilder<List<Prediction>>(
               future: _futurePredictions,
               builder: (context, predictionSnapshot) {
-                if (predictionSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  );
+                if (predictionSnapshot.connectionState == ConnectionState.waiting) {
+                  return const _LoadingCard();
                 }
 
                 return FutureBuilder<List<Recommendation>>(
                   future: _futureRecommendations,
                   builder: (context, recommendationSnapshot) {
-                    if (recommendationSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: CircularProgressIndicator()),
-                        ),
-                      );
+                    if (recommendationSnapshot.connectionState == ConnectionState.waiting) {
+                      return const _LoadingCard();
                     }
 
-                    if (predictionSnapshot.hasError ||
-                        recommendationSnapshot.hasError) {
-                      final error =
-                          predictionSnapshot.error ??
-                          recommendationSnapshot.error;
+                    if (predictionSnapshot.hasError || recommendationSnapshot.hasError) {
+                      final error = predictionSnapshot.error ?? recommendationSnapshot.error;
                       return Card(
                         child: Padding(
                           padding: const EdgeInsets.all(18),
@@ -667,34 +533,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
 
-                    final predictions = (predictionSnapshot.data ?? []).take(2);
-                    final recommendations = (recommendationSnapshot.data ?? [])
-                        .take(2);
-
                     final items = <_AssistantAgendaItem>[
-                      ...predictions.map(
-                        (prediction) => _AssistantAgendaItem(
-                          icon: Icons.schedule_outlined,
-                          title: prediction.title,
-                          subtitle:
-                              'Odhad ${_formatPredictionTime(prediction.predictedTime)} • jistota ${(prediction.confidence * 100).round()} %',
-                          badge: _predictionWindowLabel(
-                            prediction.predictedTime,
+                      ...(predictionSnapshot.data ?? []).take(2).map(
+                            (prediction) => _AssistantAgendaItem(
+                              icon: Icons.schedule_outlined,
+                              title: prediction.title,
+                              subtitle:
+                                  'Odhad ${_formatTime(prediction.predictedTime)} • jistota ${(prediction.confidence * 100).round()} %',
+                              badge: _predictionWindowLabel(prediction.predictedTime),
+                              tint: const Color(0xFFE6F7F4),
+                            ),
                           ),
-                          tint: const Color(0xFFE6F7F4),
-                        ),
-                      ),
-                      ...recommendations.map(
-                        (recommendation) => _AssistantAgendaItem(
-                          icon: Icons.lightbulb_outline,
-                          title: recommendation.title,
-                          subtitle: recommendation.description,
-                          badge: _recommendationPriorityLabel(
-                            recommendation.score,
+                      ...(recommendationSnapshot.data ?? []).take(2).map(
+                            (recommendation) => _AssistantAgendaItem(
+                              icon: Icons.lightbulb_outline,
+                              title: recommendation.title,
+                              subtitle: recommendation.description,
+                              badge: _recommendationPriorityLabel(recommendation.score),
+                              tint: const Color(0xFFFFF3E7),
+                            ),
                           ),
-                          tint: const Color(0xFFFFF3E7),
-                        ),
-                      ),
                     ];
 
                     if (items.isEmpty) {
@@ -704,25 +562,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
 
                     final colorScheme = Theme.of(context).colorScheme;
-
                     return Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(30),
                         gradient: LinearGradient(
                           colors: [
-                            colorScheme.primaryContainer.withValues(
-                              alpha: 0.22,
-                            ),
+                            colorScheme.primaryContainer.withValues(alpha: 0.22),
                             colorScheme.surface,
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         border: Border.all(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.outlineVariant.withValues(alpha: 0.16),
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.16),
                         ),
                       ),
                       child: Column(
@@ -745,14 +598,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  String _heroSubtitle(ChildProfile? profile) {
-    if (profile == null) {
-      return 'AI pohled na poslední pláč a nejbližší očekávání.';
-    }
-
-    return 'Věk ${_ageLabel(profile.dateOfBirth)} • aktivní profil dítěte.';
-  }
 }
 
 class _HomeOverview {
@@ -765,9 +610,6 @@ class _HomeOverview {
     required this.lastEventTime,
     required this.readinessTitle,
     required this.readinessText,
-    required this.setupProgress,
-    required this.hasProfile,
-    required this.hasFamilyPrepared,
   });
 
   final int totalToday;
@@ -778,36 +620,18 @@ class _HomeOverview {
   final DateTime? lastEventTime;
   final String readinessTitle;
   final String readinessText;
-  final int setupProgress;
-  final bool hasProfile;
-  final bool hasFamilyPrepared;
-}
-
-class _SetupStep {
-  const _SetupStep({
-    required this.title,
-    required this.onTap,
-  });
-
-  final String title;
-  final VoidCallback onTap;
 }
 
 class _TodayOverviewCard extends StatelessWidget {
   const _TodayOverviewCard({
     required this.overview,
     required this.ageLabel,
+    required this.formatTime,
   });
 
   final _HomeOverview overview;
   final String? ageLabel;
-
-  String _formatTime(DateTime? value) {
-    if (value == null) return '-';
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
+  final String Function(DateTime?) formatTime;
 
   @override
   Widget build(BuildContext context) {
@@ -817,31 +641,18 @@ class _TodayOverviewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pulse dne',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        overview.readinessTitle,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                InfoLabel(label: '${overview.setupProgress}/3 pripraveno'),
-              ],
+            Text(
+              'Pulse dne',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              overview.readinessTitle,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(overview.readinessText),
@@ -850,48 +661,52 @@ class _TodayOverviewCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (ageLabel != null) InfoLabel(label: 'Vek $ageLabel'),
-                InfoLabel(label: 'Dnes ${overview.totalToday} zaznamu'),
-                InfoLabel(label: 'Posledni zapis ${_formatTime(overview.lastEventTime)}'),
-                InfoLabel(
-                  label: overview.hasFamilyPrepared
-                      ? 'Rodina pripravena'
-                      : 'Sdileni zatim chybi',
-                ),
+                if (ageLabel != null) InfoLabel(label: 'Věk $ageLabel'),
+                InfoLabel(label: 'Dnes ${overview.totalToday} záznamů'),
+                InfoLabel(label: 'Poslední zápis ${formatTime(overview.lastEventTime)}'),
               ],
             ),
             const SizedBox(height: 16),
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.45,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+            Row(
               children: [
-                _MiniMetricCard(
-                  icon: Icons.local_drink_outlined,
-                  label: 'Krmeni',
-                  value: overview.feedingsToday,
-                  tint: const Color(0xFFEAF8F7),
+                Expanded(
+                  child: _MiniMetricCard(
+                    icon: Icons.local_drink_outlined,
+                    label: 'Krmení',
+                    value: overview.feedingsToday,
+                    tint: const Color(0xFFEAF8F7),
+                  ),
                 ),
-                _MiniMetricCard(
-                  icon: Icons.bedtime_outlined,
-                  label: 'Spanek',
-                  value: overview.sleepsToday,
-                  tint: const Color(0xFFE9F3FB),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _MiniMetricCard(
+                    icon: Icons.bedtime_outlined,
+                    label: 'Spánek',
+                    value: overview.sleepsToday,
+                    tint: const Color(0xFFE9F3FB),
+                  ),
                 ),
-                _MiniMetricCard(
-                  icon: Icons.baby_changing_station_outlined,
-                  label: 'Prebaleni',
-                  value: overview.diapersToday,
-                  tint: const Color(0xFFFFF3E7),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniMetricCard(
+                    icon: Icons.baby_changing_station_outlined,
+                    label: 'Přebalení',
+                    value: overview.diapersToday,
+                    tint: const Color(0xFFFFF3E7),
+                  ),
                 ),
-                _MiniMetricCard(
-                  icon: Icons.campaign_outlined,
-                  label: 'Plac',
-                  value: overview.cryingsToday,
-                  tint: const Color(0xFFF7EDF8),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _MiniMetricCard(
+                    icon: Icons.campaign_outlined,
+                    label: 'Pláč',
+                    value: overview.cryingsToday,
+                    tint: const Color(0xFFF7EDF8),
+                  ),
                 ),
               ],
             ),
@@ -920,6 +735,7 @@ class _MiniMetricCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
+      height: 112,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
@@ -930,211 +746,18 @@ class _MiniMetricCard extends StatelessWidget {
         children: [
           Icon(icon, color: colorScheme.primary),
           const Spacer(),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 2),
           Text(
             '$value',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickHomeActions extends StatelessWidget {
-  const _QuickHomeActions({
-    required this.onFeedingTap,
-    required this.onSleepTap,
-    required this.onDiaperTap,
-    required this.onFamilyTap,
-  });
-
-  final VoidCallback onFeedingTap;
-  final VoidCallback onSleepTap;
-  final VoidCallback onDiaperTap;
-  final VoidCallback onFamilyTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Rychle kroky',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Moderni mobilni aplikace setri cas jednim klepnutim. Tady jsou nejcastejsi akce bez hledani v menu.',
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _ActionChip(
-                  icon: Icons.local_drink_outlined,
-                  label: 'Krmeni',
-                  onTap: onFeedingTap,
-                ),
-                _ActionChip(
-                  icon: Icons.bedtime_outlined,
-                  label: 'Spanek',
-                  onTap: onSleepTap,
-                ),
-                _ActionChip(
-                  icon: Icons.baby_changing_station_outlined,
-                  label: 'Prebaleni',
-                  onTap: onDiaperTap,
-                ),
-                _ActionChip(
-                  icon: Icons.group_add_outlined,
-                  label: 'Sdileni',
-                  onTap: onFamilyTap,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionChip extends StatelessWidget {
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-      onPressed: onTap,
-    );
-  }
-}
-
-class _SetupNudgeCard extends StatelessWidget {
-  const _SetupNudgeCard({
-    required this.overview,
-    required this.onOpenProfiles,
-    required this.onOpenFamily,
-    required this.onOpenFeeding,
-  });
-
-  final _HomeOverview overview;
-  final VoidCallback onOpenProfiles;
-  final VoidCallback onOpenFamily;
-  final VoidCallback onOpenFeeding;
-
-  @override
-  Widget build(BuildContext context) {
-    final steps = <_SetupStep>[
-      if (!overview.hasProfile)
-        _SetupStep(title: 'Doplnit profil ditete', onTap: onOpenProfiles),
-      if (overview.totalToday == 0)
-        _SetupStep(title: 'Pridat prvni dnesni zaznam', onTap: onOpenFeeding),
-      if (!overview.hasFamilyPrepared)
-        _SetupStep(title: 'Pripravit rodinne sdileni', onTap: onOpenFamily),
-    ];
-
-    if (steps.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Co jeste zvedne hodnotu aplikace',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Tyto kroky nejsou povinne, ale pomuzou presnejsim odhadum i lepsimu dojmu z prvniho pouziti.',
-            ),
-            const SizedBox(height: 14),
-            ...steps.map(
-              (step) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: OutlinedButton.icon(
-                  onPressed: step.onTap,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: Text(step.title),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MonetizationNudgeCard extends StatelessWidget {
-  const _MonetizationNudgeCard({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.tertiaryContainer.withValues(alpha: 0.45),
-            colorScheme.surface,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Premium-ready plan',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Bebia zatim nema paywall. Ale uz ted je dobry cas rozhodnout, co ma zustat free a co ma byt placena vrstva s realnou hodnotou.',
-          ),
-          const SizedBox(height: 12),
-          FilledButton.tonalIcon(
-            onPressed: onTap,
-            icon: const Icon(Icons.workspace_premium_outlined),
-            label: const Text('Open monetization plan'),
           ),
         ],
       ),
@@ -1183,13 +806,27 @@ class _HeroPanel extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 8),
           Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
         ],
+      ),
+    );
+  }
+}
+
+class _LoadingCard extends StatelessWidget {
+  const _LoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
       ),
     );
   }
@@ -1203,7 +840,10 @@ class _EmptyInsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(padding: const EdgeInsets.all(18), child: Text(text)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(text),
+      ),
     );
   }
 }
@@ -1221,9 +861,9 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 4),
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),

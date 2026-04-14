@@ -1,95 +1,95 @@
-import 'monetization_feature.dart';
+﻿import 'monetization_feature.dart';
 
 class MonetizationService {
   const MonetizationService();
 
   BebiaPlan get currentPlan => BebiaPlan.free;
 
-  String get recommendedModel => 'freemium_subscription';
+  String get recommendedModel => 'predplatne_freemium';
   String get plusName => 'Bebia Plus';
-  String get plusTagline => 'Calmer days through deeper insight.';
+  String get plusTagline => 'Klidnější dny díky hlubšímu porozumění.';
 
   List<MonetizationFeature> getFeatures() {
     return const [
       MonetizationFeature(
         id: 'tracking_core',
-        title: 'Core tracking',
-        description: 'Feeding, sleep, diaper, crying, timeline, and editing.',
+        title: 'Základní záznamy',
+        description: 'Krmení, spánek, přebalení, pláč, přehled historie a úpravy.',
         includedInFree: true,
-        businessReason: 'The app needs a strong free habit loop before asking for money.',
-        plusPillar: 'Daily habit',
-        launchPhase: 'Now',
-        upgradeMoment: 'Never gate this. It creates trust and retention.',
+        businessReason: 'Aplikace potřebuje silný bezplatný návyk, než začne dávat smysl placení.',
+        plusPillar: 'Denní návyk',
+        launchPhase: 'Teď',
+        upgradeMoment: 'Toto by nemělo být zamčené. Právě tady vzniká důvěra a retence.',
       ),
       MonetizationFeature(
         id: 'profiles_and_sharing',
-        title: 'Profiles and basic family setup',
-        description: 'Child profile, active child switching, invite preparation, caregivers.',
+        title: 'Profily a základní sdílení',
+        description: 'Profil dítěte, přepínání aktivního dítěte, příprava pozvánky a pečující osoby.',
         includedInFree: true,
-        businessReason: 'Basic collaboration increases retention and creates future upgrade potential.',
-        plusPillar: 'Care coordination',
-        launchPhase: 'Now',
-        upgradeMoment: 'Keep basic setup free. Premium can expand coordination later.',
+        businessReason: 'Základní spolupráce zvyšuje retenci a připravuje prostor pro budoucí placenou vrstvu.',
+        plusPillar: 'Koordinace péče',
+        launchPhase: 'Teď',
+        upgradeMoment: 'Základní nastavení má zůstat zdarma. Placená vrstva může rozšířit koordinaci.',
       ),
       MonetizationFeature(
         id: 'ai_daily_assistant',
-        title: 'Daily AI assistant',
-        description: 'Current lightweight recommendations and next-step guidance.',
+        title: 'Denní AI asistent',
+        description: 'Lehká doporučení a návrhy dalšího kroku v průběhu dne.',
         includedInFree: true,
-        businessReason: 'Parents need to feel the value before premium positioning will convert.',
-        plusPillar: 'Proof of value',
-        launchPhase: 'Now',
-        upgradeMoment: 'Let users experience an AI win before showing upgrades.',
+        businessReason: 'Rodiče musí nejdřív zažít hodnotu produktu, teprve pak budou ochotní upgradovat.',
+        plusPillar: 'Důkaz hodnoty',
+        launchPhase: 'Teď',
+        upgradeMoment: 'Nech uživatele nejdřív zažít první AI úspěch, teprve pak ukazuj nabídku placené verze.',
       ),
       MonetizationFeature(
         id: 'weekly_ai_briefing',
-        title: 'Weekly AI briefing',
-        description: 'Plain-language weekly summaries of patterns, changes, and likely pressure points.',
+        title: 'Týdenní AI souhrn',
+        description: 'Srozumitelný týdenní přehled vzorců, změn a možných náročných momentů.',
         includedInFree: false,
-        businessReason: 'This is differentiated, recurring value that fits a subscription best.',
-        plusPillar: 'Interpretation',
-        launchPhase: 'Phase 1',
-        upgradeMoment: 'After 7-10 days of data or after the first strong pattern is found.',
+        businessReason: 'Je to opakovaná a odlišující hodnota, která dobře sedí na předplatné.',
+        plusPillar: 'Interpretace',
+        launchPhase: 'Fáze 1',
+        upgradeMoment: 'Po 7 až 10 dnech dat nebo po zachycení prvního silného vzorce.',
       ),
       MonetizationFeature(
         id: 'predictive_routines',
-        title: 'Predictive routines',
-        description: 'Wake windows, likely next event windows, and proactive routine coaching.',
+        title: 'Prediktivní rutiny',
+        description: 'Okna bdělosti, odhad další potřeby a proaktivní vedení během dne.',
         includedInFree: false,
-        businessReason: 'This is a clear time-saving layer that can justify monthly recurring payment.',
-        plusPillar: 'Prediction',
-        launchPhase: 'Phase 1',
-        upgradeMoment: 'After the user uses predictions repeatedly or checks timing before logging.',
+        businessReason: 'Šetří čas opakovaně, a proto může dobře ospravedlnit měsíční platbu.',
+        plusPillar: 'Predikce',
+        launchPhase: 'Fáze 1',
+        upgradeMoment: 'Ve chvíli, kdy uživatel opakovaně sleduje odhady před dalším zápisem.',
       ),
       MonetizationFeature(
         id: 'crying_intelligence_history',
-        title: 'Crying intelligence history',
-        description: 'Cause patterns, confidence trends, and what usually helped in similar moments.',
+        title: 'Historie porozumění pláči',
+        description: 'Vzorce příčin, trend jistoty a co obvykle pomohlo v podobných situacích.',
         includedInFree: false,
-        businessReason: 'This turns one-off AI outputs into a reusable system of value.',
-        plusPillar: 'Interpretation',
-        launchPhase: 'Phase 2',
-        upgradeMoment: 'After multiple crying analyses or when a repeated cause pattern emerges.',
+        businessReason: 'Proměňuje jednorázové AI výstupy v dlouhodobě užitečný systém.',
+        plusPillar: 'Interpretace',
+        launchPhase: 'Fáze 2',
+        upgradeMoment: 'Po více analýzách pláče nebo při opakovaném výskytu stejné příčiny.',
       ),
       MonetizationFeature(
         id: 'care_reports',
-        title: 'Reports and export',
-        description: 'Doctor-friendly summaries, caregiver handoff reports, and shareable exports.',
+        title: 'Reporty a exporty',
+        description: 'Přehledy pro pediatra, předání péče a sdílitelný export.',
         includedInFree: false,
-        businessReason: 'High-value task completion works well as premium utility.',
-        plusPillar: 'Coordination',
-        launchPhase: 'Phase 2',
-        upgradeMoment: 'Before pediatric visits, handoffs, and travel.',
+        businessReason: 'Jde o užitečný výstup s vysokou hodnotou v konkrétním okamžiku.',
+        plusPillar: 'Koordinace',
+        launchPhase: 'Fáze 2',
+        upgradeMoment: 'Před návštěvou lékaře, cestou nebo předáním péče.',
       ),
       MonetizationFeature(
         id: 'advanced_family_coordination',
-        title: 'Advanced family coordination',
-        description: 'Smart handoff notes, shared reminders, and role-specific caregiver views.',
+        title: 'Pokročilá koordinace rodiny',
+        description: 'Chytré handoff poznámky, sdílené připomínky a role pro více pečujících osob.',
         includedInFree: false,
-        businessReason: 'This can save real time for households with more than one caregiver.',
-        plusPillar: 'Coordination',
-        launchPhase: 'Phase 3',
-        upgradeMoment: 'When more than one caregiver actively uses the app.',
+        businessReason: 'Dokáže ušetřit reálný čas v domácnostech, kde aplikaci používá více lidí.',
+        plusPillar: 'Koordinace',
+        launchPhase: 'Fáze 3',
+        upgradeMoment: 'Ve chvíli, kdy aplikaci aktivně používá více než jeden pečující.',
       ),
     ];
   }
@@ -101,18 +101,18 @@ class MonetizationService {
       getFeatures().where((feature) => !feature.includedInFree).toList();
 
   String get positioningSummary {
-    return 'Keep the daily logging habit free. Charge for deeper interpretation, proactive guidance, and exports once users already trust the product.';
+    return 'Denní zapisování nech zdarma. Plať až za hlubší interpretaci, predikci a koordinaci, jakmile uživatel produktu důvěřuje.';
   }
 
   List<String> get plusValueProps => const [
-        'Understand the day faster',
-        'See patterns before they become stressful',
-        'Coordinate care with less mental load',
+        'Rychleji pochopit, co se během dne děje',
+        'Vidět vzorce dřív, než začnou být stresující',
+        'Koordinovat péči s menší mentální zátěží',
       ];
 
   List<String> get rolloutPlan => const [
-        'Phase 1: Weekly AI briefing and predictive routines',
-        'Phase 2: Crying intelligence history and reports/export',
-        'Phase 3: Advanced family coordination',
+        'Fáze 1: Týdenní AI souhrn a prediktivní rutiny',
+        'Fáze 2: Historie porozumění pláči a reporty/exporty',
+        'Fáze 3: Pokročilá koordinace rodiny',
       ];
 }
