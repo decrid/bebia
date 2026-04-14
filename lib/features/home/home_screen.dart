@@ -5,6 +5,7 @@ import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../family/family_sharing_screen.dart';
 import '../feeding/feeding_form_screen.dart';
+import '../monetization/monetization_plan_screen.dart';
 import '../onboarding/onboarding_flow.dart';
 import '../predictions/prediction_model.dart';
 import '../profile/child_profile.dart';
@@ -12,9 +13,10 @@ import '../profile/child_profile_screen.dart';
 import '../recommendations/recommendation_model.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
+import '../timeline/timeline_item.dart';
 import '../../shared/widgets/info_label.dart';
 
-enum _HomeMenuAction { profiles, onboarding, connectParent }
+enum _HomeMenuAction { profiles, onboarding, connectParent, monetization }
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -29,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Recommendation>> _futureRecommendations;
   late Future<CryingAnalysisResult?> _futureCryingAnalysis;
   late Future<List<Prediction>> _futurePredictions;
+  late Future<_HomeOverview> _futureOverview;
   bool _didCheckOnboarding = false;
 
   @override
@@ -37,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecommendations();
     _loadCryingAnalysis();
     _loadPredictions();
+    _loadOverview();
     AppServices.childProfileController.activeProfileId.addListener(
       _handleChildProfileChanged,
     );
@@ -71,6 +75,62 @@ class _HomeScreenState extends State<HomeScreen> {
     _futurePredictions = AppServices.predictionService.getPredictions();
   }
 
+  void _loadOverview() {
+    _futureOverview = _buildOverview();
+  }
+
+  Future<_HomeOverview> _buildOverview() async {
+    final items = await AppServices.timelineRepository.getAll(
+      childId: AppServices.childProfileController.activeProfileId.value,
+    );
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayItems = items
+        .where((item) => !item.time.isBefore(todayStart))
+        .toList();
+    final family = AppServices.familyConnectionController.state.value;
+    final profile = AppServices.childProfileController.activeProfile;
+
+    String readinessTitle;
+    String readinessText;
+    if (todayItems.isEmpty) {
+      readinessTitle = 'Začni dnešním prvním záznamem';
+      readinessText =
+          'První zápisy rychle odemknou hodnotu predikcí, doporučení i přehledu rytmu dne.';
+    } else if (todayItems.length < 4) {
+      readinessTitle = 'Bebia se už chytá dnešního rytmu';
+      readinessText =
+          'Ještě pár zápisů a doporučení budou působit jistěji i konkrétněji.';
+    } else {
+      readinessTitle = 'Dnešní přehled je dobře rozběhnutý';
+      readinessText =
+          'Data už dávají smysluplný kontext pro další kroky i AI nápovědu.';
+    }
+
+    return _HomeOverview(
+      totalToday: todayItems.length,
+      feedingsToday: todayItems
+          .where((item) => item.type == EventType.feeding)
+          .length,
+      sleepsToday:
+          todayItems.where((item) => item.type == EventType.sleep).length,
+      diapersToday:
+          todayItems.where((item) => item.type == EventType.diaper).length,
+      cryingsToday:
+          todayItems.where((item) => item.type == EventType.crying).length,
+      lastEventTime: items.isEmpty ? null : items.first.time,
+      readinessTitle: readinessTitle,
+      readinessText: readinessText,
+      setupProgress: [
+        profile != null,
+        todayItems.isNotEmpty,
+        family.isConnected || family.caregivers.length >= 2,
+      ].where((done) => done).length,
+      hasProfile: profile != null,
+      hasFamilyPrepared: family.isConnected || family.hasInvite,
+    );
+  }
+
   Future<void> _refresh() async {
     setState(() {
       _loadRecommendations();
@@ -82,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _futureRecommendations,
       _futureCryingAnalysis,
       _futurePredictions,
+      _futureOverview,
     ]);
   }
 
@@ -252,6 +313,13 @@ class _HomeScreenState extends State<HomeScreen> {
     await _openOnboarding(markCompleted: true);
   }
 
+  Future<void> _openMonetizationPlan() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MonetizationPlanScreen()),
+    );
+  }
+
   void _handleMenuAction(_HomeMenuAction action) {
     switch (action) {
       case _HomeMenuAction.profiles:
@@ -262,6 +330,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       case _HomeMenuAction.connectParent:
         _openFamilySharing();
+        return;
+      case _HomeMenuAction.monetization:
+        _openMonetizationPlan();
         return;
     }
   }
@@ -326,6 +397,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: Text('Připojení s druhým rodičem'),
                 ),
               ),
+              PopupMenuItem(
+                value: _HomeMenuAction.monetization,
+                child: ListTile(
+                  leading: Icon(Icons.workspace_premium_outlined),
+                  title: Text('Monetization plan'),
+                ),
+              ),
             ],
           ),
         ],
@@ -341,6 +419,63 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: _heroSubtitle(profile),
             ),
             const SizedBox(height: 14),
+            FutureBuilder<_HomeOverview>(
+              future: _futureOverview,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Text(
+                        'Souhrn dne se nepodarilo nacist: ${snapshot.error}',
+                      ),
+                    ),
+                  );
+                }
+
+                final overview = snapshot.data!;
+
+                return Column(
+                  children: [
+                    _TodayOverviewCard(
+                      overview: overview,
+                      ageLabel: profile == null
+                          ? null
+                          : _ageLabel(profile.dateOfBirth),
+                    ),
+                    const SizedBox(height: 14),
+                    _QuickHomeActions(
+                      onFeedingTap: () => _openForm(const FeedingFormScreen()),
+                      onSleepTap: () => _openForm(const SleepFormScreen()),
+                      onDiaperTap: () => _openForm(const DiaperFormScreen()),
+                      onFamilyTap: _openFamilySharing,
+                    ),
+                    if (overview.setupProgress < 3) ...[
+                      const SizedBox(height: 14),
+                      _SetupNudgeCard(
+                        overview: overview,
+                        onOpenProfiles: _openChildProfile,
+                        onOpenFamily: _openFamilySharing,
+                        onOpenFeeding: () =>
+                            _openForm(const FeedingFormScreen()),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    _MonetizationNudgeCard(onTap: _openMonetizationPlan),
+                    const SizedBox(height: 22),
+                  ],
+                );
+              },
+            ),
             FutureBuilder<CryingAnalysisResult?>(
               future: _futureCryingAnalysis,
               builder: (context, snapshot) {
@@ -368,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (analysis == null) {
                   return const _EmptyInsightCard(
                     text:
-                        'Jakmile přidáš záznam pláče, zobrazí se tady AI souhrn.',
+                        'Jakmile pridas zaznam place, zobrazi se tady AI souhrn.',
                   );
                 }
 
@@ -617,6 +752,393 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return 'Věk ${_ageLabel(profile.dateOfBirth)} • aktivní profil dítěte.';
+  }
+}
+
+class _HomeOverview {
+  const _HomeOverview({
+    required this.totalToday,
+    required this.feedingsToday,
+    required this.sleepsToday,
+    required this.diapersToday,
+    required this.cryingsToday,
+    required this.lastEventTime,
+    required this.readinessTitle,
+    required this.readinessText,
+    required this.setupProgress,
+    required this.hasProfile,
+    required this.hasFamilyPrepared,
+  });
+
+  final int totalToday;
+  final int feedingsToday;
+  final int sleepsToday;
+  final int diapersToday;
+  final int cryingsToday;
+  final DateTime? lastEventTime;
+  final String readinessTitle;
+  final String readinessText;
+  final int setupProgress;
+  final bool hasProfile;
+  final bool hasFamilyPrepared;
+}
+
+class _SetupStep {
+  const _SetupStep({
+    required this.title,
+    required this.onTap,
+  });
+
+  final String title;
+  final VoidCallback onTap;
+}
+
+class _TodayOverviewCard extends StatelessWidget {
+  const _TodayOverviewCard({
+    required this.overview,
+    required this.ageLabel,
+  });
+
+  final _HomeOverview overview;
+  final String? ageLabel;
+
+  String _formatTime(DateTime? value) {
+    if (value == null) return '-';
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pulse dne',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        overview.readinessTitle,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                InfoLabel(label: '${overview.setupProgress}/3 pripraveno'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(overview.readinessText),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (ageLabel != null) InfoLabel(label: 'Vek $ageLabel'),
+                InfoLabel(label: 'Dnes ${overview.totalToday} zaznamu'),
+                InfoLabel(label: 'Posledni zapis ${_formatTime(overview.lastEventTime)}'),
+                InfoLabel(
+                  label: overview.hasFamilyPrepared
+                      ? 'Rodina pripravena'
+                      : 'Sdileni zatim chybi',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.45,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _MiniMetricCard(
+                  icon: Icons.local_drink_outlined,
+                  label: 'Krmeni',
+                  value: overview.feedingsToday,
+                  tint: const Color(0xFFEAF8F7),
+                ),
+                _MiniMetricCard(
+                  icon: Icons.bedtime_outlined,
+                  label: 'Spanek',
+                  value: overview.sleepsToday,
+                  tint: const Color(0xFFE9F3FB),
+                ),
+                _MiniMetricCard(
+                  icon: Icons.baby_changing_station_outlined,
+                  label: 'Prebaleni',
+                  value: overview.diapersToday,
+                  tint: const Color(0xFFFFF3E7),
+                ),
+                _MiniMetricCard(
+                  icon: Icons.campaign_outlined,
+                  label: 'Plac',
+                  value: overview.cryingsToday,
+                  tint: const Color(0xFFF7EDF8),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniMetricCard extends StatelessWidget {
+  const _MiniMetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.tint,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: tint,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: colorScheme.primary),
+          const Spacer(),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 2),
+          Text(
+            '$value',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickHomeActions extends StatelessWidget {
+  const _QuickHomeActions({
+    required this.onFeedingTap,
+    required this.onSleepTap,
+    required this.onDiaperTap,
+    required this.onFamilyTap,
+  });
+
+  final VoidCallback onFeedingTap;
+  final VoidCallback onSleepTap;
+  final VoidCallback onDiaperTap;
+  final VoidCallback onFamilyTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Rychle kroky',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Moderni mobilni aplikace setri cas jednim klepnutim. Tady jsou nejcastejsi akce bez hledani v menu.',
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _ActionChip(
+                  icon: Icons.local_drink_outlined,
+                  label: 'Krmeni',
+                  onTap: onFeedingTap,
+                ),
+                _ActionChip(
+                  icon: Icons.bedtime_outlined,
+                  label: 'Spanek',
+                  onTap: onSleepTap,
+                ),
+                _ActionChip(
+                  icon: Icons.baby_changing_station_outlined,
+                  label: 'Prebaleni',
+                  onTap: onDiaperTap,
+                ),
+                _ActionChip(
+                  icon: Icons.group_add_outlined,
+                  label: 'Sdileni',
+                  onTap: onFamilyTap,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: Icon(icon, size: 18),
+      label: Text(label),
+      onPressed: onTap,
+    );
+  }
+}
+
+class _SetupNudgeCard extends StatelessWidget {
+  const _SetupNudgeCard({
+    required this.overview,
+    required this.onOpenProfiles,
+    required this.onOpenFamily,
+    required this.onOpenFeeding,
+  });
+
+  final _HomeOverview overview;
+  final VoidCallback onOpenProfiles;
+  final VoidCallback onOpenFamily;
+  final VoidCallback onOpenFeeding;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = <_SetupStep>[
+      if (!overview.hasProfile)
+        _SetupStep(title: 'Doplnit profil ditete', onTap: onOpenProfiles),
+      if (overview.totalToday == 0)
+        _SetupStep(title: 'Pridat prvni dnesni zaznam', onTap: onOpenFeeding),
+      if (!overview.hasFamilyPrepared)
+        _SetupStep(title: 'Pripravit rodinne sdileni', onTap: onOpenFamily),
+    ];
+
+    if (steps.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Co jeste zvedne hodnotu aplikace',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Tyto kroky nejsou povinne, ale pomuzou presnejsim odhadum i lepsimu dojmu z prvniho pouziti.',
+            ),
+            const SizedBox(height: 14),
+            ...steps.map(
+              (step) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: OutlinedButton.icon(
+                  onPressed: step.onTap,
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: Text(step.title),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MonetizationNudgeCard extends StatelessWidget {
+  const _MonetizationNudgeCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.tertiaryContainer.withValues(alpha: 0.45),
+            colorScheme.surface,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Premium-ready plan',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Bebia zatim nema paywall. Ale uz ted je dobry cas rozhodnout, co ma zustat free a co ma byt placena vrstva s realnou hodnotou.',
+          ),
+          const SizedBox(height: 12),
+          FilledButton.tonalIcon(
+            onPressed: onTap,
+            icon: const Icon(Icons.workspace_premium_outlined),
+            label: const Text('Open monetization plan'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

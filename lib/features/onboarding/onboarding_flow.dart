@@ -15,7 +15,7 @@ class OnboardingFlow extends StatefulWidget {
 }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
-  static const _pageCount = 4;
+  static const _pageCount = 5;
 
   final PageController _controller = PageController();
   int _page = 0;
@@ -145,11 +145,34 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                       ),
                     ],
                   ),
+                  const _OnboardingPage(
+                    imageAsset: 'assets/illustrations/care_illustration.png',
+                    title: 'Důvěra a soukromí',
+                    subtitle:
+                        'Rodičovská aplikace musí být rychlá, srozumitelná a bezpečná na každodenní používání.',
+                    children: [
+                      _OnboardingPoint(
+                        title: 'Lokální historie',
+                        text:
+                            'Záznamy držíš přímo v aplikaci a máš je pod kontrolou.',
+                      ),
+                      _OnboardingPoint(
+                        title: 'Upravitelné záznamy',
+                        text:
+                            'V Přehledu můžeš data kdykoli otevřít, opravit nebo smazat.',
+                      ),
+                      _OnboardingPoint(
+                        title: 'AI jako opora',
+                        text:
+                            'Bebia pomáhá s dalším krokem, ale finální rozhodnutí nechává rodiči.',
+                      ),
+                    ],
+                  ),
                   _OnboardingPage(
                     imageAsset: 'assets/illustrations/care_illustration.png',
-                    title: 'Začít',
+                    title: 'Začít během dvou minut',
                     subtitle:
-                        'Tyto kroky jsou doporučené, ale nejsou povinné. Aplikaci můžeš používat i bez nich.',
+                        'Tyto kroky nejsou povinné, ale nejrychleji zvednou hodnotu aplikace hned od prvního dne.',
                     children: [
                       SizedBox(
                         width: double.infinity,

@@ -14,6 +14,7 @@ import '../features/crying/mock_cry_detection_service.dart';
 import '../features/crying/real_cry_detection_service.dart';
 import '../features/family/family_connection_controller.dart';
 import '../features/intelligence/infant_insights_service.dart';
+import '../features/monetization/monetization_service.dart';
 import '../features/predictions/prediction_service.dart';
 import '../features/predictions/rhythm_profile_service.dart';
 import '../features/profile/child_profile_controller.dart';
@@ -40,6 +41,7 @@ class AppServices {
 
   static final InfantInsightsService infantInsightsService =
       InfantInsightsService();
+  static const MonetizationService monetizationService = MonetizationService();
 
   static final AudioCaptureService audioCaptureService = AudioCaptureService();
 
