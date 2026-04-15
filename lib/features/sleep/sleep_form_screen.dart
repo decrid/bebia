@@ -192,7 +192,16 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Upravit spánek' : 'Spánek')),
+      appBar: AppBar(
+        title: Text(_isEdit ? 'Upravit spánek' : 'Spánek'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(56),
+          child: ProfileSwitcher(
+            embedded: true,
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -203,12 +212,6 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const ProfileSwitcher(
-                        title: 'Vybrané dítě',
-                        subtitle:
-                            'Klepnutím přepneš profil, ke kterému se nový záznam uloží.',
-                      ),
-                      const SizedBox(height: 14),
                       _FormIntroCard(
                         title: _isEdit ? 'Upravit spánek' : 'Nový spánek',
                         subtitle:

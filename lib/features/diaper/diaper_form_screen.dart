@@ -132,7 +132,16 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení')),
+      appBar: AppBar(
+        title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(56),
+          child: ProfileSwitcher(
+            embedded: true,
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -143,12 +152,6 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const ProfileSwitcher(
-                        title: 'Vybrané dítě',
-                        subtitle:
-                            'Klepnutím přepneš profil, ke kterému se nový záznam uloží.',
-                      ),
-                      const SizedBox(height: 14),
                       _FormIntroCard(
                         title: _isEdit ? 'Upravit přebalení' : 'Nové přebalení',
                         subtitle:

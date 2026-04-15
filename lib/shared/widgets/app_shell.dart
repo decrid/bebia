@@ -8,7 +8,6 @@ import '../../features/home/home_screen.dart';
 import '../../features/sleep/sleep_form_screen.dart';
 import '../../features/statistics/statistics_screen.dart';
 import '../../features/timeline/timeline_screen.dart';
-import 'profile_switcher.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -178,24 +177,6 @@ class _QuickAddSheet extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text(
-                    'Co chceš zapsat?',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Vyber jen jednu událost. Zbytek můžeš doplnit později.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 18),
-                  const ProfileSwitcher(
-                    title: 'Vybrané dítě',
-                    subtitle:
-                        'Než zvolíš typ události, můžeš rychle přepnout aktivní profil.',
-                  ),
-                  const SizedBox(height: 18),
                   _QuickAddTile(
                     icon: Icons.local_drink_outlined,
                     title: 'Krmení',

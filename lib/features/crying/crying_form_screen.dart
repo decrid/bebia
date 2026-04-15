@@ -384,7 +384,16 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? 'Upravit pláč' : 'Pláč')),
+      appBar: AppBar(
+        title: Text(_isEdit ? 'Upravit pláč' : 'Pláč'),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(56),
+          child: ProfileSwitcher(
+            embedded: true,
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -395,12 +404,6 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const ProfileSwitcher(
-                        title: 'Vybrané dítě',
-                        subtitle:
-                            'Klepnutím přepneš profil, ke kterému se nový záznam uloží.',
-                      ),
-                      const SizedBox(height: 14),
                       _IntroCard(
                         title: _isEdit
                             ? 'Upravit záznam pláče'

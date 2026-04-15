@@ -167,7 +167,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistiky')),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(92),
+        child: AppBar(
+          automaticallyImplyLeading: false,
+          toolbarHeight: 92,
+          titleSpacing: 0,
+          title: ProfileSwitcher(
+            embedded: true,
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+          ),
+        ),
+      ),
       body: FutureBuilder<_Stats>(
         future: _future,
         builder: (context, snapshot) {
@@ -207,12 +218,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const ProfileSwitcher(
-                    title: 'Přepnout dítě',
-                    subtitle:
-                        'Statistiky se zobrazují vždy pro právě vybraný profil.',
-                  ),
-                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -251,12 +256,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
               children: [
-                const ProfileSwitcher(
-                  title: 'Přepnout dítě',
-                  subtitle:
-                      'Statistiky se zobrazují vždy pro právě vybraný profil.',
-                ),
-                const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(

@@ -10,12 +10,14 @@ class ProfileSwitcher extends StatelessWidget {
     this.subtitle,
     this.padding = const EdgeInsets.all(14),
     this.margin,
+    this.embedded = false,
   });
 
   final String? title;
   final String? subtitle;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +34,46 @@ class ProfileSwitcher extends StatelessWidget {
           valueListenable: controller.activeProfileId,
           builder: (context, activeProfileId, child) {
             final colorScheme = Theme.of(context).colorScheme;
+            final content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title != null) ...[
+                  Text(
+                    title!,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(subtitle!),
+                  ],
+                  const SizedBox(height: 12),
+                ],
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var index = 0; index < profiles.length; index++) ...[
+                        _ProfileChipButton(
+                          profile: profiles[index],
+                          isActive: profiles[index].id == activeProfileId,
+                          onPressed: () {
+                            controller.setActiveProfile(profiles[index].id);
+                          },
+                        ),
+                        if (index < profiles.length - 1)
+                          const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            );
+
+            if (embedded) {
+              return Padding(padding: padding, child: content);
+            }
 
             return Container(
               margin: margin,
@@ -43,46 +85,7 @@ class ProfileSwitcher extends StatelessWidget {
                   color: colorScheme.outlineVariant.withValues(alpha: 0.35),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (title != null) ...[
-                    Text(
-                      title!,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 4),
-                      Text(subtitle!),
-                    ],
-                    const SizedBox(height: 12),
-                  ],
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (
-                          var index = 0;
-                          index < profiles.length;
-                          index++
-                        ) ...[
-                          _ProfileChipButton(
-                            profile: profiles[index],
-                            isActive: profiles[index].id == activeProfileId,
-                            onPressed: () {
-                              controller.setActiveProfile(profiles[index].id);
-                            },
-                          ),
-                          if (index < profiles.length - 1)
-                            const SizedBox(width: 8),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              child: content,
             );
           },
         );
@@ -136,32 +139,13 @@ class _ProfileChipButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           onTap: onPressed,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 12,
-                  backgroundColor: palette.border.withValues(alpha: 0.12),
-                  foregroundColor: palette.foreground,
-                  child: Icon(
-                    profile.sex == 'boy'
-                        ? Icons.male_rounded
-                        : profile.sex == 'girl'
-                        ? Icons.female_rounded
-                        : Icons.child_care_outlined,
-                    size: 15,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  profile.name,
-                  style: TextStyle(
-                    color: palette.foreground,
-                    fontWeight: isActive ? FontWeight.w800 : FontWeight.w700,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Text(
+              profile.name,
+              style: TextStyle(
+                color: palette.foreground,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w700,
+              ),
             ),
           ),
         ),

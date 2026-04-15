@@ -295,17 +295,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Přehled')),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(92),
+        child: AppBar(
+          automaticallyImplyLeading: false,
+          toolbarHeight: 92,
+          titleSpacing: 0,
+          title: ProfileSwitcher(
+            embedded: true,
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+          ),
+        ),
+      ),
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: ProfileSwitcher(
-              title: 'Přepnout dítě',
-              subtitle:
-                  'Přehled níže se okamžitě přefiltruje podle vybraného profilu.',
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Container(

@@ -301,7 +301,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bebia'),
+        automaticallyImplyLeading: false,
+        toolbarHeight: 92,
+        titleSpacing: 0,
+        title: const ProfileSwitcher(
+          embedded: true,
+          padding: EdgeInsets.fromLTRB(16, 12, 8, 12),
+        ),
         actions: [
           PopupMenuButton<_HomeMenuAction>(
             tooltip: 'Menu',
@@ -344,11 +350,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
           children: [
-            const ProfileSwitcher(
-              title: 'Přepnout dítě',
-              subtitle: 'Vyber profil, pro který chceš vidět dnešní data.',
-            ),
-            const SizedBox(height: 14),
             _HeroPanel(
               eyebrow: profile == null ? 'Dnes' : profile.name,
               title: 'Co je teď důležité',
