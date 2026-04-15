@@ -3,6 +3,7 @@ import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
+import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 import 'ai_crying_analysis_result.dart';
 import 'crying_source.dart';
@@ -394,6 +395,12 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const ProfileSwitcher(
+                        title: 'Vybrané dítě',
+                        subtitle:
+                            'Klepnutím přepneš profil, ke kterému se nový záznam uloží.',
+                      ),
+                      const SizedBox(height: 14),
                       _IntroCard(
                         title: _isEdit
                             ? 'Upravit záznam pláče'

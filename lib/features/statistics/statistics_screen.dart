@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
+import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -206,6 +207,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  const ProfileSwitcher(
+                    title: 'Přepnout dítě',
+                    subtitle:
+                        'Statistiky se zobrazují vždy pro právě vybraný profil.',
+                  ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -244,6 +251,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
               children: [
+                const ProfileSwitcher(
+                  title: 'Přepnout dítě',
+                  subtitle:
+                      'Statistiky se zobrazují vždy pro právě vybraný profil.',
+                ),
+                const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(

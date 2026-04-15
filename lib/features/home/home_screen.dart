@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
+import '../../shared/widgets/profile_switcher.dart';
 import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../family/family_sharing_screen.dart';
@@ -122,12 +123,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openChildProfile() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const ChildProfileScreen(),
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChildProfileScreen()),
     );
     if (!mounted) return;
     await _refresh();
@@ -346,6 +344,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
           children: [
+            const ProfileSwitcher(
+              title: 'Přepnout dítě',
+              subtitle: 'Vyber profil, pro který chceš vidět dnešní data.',
+            ),
+            const SizedBox(height: 14),
             _HeroPanel(
               eyebrow: profile == null ? 'Dnes' : profile.name,
               title: 'Co je teď důležité',

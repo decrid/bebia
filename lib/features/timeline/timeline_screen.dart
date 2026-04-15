@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
+import '../../shared/widgets/profile_switcher.dart';
 import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
@@ -297,6 +298,14 @@ class _TimelineScreenState extends State<TimelineScreen> {
       appBar: AppBar(title: const Text('Přehled')),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: ProfileSwitcher(
+              title: 'Přepnout dítě',
+              subtitle:
+                  'Přehled níže se okamžitě přefiltruje podle vybraného profilu.',
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Container(

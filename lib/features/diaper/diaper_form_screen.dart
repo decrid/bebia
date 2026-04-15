@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 import 'diaper_model.dart';
 
@@ -142,6 +143,12 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const ProfileSwitcher(
+                        title: 'Vybrané dítě',
+                        subtitle:
+                            'Klepnutím přepneš profil, ke kterému se nový záznam uloží.',
+                      ),
+                      const SizedBox(height: 14),
                       _FormIntroCard(
                         title: _isEdit ? 'Upravit přebalení' : 'Nové přebalení',
                         subtitle:
