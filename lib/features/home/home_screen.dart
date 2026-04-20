@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
+import '../auth/app_account_session.dart';
+import '../auth/app_account_setup_screen.dart';
 import '../crying/crying_analysis_result.dart';
 import '../diaper/diaper_form_screen.dart';
+import '../family/family_connection.dart';
 import '../family/family_sharing_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../monetization/monetization_plan_screen.dart';
@@ -16,7 +19,7 @@ import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
 import '../timeline/timeline_item.dart';
 
-enum _HomeMenuAction { profiles, onboarding, connectParent, plus }
+enum _HomeMenuAction { profiles, accountSync, onboarding, connectParent, plus }
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -40,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _reloadData();
     AppServices.childProfileController.activeProfileId.addListener(_refresh);
     AppServices.timelineController.revision.addListener(_refresh);
+    AppServices.appAccountController.session.addListener(_refresh);
+    AppServices.familyConnectionController.state.addListener(_refresh);
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOpenOnboarding());
   }
 
@@ -47,6 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     AppServices.childProfileController.activeProfileId.removeListener(_refresh);
     AppServices.timelineController.revision.removeListener(_refresh);
+    AppServices.appAccountController.session.removeListener(_refresh);
+    AppServices.familyConnectionController.state.removeListener(_refresh);
     super.dispose();
   }
 
@@ -188,10 +195,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _openAccountSetup() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AppAccountSetupScreen()),
+    );
+  }
+
   void _handleMenuAction(_HomeMenuAction action) {
     switch (action) {
       case _HomeMenuAction.profiles:
         _openChildProfile();
+        return;
+      case _HomeMenuAction.accountSync:
+        _openAccountSetup();
         return;
       case _HomeMenuAction.onboarding:
         _openOnboarding();
@@ -298,6 +315,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final profile = AppServices.childProfileController.activeProfile;
+    final accountSession = AppServices.appAccountController.session.value;
+    final familyState = AppServices.familyConnectionController.state.value;
 
     return Scaffold(
       appBar: AppBar(
@@ -321,6 +340,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               PopupMenuItem(
+                value: _HomeMenuAction.accountSync,
+                child: ListTile(
+                  leading: Icon(Icons.cloud_sync_outlined),
+                  title: Text('Účet a synchronizace'),
+                ),
+              ),
+              PopupMenuItem(
                 value: _HomeMenuAction.onboarding,
                 child: ListTile(
                   leading: Icon(Icons.map_outlined),
@@ -331,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: _HomeMenuAction.connectParent,
                 child: ListTile(
                   leading: Icon(Icons.group_add_outlined),
-                  title: Text('Připojení s druhým rodičem'),
+                  title: Text('Rodinné sdílení'),
                 ),
               ),
               PopupMenuItem(
@@ -356,6 +382,13 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: profile == null
                   ? 'AI pohled na poslední pláč a nejbližší očekávání.'
                   : 'Věk ${_ageLabel(profile.dateOfBirth)} • aktivní profil dítěte.',
+            ),
+            const SizedBox(height: 14),
+            _FamilyStatusBanner(
+              session: accountSession,
+              familyState: familyState,
+              onOpenAccountSetup: _openAccountSetup,
+              onOpenFamilySharing: _openFamilySharing,
             ),
             const SizedBox(height: 14),
             FutureBuilder<_HomeOverview>(
@@ -666,6 +699,154 @@ class _HomeOverview {
   final DateTime? lastEventTime;
   final String readinessTitle;
   final String readinessText;
+}
+
+class _FamilyStatusBanner extends StatelessWidget {
+  const _FamilyStatusBanner({
+    required this.session,
+    required this.familyState,
+    required this.onOpenAccountSetup,
+    required this.onOpenFamilySharing,
+  });
+
+  final AppAccountSession session;
+  final FamilyConnectionState familyState;
+  final Future<void> Function() onOpenAccountSetup;
+  final Future<void> Function() onOpenFamilySharing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final title = !session.isSignedIn
+        ? 'Připrav účet pro rodinné sdílení'
+        : switch (familyState.inviteStatus) {
+            FamilyInviteStatus.none => 'Založ rodinu a první pozvánku',
+            FamilyInviteStatus.draft => 'Pozvánka čeká na odeslání',
+            FamilyInviteStatus.waitingForAcceptance =>
+              'Čeká se na přijetí pozvánky',
+            FamilyInviteStatus.accepted => 'Pozvánka je přijatá',
+            FamilyInviteStatus.connected => 'Rodinné sdílení je připravené',
+          };
+
+    final subtitle = !session.isSignedIn
+        ? 'Každý rodič bude mít vlastní účet. Teprve potom má smysl zakládat sdílenou rodinu.'
+        : switch (familyState.inviteStatus) {
+            FamilyInviteStatus.none =>
+              'Účet už je připravený. Teď vytvoř rodinu a pozvánku pro druhého rodiče.',
+            FamilyInviteStatus.draft =>
+              'Pozvánka už existuje, ale ještě nebyla označená jako odeslaná druhému rodiči.',
+            FamilyInviteStatus.waitingForAcceptance =>
+              'Kód už byl sdílený. Teď se čeká, až druhý rodič pozvánku přijme.',
+            FamilyInviteStatus.accepted =>
+              'Pozvánka byla přijatá. Zbývá aktivovat společnou rodinu.',
+            FamilyInviteStatus.connected =>
+              'Rodina, pečující osoby i pozvánkový tok jsou připravené pro další krok s cloudovou synchronizací.',
+          };
+
+    final label = !session.isSignedIn
+        ? 'Krok 1'
+        : switch (familyState.inviteStatus) {
+            FamilyInviteStatus.none => 'Krok 2',
+            FamilyInviteStatus.draft => 'Návrh',
+            FamilyInviteStatus.waitingForAcceptance => 'Čeká',
+            FamilyInviteStatus.accepted => 'Přijato',
+            FamilyInviteStatus.connected => 'Připraveno',
+          };
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: colorScheme.surface,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: colorScheme.secondaryContainer,
+                foregroundColor: colorScheme.primary,
+                child: const Icon(Icons.groups_2_outlined),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              InfoLabel(label: label),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(subtitle),
+          if (session.isSignedIn) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Aktivní rodič: ${session.user!.displayName}',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (familyState.hasInvite) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Pozvánka: ${familyState.inviteCode} • ${_inviteStatusLabel(familyState.inviteStatus)}',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (!session.isSignedIn)
+            FilledButton.tonalIcon(
+              onPressed: () {
+                onOpenAccountSetup();
+              },
+              icon: const Icon(Icons.manage_accounts_outlined),
+              label: const Text('Otevřít účet'),
+            )
+          else
+            FilledButton.tonalIcon(
+              onPressed: () {
+                onOpenFamilySharing();
+              },
+              icon: const Icon(Icons.family_restroom_outlined),
+              label: Text(
+                familyState.isConnected
+                    ? 'Zobrazit rodinu'
+                    : 'Dokončit sdílení',
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _inviteStatusLabel(FamilyInviteStatus status) {
+    switch (status) {
+      case FamilyInviteStatus.none:
+        return 'bez pozvánky';
+      case FamilyInviteStatus.draft:
+        return 'návrh';
+      case FamilyInviteStatus.waitingForAcceptance:
+        return 'čeká na přijetí';
+      case FamilyInviteStatus.accepted:
+        return 'přijatá';
+      case FamilyInviteStatus.connected:
+        return 'aktivní';
+    }
+  }
 }
 
 class _TodayOverviewCard extends StatelessWidget {

@@ -1,3 +1,11 @@
+enum FamilyInviteStatus {
+  none,
+  draft,
+  waitingForAcceptance,
+  accepted,
+  connected,
+}
+
 class CaregiverProfile {
   const CaregiverProfile({
     required this.id,
@@ -41,6 +49,8 @@ class FamilyConnectionState {
     required this.familyId,
     required this.inviteCode,
     required this.inviteCreatedAt,
+    required this.inviteSharedAt,
+    required this.inviteAcceptedAt,
     required this.connectedAt,
     required this.caregivers,
   });
@@ -48,16 +58,36 @@ class FamilyConnectionState {
   final String? familyId;
   final String? inviteCode;
   final DateTime? inviteCreatedAt;
+  final DateTime? inviteSharedAt;
+  final DateTime? inviteAcceptedAt;
   final DateTime? connectedAt;
   final List<CaregiverProfile> caregivers;
 
   bool get hasInvite => inviteCode != null && inviteCode!.isNotEmpty;
   bool get isConnected => connectedAt != null;
 
+  FamilyInviteStatus get inviteStatus {
+    if (!hasInvite) {
+      return FamilyInviteStatus.none;
+    }
+    if (connectedAt != null) {
+      return FamilyInviteStatus.connected;
+    }
+    if (inviteAcceptedAt != null) {
+      return FamilyInviteStatus.accepted;
+    }
+    if (inviteSharedAt != null) {
+      return FamilyInviteStatus.waitingForAcceptance;
+    }
+    return FamilyInviteStatus.draft;
+  }
+
   FamilyConnectionState copyWith({
     String? familyId,
     String? inviteCode,
     DateTime? inviteCreatedAt,
+    DateTime? inviteSharedAt,
+    DateTime? inviteAcceptedAt,
     DateTime? connectedAt,
     List<CaregiverProfile>? caregivers,
     bool clearInvite = false,
@@ -69,6 +99,12 @@ class FamilyConnectionState {
       inviteCreatedAt: clearInvite
           ? null
           : (inviteCreatedAt ?? this.inviteCreatedAt),
+      inviteSharedAt: clearInvite
+          ? null
+          : (inviteSharedAt ?? this.inviteSharedAt),
+      inviteAcceptedAt: clearInvite
+          ? null
+          : (inviteAcceptedAt ?? this.inviteAcceptedAt),
       connectedAt: clearConnectedAt ? null : (connectedAt ?? this.connectedAt),
       caregivers: caregivers ?? this.caregivers,
     );
@@ -79,6 +115,8 @@ class FamilyConnectionState {
       'familyId': familyId,
       'inviteCode': inviteCode,
       'inviteCreatedAt': inviteCreatedAt?.toIso8601String(),
+      'inviteSharedAt': inviteSharedAt?.toIso8601String(),
+      'inviteAcceptedAt': inviteAcceptedAt?.toIso8601String(),
       'connectedAt': connectedAt?.toIso8601String(),
       'caregivers': caregivers.map((caregiver) => caregiver.toJson()).toList(),
     };
@@ -96,6 +134,12 @@ class FamilyConnectionState {
       inviteCreatedAt: DateTime.tryParse(
         json['inviteCreatedAt'] as String? ?? '',
       ),
+      inviteSharedAt: DateTime.tryParse(
+        json['inviteSharedAt'] as String? ?? '',
+      ),
+      inviteAcceptedAt: DateTime.tryParse(
+        json['inviteAcceptedAt'] as String? ?? '',
+      ),
       connectedAt: DateTime.tryParse(json['connectedAt'] as String? ?? ''),
       caregivers: rawCaregivers.map(CaregiverProfile.fromJson).toList(),
     );
@@ -106,6 +150,8 @@ class FamilyConnectionState {
       familyId: null,
       inviteCode: null,
       inviteCreatedAt: null,
+      inviteSharedAt: null,
+      inviteAcceptedAt: null,
       connectedAt: null,
       caregivers: [],
     );

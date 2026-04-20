@@ -4,25 +4,38 @@ class ChildProfile {
     required this.name,
     required this.dateOfBirth,
     this.sex,
+    this.familyId,
+    this.linkedToFamilyAt,
   });
 
   final String id;
   final String name;
   final DateTime dateOfBirth;
   final String? sex;
+  final String? familyId;
+  final DateTime? linkedToFamilyAt;
+
+  bool get isLinkedToFamily => familyId != null && familyId!.isNotEmpty;
 
   ChildProfile copyWith({
     String? id,
     String? name,
     DateTime? dateOfBirth,
     String? sex,
+    String? familyId,
+    DateTime? linkedToFamilyAt,
     bool clearSex = false,
+    bool clearFamilyLink = false,
   }) {
     return ChildProfile(
       id: id ?? this.id,
       name: name ?? this.name,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       sex: clearSex ? null : (sex ?? this.sex),
+      familyId: clearFamilyLink ? null : (familyId ?? this.familyId),
+      linkedToFamilyAt: clearFamilyLink
+          ? null
+          : (linkedToFamilyAt ?? this.linkedToFamilyAt),
     );
   }
 
@@ -32,6 +45,8 @@ class ChildProfile {
       'name': name,
       'dateOfBirth': dateOfBirth.toIso8601String(),
       'sex': sex,
+      'familyId': familyId,
+      'linkedToFamilyAt': linkedToFamilyAt?.toIso8601String(),
     };
   }
 
@@ -43,6 +58,10 @@ class ChildProfile {
         json['dateOfBirth'] as String? ?? DateTime.now().toIso8601String(),
       ),
       sex: json['sex'] as String?,
+      familyId: json['familyId'] as String?,
+      linkedToFamilyAt: DateTime.tryParse(
+        json['linkedToFamilyAt'] as String? ?? '',
+      ),
     );
   }
 }

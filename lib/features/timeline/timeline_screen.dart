@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
+import '../auth/app_account_session.dart';
 import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
+import '../family/family_connection.dart';
+import '../profile/child_profile.dart';
 import '../sleep/sleep_form_screen.dart';
+import 'timeline_cloud_sync_service.dart';
 import 'timeline_item.dart';
 
 class TimelineScreen extends StatefulWidget {
@@ -293,6 +297,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final accountSession = AppServices.appAccountController.session.value;
+    final familyState = AppServices.familyConnectionController.state.value;
+    final activeProfile = AppServices.childProfileController.activeProfile;
 
     return Scaffold(
       appBar: PreferredSize(
@@ -338,6 +345,40 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: ValueListenableBuilder<List<TimelineItem>>(
+              valueListenable: AppServices.timelineController.items,
+              builder: (context, items, _) {
+                final syncPayload = AppServices.timelineCloudSyncService
+                    .buildPayload(
+                      session: accountSession,
+                      familyState: familyState,
+                      activeProfile: activeProfile,
+                      items: items,
+                    );
+                final syncPlan = AppServices.timelineCloudSyncService.buildPlan(
+                  syncPayload,
+                );
+
+                return Column(
+                  children: [
+                    _TimelineShareReadinessCard(
+                      session: accountSession,
+                      familyState: familyState,
+                      activeProfile: activeProfile,
+                      payload: syncPayload,
+                    ),
+                    const SizedBox(height: 12),
+                    _TimelineCloudPreviewCard(
+                      payload: syncPayload,
+                      plan: syncPlan,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           ValueListenableBuilder<EventType?>(
@@ -591,6 +632,205 @@ class _TimelineDaySummary {
   final int cryingEvents;
   final int unresolvedCryings;
   final double? averageAiConfidence;
+}
+
+class _TimelineShareReadinessCard extends StatelessWidget {
+  const _TimelineShareReadinessCard({
+    required this.session,
+    required this.familyState,
+    required this.activeProfile,
+    required this.payload,
+  });
+
+  final AppAccountSession session;
+  final FamilyConnectionState familyState;
+  final ChildProfile? activeProfile;
+  final TimelineCloudSyncPayload payload;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final title = !session.isSignedIn
+        ? 'Timeline čeká na rodičovský účet'
+        : activeProfile == null
+        ? 'Timeline čeká na aktivní dítě'
+        : !familyState.isConnected
+        ? 'Timeline čeká na aktivní rodinu'
+        : payload.canSync
+        ? 'Timeline je připravená pro sdílení'
+        : 'Timeline ještě není připravená pro sync';
+
+    final subtitle = !session.isSignedIn
+        ? 'Bez rodičovského účtu nebude možné bezpečně sdílet události mezi dvěma telefony.'
+        : activeProfile == null
+        ? 'Vyber dítě, aby bylo jasné, které události se mají sdílet.'
+        : !familyState.isConnected
+        ? 'Rodina musí být nejdřív aktivní, teprve potom má smysl sdílet timeline.'
+        : payload.canSync
+        ? 'Aktivní dítě i jeho události už mají tvar připravený pro cloudové sdílení.'
+        : 'Některé podmínky pro sdílenou timeline ještě chybí.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surface,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              InfoLabel(label: payload.canSync ? 'Ready' : 'Preview'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle),
+          if (activeProfile != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Aktivní dítě: ${activeProfile!.name}',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineCloudPreviewCard extends StatelessWidget {
+  const _TimelineCloudPreviewCard({required this.payload, required this.plan});
+
+  final TimelineCloudSyncPayload payload;
+  final TimelineSyncPlanPreview plan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cloud preview timeline',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(plan.summary),
+            if (payload.blockers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...payload.blockers.map(
+                (blocker) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text('• $blocker'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            _TimelinePreviewLine(
+              label: 'familyId',
+              value: payload.familyId ?? 'neuvedeno',
+            ),
+            _TimelinePreviewLine(
+              label: 'childId',
+              value: payload.childId ?? 'neuvedeno',
+            ),
+            _TimelinePreviewLine(
+              label: 'childName',
+              value: payload.childName ?? 'neuvedeno',
+            ),
+            _TimelinePreviewLine(
+              label: 'authorUserId',
+              value: payload.authorUserId ?? 'neuvedeno',
+            ),
+            _TimelinePreviewLine(
+              label: 'itemCount',
+              value: '${payload.items.length}',
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Backend plán',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            ...plan.operations.map(
+              (operation) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            operation.title,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(operation.description),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    InfoLabel(label: operation.isReady ? 'Ready' : 'Blocked'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimelinePreviewLine extends StatelessWidget {
+  const _TimelinePreviewLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: RichText(
+        text: TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _TimelineSummaryCard extends StatelessWidget {

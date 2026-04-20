@@ -51,6 +51,9 @@ class FamilyConnectionController {
           familyId: familyId,
           inviteCode: _generateInviteCode(now),
           inviteCreatedAt: now,
+          inviteSharedAt: null,
+          inviteAcceptedAt: null,
+          connectedAt: null,
           caregivers: nextCaregivers,
         ),
       );
@@ -61,13 +64,86 @@ class FamilyConnectionController {
     }
   }
 
-  Future<void> markConnected() async {
+  Future<void> markInviteShared() async {
+    if (!state.value.hasInvite) {
+      error.value = 'Nejdřív vytvoř pozvánku.';
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      await _persist(
+        state.value.copyWith(
+          inviteSharedAt: state.value.inviteSharedAt ?? DateTime.now(),
+        ),
+      );
+    } catch (e) {
+      error.value = 'Nepodařilo se označit odeslání pozvánky: $e';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> markInviteAccepted() async {
+    if (!state.value.hasInvite) {
+      error.value = 'Nejdřív vytvoř pozvánku.';
+      return;
+    }
+
     isLoading.value = true;
     error.value = null;
 
     try {
       final now = DateTime.now();
-      await _persist(state.value.copyWith(connectedAt: now));
+      final hasSecondCaregiver = state.value.caregivers.any(
+        (caregiver) => !caregiver.isOwner,
+      );
+      final nextCaregivers = hasSecondCaregiver
+          ? state.value.caregivers
+          : [
+              ...state.value.caregivers,
+              CaregiverProfile(
+                id: 'caregiver-accepted-${now.millisecondsSinceEpoch}',
+                name: 'Druhý rodič',
+                role: 'Rodič',
+                createdAt: now,
+              ),
+            ];
+
+      await _persist(
+        state.value.copyWith(
+          inviteSharedAt: state.value.inviteSharedAt ?? now,
+          inviteAcceptedAt: now,
+          caregivers: nextCaregivers,
+        ),
+      );
+    } catch (e) {
+      error.value = 'Nepodařilo se označit přijetí pozvánky: $e';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> markConnected() async {
+    if (!state.value.hasInvite) {
+      error.value = 'Nejdřív vytvoř pozvánku.';
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      final now = DateTime.now();
+      await _persist(
+        state.value.copyWith(
+          inviteSharedAt: state.value.inviteSharedAt ?? now,
+          inviteAcceptedAt: state.value.inviteAcceptedAt ?? now,
+          connectedAt: now,
+        ),
+      );
     } catch (e) {
       error.value = 'Nepodařilo se označit propojení: $e';
     } finally {
@@ -80,7 +156,9 @@ class FamilyConnectionController {
     error.value = null;
 
     try {
-      await _persist(state.value.copyWith(clearInvite: true));
+      await _persist(
+        state.value.copyWith(clearInvite: true, clearConnectedAt: true),
+      );
     } catch (e) {
       error.value = 'Nepodařilo se zrušit pozvánku: $e';
     } finally {

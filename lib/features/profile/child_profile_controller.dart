@@ -85,6 +85,50 @@ class ChildProfileController {
     }
   }
 
+  Future<void> assignProfileToFamily({
+    required String profileId,
+    required String familyId,
+  }) async {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      final now = DateTime.now();
+      final updatedProfiles = profiles.value.map((profile) {
+        if (profile.id != profileId) {
+          return profile;
+        }
+        return profile.copyWith(familyId: familyId, linkedToFamilyAt: now);
+      }).toList();
+
+      await _persist(updatedProfiles, activeProfileId.value);
+    } catch (e) {
+      error.value = 'Nepodařilo se přidat dítě do rodiny: $e';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> removeProfileFromFamily(String profileId) async {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      final updatedProfiles = profiles.value.map((profile) {
+        if (profile.id != profileId) {
+          return profile;
+        }
+        return profile.copyWith(clearFamilyLink: true);
+      }).toList();
+
+      await _persist(updatedProfiles, activeProfileId.value);
+    } catch (e) {
+      error.value = 'Nepodařilo se odebrat dítě z rodiny: $e';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> deleteProfile(
     String profileId, {
     required bool deleteEvents,
