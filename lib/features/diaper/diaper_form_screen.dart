@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 import 'diaper_model.dart';
@@ -87,6 +88,17 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   }
 
   Future<void> _save() async {
+    if (AppServices.childProfileController.activeProfile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nejdřív vyber profil dítěte, ke kterému chceš událost uložit.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final note = _noteController.text.trim().isEmpty
         ? null
         : _noteController.text.trim();
@@ -157,6 +169,8 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                         subtitle:
                             'Vyber typ a případně doplň krátkou poznámku. Rychlé zapsání má přednost.',
                       ),
+                      const SizedBox(height: 14),
+                      const EventFormContextCard(),
                       const SizedBox(height: 14),
                       Card(
                         child: ListTile(

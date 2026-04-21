@@ -26,10 +26,38 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void initState() {
     super.initState();
+    AppServices.appAccountController.session.addListener(_handleContextChanged);
+    AppServices.familyConnectionController.state.addListener(
+      _handleContextChanged,
+    );
+    AppServices.childProfileController.activeProfileId.addListener(
+      _handleContextChanged,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       AppServices.timelineController.load();
     });
+  }
+
+  @override
+  void dispose() {
+    AppServices.appAccountController.session.removeListener(
+      _handleContextChanged,
+    );
+    AppServices.familyConnectionController.state.removeListener(
+      _handleContextChanged,
+    );
+    AppServices.childProfileController.activeProfileId.removeListener(
+      _handleContextChanged,
+    );
+    super.dispose();
+  }
+
+  void _handleContextChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
   }
 
   Future<void> _openEditForm(TimelineItem item) async {
@@ -345,6 +373,14 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _TimelineFamilyContextCard(
+              session: accountSession,
+              familyState: familyState,
+              activeProfile: activeProfile,
             ),
           ),
           Padding(
@@ -694,7 +730,9 @@ class _TimelineShareReadinessCard extends StatelessWidget {
                   ),
                 ),
               ),
-              InfoLabel(label: payload.canSync ? 'Ready' : 'Preview'),
+              InfoLabel(
+                label: payload.canSync ? 'Připraveno' : 'Kontrolní režim',
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -715,6 +753,114 @@ class _TimelineShareReadinessCard extends StatelessWidget {
   }
 }
 
+class _TimelineFamilyContextCard extends StatelessWidget {
+  const _TimelineFamilyContextCard({
+    required this.session,
+    required this.familyState,
+    required this.activeProfile,
+  });
+
+  final AppAccountSession session;
+  final FamilyConnectionState familyState;
+  final ChildProfile? activeProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasFamily =
+        familyState.familyId != null && familyState.familyId!.isNotEmpty;
+    final activeProfileLinked =
+        activeProfile != null &&
+        activeProfile!.familyId == familyState.familyId;
+
+    final title = !session.isSignedIn
+        ? 'Timeline běží bez rodinného účtu'
+        : !hasFamily
+        ? 'Timeline ještě není navázaná na rodinu'
+        : activeProfile == null
+        ? 'Vyber dítě pro sdílenou timeline'
+        : activeProfileLinked
+        ? 'Pracuješ ve sdíleném rodinném kontextu'
+        : 'Aktivní dítě ještě není ve sdílené rodině';
+
+    final subtitle = !session.isSignedIn
+        ? 'Události fungují lokálně, ale sdílení mezi rodiči zatím není připravené.'
+        : !hasFamily
+        ? 'Rodina ještě není založená nebo aktivovaná, takže timeline zůstává pouze na tomto zařízení.'
+        : activeProfile == null
+        ? 'Jakmile vybereš dítě, bude jasné, které záznamy patří do sdílené rodiny.'
+        : activeProfileLinked
+        ? 'Aktivní profil dítěte už patří do stejné rodiny jako pozvánka a další pečující osoby.'
+        : 'Události se sice zapisují k aktivnímu dítěti, ale toto dítě ještě není přiřazené do aktuální rodiny.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surface,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              InfoLabel(
+                label: activeProfileLinked ? 'Sdílená rodina' : 'Lokální režim',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (session.isSignedIn)
+                InfoLabel(label: 'Rodič ${session.user!.displayName}'),
+              if (hasFamily) InfoLabel(label: 'Rodina ${familyState.familyId}'),
+              if (activeProfile != null)
+                InfoLabel(label: 'Dítě ${activeProfile!.name}'),
+              if (familyState.hasInvite)
+                InfoLabel(
+                  label:
+                      'Pozvánka ${_inviteStatusLabel(familyState.inviteStatus)}',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _inviteStatusLabel(FamilyInviteStatus status) {
+    switch (status) {
+      case FamilyInviteStatus.none:
+        return 'bez pozvánky';
+      case FamilyInviteStatus.draft:
+        return 'návrh';
+      case FamilyInviteStatus.waitingForAcceptance:
+        return 'čeká';
+      case FamilyInviteStatus.accepted:
+        return 'přijatá';
+      case FamilyInviteStatus.connected:
+        return 'aktivní';
+    }
+  }
+}
+
 class _TimelineCloudPreviewCard extends StatelessWidget {
   const _TimelineCloudPreviewCard({required this.payload, required this.plan});
 
@@ -730,7 +876,7 @@ class _TimelineCloudPreviewCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cloud preview timeline',
+              'Náhled cloudové timeline',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -795,7 +941,9 @@ class _TimelineCloudPreviewCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    InfoLabel(label: operation.isReady ? 'Ready' : 'Blocked'),
+                    InfoLabel(
+                      label: operation.isReady ? 'Připraveno' : 'Blokováno',
+                    ),
                   ],
                 ),
               ),

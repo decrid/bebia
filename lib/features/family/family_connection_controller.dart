@@ -126,6 +126,69 @@ class FamilyConnectionController {
     }
   }
 
+  Future<void> acceptInviteCode({
+    required String inviteCode,
+    required String caregiverName,
+    required String caregiverRole,
+  }) async {
+    final normalizedCode = inviteCode.trim().toUpperCase();
+    final normalizedName = caregiverName.trim();
+    final normalizedRole = caregiverRole.trim();
+
+    if (!state.value.hasInvite) {
+      error.value = 'Nejdřív musí existovat pozvánka.';
+      return;
+    }
+    if (normalizedCode.isEmpty) {
+      error.value = 'Zadej pozvánkový kód.';
+      return;
+    }
+    if (normalizedCode != state.value.inviteCode) {
+      error.value = 'Zadaný kód neodpovídá aktivní pozvánce.';
+      return;
+    }
+    if (normalizedName.isEmpty) {
+      error.value = 'Zadej jméno druhého rodiče.';
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      final now = DateTime.now();
+      final alreadyExists = state.value.caregivers.any(
+        (caregiver) =>
+            !caregiver.isOwner &&
+            caregiver.name.trim().toLowerCase() == normalizedName.toLowerCase(),
+      );
+
+      final nextCaregivers = alreadyExists
+          ? state.value.caregivers
+          : [
+              ...state.value.caregivers,
+              CaregiverProfile(
+                id: 'caregiver-accepted-${now.millisecondsSinceEpoch}',
+                name: normalizedName,
+                role: normalizedRole.isEmpty ? 'Rodič' : normalizedRole,
+                createdAt: now,
+              ),
+            ];
+
+      await _persist(
+        state.value.copyWith(
+          inviteSharedAt: state.value.inviteSharedAt ?? now,
+          inviteAcceptedAt: now,
+          caregivers: nextCaregivers,
+        ),
+      );
+    } catch (e) {
+      error.value = 'Nepodařilo se přijmout pozvánku: $e';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> markConnected() async {
     if (!state.value.hasInvite) {
       error.value = 'Nejdřív vytvoř pozvánku.';

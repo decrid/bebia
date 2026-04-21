@@ -24,6 +24,11 @@ class FamilySharingScreen extends StatefulWidget {
 }
 
 class _FamilySharingScreenState extends State<FamilySharingScreen> {
+  final TextEditingController _partnerCodeController = TextEditingController();
+  final TextEditingController _partnerNameController = TextEditingController();
+  final TextEditingController _partnerRoleController = TextEditingController(
+    text: 'Rodič',
+  );
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _roleController = TextEditingController(
     text: 'Rodič',
@@ -41,6 +46,9 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
 
   @override
   void dispose() {
+    _partnerCodeController.dispose();
+    _partnerNameController.dispose();
+    _partnerRoleController.dispose();
     _nameController.dispose();
     _roleController.dispose();
     super.dispose();
@@ -86,6 +94,49 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
     if (AppServices.familyConnectionController.error.value == null) {
       _nameController.clear();
       _roleController.text = 'Rodič';
+    }
+  }
+
+  Future<void> _acceptInviteCode() async {
+    await AppServices.familyConnectionController.acceptInviteCode(
+      inviteCode: _partnerCodeController.text,
+      caregiverName: _partnerNameController.text,
+      caregiverRole: _partnerRoleController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (AppServices.familyConnectionController.error.value == null) {
+      _partnerCodeController.clear();
+      _partnerNameController.clear();
+      _partnerRoleController.text = 'Rodič';
+    }
+  }
+
+  Future<void> _assignChildToCurrentFamily(String childId) async {
+    final familyId =
+        AppServices.familyConnectionController.state.value.familyId;
+    if (familyId == null || familyId.isEmpty) {
+      return;
+    }
+
+    await AppServices.childProfileController.assignProfileToFamily(
+      profileId: childId,
+      familyId: familyId,
+    );
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _removeChildFromCurrentFamily(String childId) async {
+    await AppServices.childProfileController.removeProfileFromFamily(childId);
+
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -341,7 +392,11 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
                               const SizedBox(height: 16),
                               const _InviteLifecycleCard(),
                               const SizedBox(height: 16),
-                              _WorkspacePreviewCard(workspace: workspace),
+                              _WorkspacePreviewCard(
+                                workspace: workspace,
+                                onAssignChild: _assignChildToCurrentFamily,
+                                onRemoveChild: _removeChildFromCurrentFamily,
+                              ),
                               const SizedBox(height: 16),
                               _CloudSyncPreviewCard(payload: syncPayload),
                               const SizedBox(height: 16),
@@ -373,6 +428,22 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
                                   );
                                 },
                               ),
+                              if (state.hasInvite && !state.isConnected) ...[
+                                const SizedBox(height: 16),
+                                ValueListenableBuilder<bool>(
+                                  valueListenable: controller.isLoading,
+                                  builder: (context, isLoading, _) {
+                                    return _JoinByInviteCard(
+                                      state: state,
+                                      isLoading: isLoading,
+                                      codeController: _partnerCodeController,
+                                      nameController: _partnerNameController,
+                                      roleController: _partnerRoleController,
+                                      onAccept: _acceptInviteCode,
+                                    );
+                                  },
+                                ),
+                              ],
                               if (state.familyId != null &&
                                   state.familyId!.isNotEmpty) ...[
                                 const SizedBox(height: 16),
@@ -760,9 +831,15 @@ class _InviteLifecycleCard extends StatelessWidget {
 }
 
 class _WorkspacePreviewCard extends StatelessWidget {
-  const _WorkspacePreviewCard({required this.workspace});
+  const _WorkspacePreviewCard({
+    required this.workspace,
+    required this.onAssignChild,
+    required this.onRemoveChild,
+  });
 
   final FamilyWorkspaceSnapshot workspace;
+  final Future<void> Function(String childId) onAssignChild;
+  final Future<void> Function(String childId) onRemoveChild;
 
   @override
   Widget build(BuildContext context) {
@@ -833,18 +910,49 @@ class _WorkspacePreviewCard extends StatelessWidget {
               ...workspace.children.map(
                 (child) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          child.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              child.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          InfoLabel(
+                            label: child.isLinkedToCurrentFamily
+                                ? 'Ve sdílené rodině'
+                                : 'Mimo aktuální rodinu',
+                          ),
+                        ],
                       ),
-                      InfoLabel(
-                        label: child.isLinkedToCurrentFamily
-                            ? 'Ve sdílené rodině'
-                            : 'Mimo aktuální rodinu',
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (workspace.hasFamily &&
+                              !child.isLinkedToCurrentFamily)
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                onAssignChild(child.id);
+                              },
+                              icon: const Icon(Icons.family_restroom_outlined),
+                              label: const Text('Přidat do rodiny'),
+                            ),
+                          if (child.isLinkedToCurrentFamily)
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                onRemoveChild(child.id);
+                              },
+                              icon: const Icon(Icons.link_off_rounded),
+                              label: const Text('Odebrat z rodiny'),
+                            ),
+                        ],
                       ),
                     ],
                   ),
@@ -1688,6 +1796,120 @@ class _InviteCard extends StatelessWidget {
       case FamilyInviteStatus.connected:
         return 'Aktivní';
     }
+  }
+}
+
+class _JoinByInviteCard extends StatelessWidget {
+  const _JoinByInviteCard({
+    required this.state,
+    required this.isLoading,
+    required this.codeController,
+    required this.nameController,
+    required this.roleController,
+    required this.onAccept,
+  });
+
+  final FamilyConnectionState state;
+  final bool isLoading;
+  final TextEditingController codeController;
+  final TextEditingController nameController;
+  final TextEditingController roleController;
+  final Future<void> Function() onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Připojení druhého rodiče',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                InfoLabel(
+                  label: state.inviteStatus == FamilyInviteStatus.accepted
+                      ? 'Pozvánka přijatá'
+                      : 'Čeká na přijetí',
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.inviteStatus == FamilyInviteStatus.accepted
+                  ? 'Druhý rodič už kód potvrdil. Pokud je potřeba, můžeš upravit jméno nebo rovnou dokončit aktivaci rodiny.'
+                  : 'Tady nasimuluješ krok na druhém zařízení: vlož pozvánkový kód, zadej jméno rodiče a potvrď přijetí.',
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.32,
+                ),
+              ),
+              child: Text(
+                'Aktivní kód rodiny: ${state.inviteCode ?? 'bez kódu'}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: codeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Pozvánkový kód',
+                hintText: 'Např. ABCD-1234',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Jméno druhého rodiče',
+                hintText: 'Např. Tomáš',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: roleController,
+              decoration: const InputDecoration(
+                labelText: 'Role',
+                hintText: 'Rodič',
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: isLoading
+                    ? null
+                    : () {
+                        onAccept();
+                      },
+                icon: const Icon(Icons.how_to_reg_rounded),
+                label: Text(
+                  state.inviteStatus == FamilyInviteStatus.accepted
+                      ? 'Potvrdit údaje druhého rodiče'
+                      : 'Přijmout pozvánku k rodině',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

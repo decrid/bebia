@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
+import '../auth/app_account_session.dart';
+import '../family/family_connection.dart';
+import '../profile/child_profile.dart';
 import '../timeline/timeline_item.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -23,6 +26,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       _handleChildProfileChanged,
     );
     AppServices.timelineController.revision.addListener(_handleTimelineChanged);
+    AppServices.appAccountController.session.addListener(_handleContextChanged);
+    AppServices.familyConnectionController.state.addListener(
+      _handleContextChanged,
+    );
   }
 
   @override
@@ -32,6 +39,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
     AppServices.timelineController.revision.removeListener(
       _handleTimelineChanged,
+    );
+    AppServices.appAccountController.session.removeListener(
+      _handleContextChanged,
+    );
+    AppServices.familyConnectionController.state.removeListener(
+      _handleContextChanged,
     );
     super.dispose();
   }
@@ -162,9 +175,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _refresh();
   }
 
+  void _handleContextChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final session = AppServices.appAccountController.session.value;
+    final familyState = AppServices.familyConnectionController.state.value;
+    final activeProfile = AppServices.childProfileController.activeProfile;
 
     return Scaffold(
       appBar: PreferredSize(
@@ -218,6 +239,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  _StatisticsFamilyContextCard(
+                    session: session,
+                    familyState: familyState,
+                    activeProfile: activeProfile,
+                  ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -256,6 +283,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
               children: [
+                _StatisticsFamilyContextCard(
+                  session: session,
+                  familyState: familyState,
+                  activeProfile: activeProfile,
+                ),
+                const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
@@ -435,6 +468,114 @@ class _SectionTitle extends StatelessWidget {
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
+  }
+}
+
+class _StatisticsFamilyContextCard extends StatelessWidget {
+  const _StatisticsFamilyContextCard({
+    required this.session,
+    required this.familyState,
+    required this.activeProfile,
+  });
+
+  final AppAccountSession session;
+  final FamilyConnectionState familyState;
+  final ChildProfile? activeProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasFamily =
+        familyState.familyId != null && familyState.familyId!.isNotEmpty;
+    final activeProfileLinked =
+        activeProfile != null &&
+        activeProfile!.familyId == familyState.familyId;
+
+    final title = !session.isSignedIn
+        ? 'Statistiky běží bez rodinného účtu'
+        : !hasFamily
+        ? 'Statistiky ještě nejsou navázané na rodinu'
+        : activeProfile == null
+        ? 'Vyber dítě pro sdílené statistiky'
+        : activeProfileLinked
+        ? 'Statistiky patří do sdílené rodiny'
+        : 'Aktivní dítě ještě není ve sdílené rodině';
+
+    final subtitle = !session.isSignedIn
+        ? 'Souhrny fungují lokálně, ale zatím nejsou připravené pro sdílení mezi rodiči.'
+        : !hasFamily
+        ? 'Rodinný prostor ještě není aktivní, takže dnešní čísla zůstávají pouze na tomto zařízení.'
+        : activeProfile == null
+        ? 'Jakmile vybereš dítě, budou statistiky jednoznačně patřit do sdílené rodiny.'
+        : activeProfileLinked
+        ? 'Aktivní profil dítěte je správně navázaný na aktuální rodinu, takže statistiky dávají smysl i pro budoucí synchronizaci.'
+        : 'Statistiky se počítají pro aktivní dítě, ale toto dítě zatím není přiřazené do aktuální rodiny.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surface,
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              InfoLabel(
+                label: activeProfileLinked ? 'Sdílená rodina' : 'Lokální režim',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(subtitle),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (session.isSignedIn)
+                InfoLabel(label: 'Rodič ${session.user!.displayName}'),
+              if (hasFamily) InfoLabel(label: 'Rodina ${familyState.familyId}'),
+              if (activeProfile != null)
+                InfoLabel(label: 'Dítě ${activeProfile!.name}'),
+              if (familyState.hasInvite)
+                InfoLabel(
+                  label:
+                      'Pozvánka ${_inviteStatusLabel(familyState.inviteStatus)}',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _inviteStatusLabel(FamilyInviteStatus status) {
+    switch (status) {
+      case FamilyInviteStatus.none:
+        return 'bez pozvánky';
+      case FamilyInviteStatus.draft:
+        return 'návrh';
+      case FamilyInviteStatus.waitingForAcceptance:
+        return 'čeká';
+      case FamilyInviteStatus.accepted:
+        return 'přijatá';
+      case FamilyInviteStatus.connected:
+        return 'aktivní';
+    }
   }
 }
 

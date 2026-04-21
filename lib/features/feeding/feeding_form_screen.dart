@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 import 'feeding_model.dart';
@@ -88,6 +89,17 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   }
 
   Future<void> _save() async {
+    if (AppServices.childProfileController.activeProfile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nejdřív vyber profil dítěte, ke kterému chceš událost uložit.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final amountText = _amountController.text.trim();
     final parsedAmount = amountText.isEmpty ? null : int.tryParse(amountText);
     final note = _noteController.text.trim().isEmpty
@@ -161,6 +173,8 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
                         subtitle:
                             'Zapiš jen to podstatné. Množství i poznámka jsou volitelné.',
                       ),
+                      const SizedBox(height: 14),
+                      const EventFormContextCard(),
                       const SizedBox(height: 14),
                       Card(
                         child: ListTile(

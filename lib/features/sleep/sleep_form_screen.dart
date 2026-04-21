@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
+import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 import 'sleep_model.dart';
@@ -142,6 +143,17 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   }
 
   Future<void> _save() async {
+    if (AppServices.childProfileController.activeProfile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nejdřív vyber profil dítěte, ke kterému chceš událost uložit.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (!_endTime.isAfter(_startTime)) {
       _showInvalidRangeMessage();
       return;
@@ -217,6 +229,8 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
                         subtitle:
                             'Stačí zapsat začátek a konec. Délka se dopočítá automaticky.',
                       ),
+                      const SizedBox(height: 14),
+                      const EventFormContextCard(),
                       const SizedBox(height: 14),
                       Card(
                         child: ListTile(

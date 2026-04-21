@@ -3,6 +3,7 @@ import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
 import '../../shared/widgets/info_label.dart';
+import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
 import 'ai_crying_analysis_result.dart';
@@ -339,6 +340,16 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
   Future<void> _save() async {
     if (_isRecording) return;
+    if (AppServices.childProfileController.activeProfile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nejdřív vyber profil dítěte, ke kterému chceš událost uložit.',
+          ),
+        ),
+      );
+      return;
+    }
 
     final item = _buildDraftItem();
 
@@ -412,6 +423,8 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                             'Nejdřív zapiš základ. Audio i AI můžeš přidat hned nebo až podle potřeby.',
                         trailingLabel: sourceLabel,
                       ),
+                      const SizedBox(height: 14),
+                      const EventFormContextCard(),
                       const SizedBox(height: 14),
                       _SectionTitle(
                         title: 'Základ záznamu',
