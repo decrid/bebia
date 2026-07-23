@@ -146,6 +146,7 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit krmení' : 'Krmení'),
         bottom: const PreferredSize(

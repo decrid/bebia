@@ -306,7 +306,10 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
           child: Container(
-            height: MediaQuery.of(context).size.height * 0.94,
+            height:
+                (MediaQuery.sizeOf(context).height -
+                    MediaQuery.viewInsetsOf(context).bottom) *
+                0.94,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(32),
               border: Border.all(

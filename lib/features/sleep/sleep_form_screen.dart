@@ -204,6 +204,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit spánek' : 'Spánek'),
         bottom: const PreferredSize(

@@ -1,108 +1,68 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../sleep/sleep_form_screen.dart';
 
 class AddEventScreen extends StatelessWidget {
-  static const routeName = '/add';
-
   const AddEventScreen({super.key});
+
+  Future<void> _open(BuildContext context, Widget screen) async {
+    await Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (_) => screen));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Přidat záznam')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _AddEventButton(
-              title: 'Krmení',
+      appBar: AppBar(title: const Text('Nový záznam')),
+      body: BebiaPage(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            const BebiaScreenHeader(
+              title: 'Co se právě stalo?',
+              subtitle:
+                  'Vyberte typ události. Podrobnosti můžete kdykoli upravit.',
+            ),
+            const SizedBox(height: BebiaSpace.lg),
+            BebiaEventActionTile(
               icon: Icons.local_drink_outlined,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FeedingFormScreen()),
-                );
-              },
+              color: context.bebia.feeding,
+              title: 'Krmení',
+              subtitle: 'Čas, způsob a případně množství',
+              onTap: () => _open(context, const FeedingFormScreen()),
             ),
-            const SizedBox(height: 12),
-            _AddEventButton(
-              title: 'Spánek',
+            const SizedBox(height: BebiaSpace.xs),
+            BebiaEventActionTile(
               icon: Icons.bedtime_outlined,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SleepFormScreen()),
-                );
-              },
+              color: context.bebia.sleep,
+              title: 'Spánek',
+              subtitle: 'Začátek, konec a kvalita odpočinku',
+              onTap: () => _open(context, const SleepFormScreen()),
             ),
-            const SizedBox(height: 12),
-            _AddEventButton(
-              title: 'Přebalení',
+            const SizedBox(height: BebiaSpace.xs),
+            BebiaEventActionTile(
               icon: Icons.baby_changing_station_outlined,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DiaperFormScreen()),
-                );
-              },
+              color: context.bebia.diaper,
+              title: 'Přebalení',
+              subtitle: 'Typ pleny a poznámka k péči',
+              onTap: () => _open(context, const DiaperFormScreen()),
             ),
-            const SizedBox(height: 12),
-            _AddEventButton(
+            const SizedBox(height: BebiaSpace.xs),
+            BebiaEventActionTile(
+              icon: Icons.graphic_eq_rounded,
+              color: context.bebia.crying,
               title: 'Pláč',
-              icon: Icons.campaign_outlined,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CryingFormScreen()),
-                );
-              },
+              subtitle: 'Kontext, délka a volitelná analýza zvuku',
+              onTap: () => _open(context, const CryingFormScreen()),
             ),
+            const SizedBox(height: BebiaSpace.xxl),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddEventButton extends StatelessWidget {
-  const _AddEventButton({
-    required this.title,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Icon(icon, size: 28),
-                const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

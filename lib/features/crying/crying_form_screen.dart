@@ -395,6 +395,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     );
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit pláč' : 'Pláč'),
         bottom: const PreferredSize(

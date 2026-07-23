@@ -144,6 +144,7 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení'),
         bottom: const PreferredSize(

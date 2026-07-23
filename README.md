@@ -1,34 +1,61 @@
-﻿# Bebia
+# Bebia
 
-Smart baby tracking app for feeding, sleep, and daily routines.
+Bebia je česká Flutter aplikace pro přehled každodenní péče o malé dítě.
+Pomáhá rodičům rychle zaznamenat krmení, spánek, přebalování a pláč, sledovat
+časovou osu a statistiky a podle potřeby sdílet péči v rodině.
 
-## Overview
+## Funkce
 
-Bebia is a mobile app for parents of newborns and small children. It helps log daily events, find patterns, and gradually introduces AI assistance for crying interpretation and next-step guidance.
+- profily dětí a rychlé přepínání aktivního profilu,
+- záznam a editace krmení, spánku, přebalování a pláče,
+- časová osa s filtry a bezpečným mazáním,
+- statistiky, doporučení a predikce z existujících záznamů,
+- volitelná lokální analýza pláče pomocí TFLite,
+- volitelný účet a Firebase rodinná synchronizace,
+- systémový, světlý a tmavý vzhled,
+- komfortní nebo kompaktní hustota, omezení animací a haptika,
+- adaptivní navigace pro telefon i širší displej.
 
-## Features
+## Architektura
 
-- Feeding tracking
-- Sleep tracking
-- Diaper tracking
-- Crying tracking (with structured context)
-- Timeline overview with filtering
-- Recommendations and predictions
-- AI-powered crying analysis flow in UI
+- `lib/core` – služby, Firebase bootstrap, design systém a preference,
+- `lib/data` – Isar repository, lokální stores a volitelné Firestore adaptery,
+- `lib/features` – obrazovky, feature controllery, modely a doménové služby,
+- `lib/shared/widgets` – shell a sdílené Bebia komponenty,
+- `test` – preference, theme, navigace a rizikové responzivní scénáře.
 
-## Tech Stack
+Timeline je offline-first v Isar Community. Profily, onboarding, přiřazení a
+rodinné spojení používají stávající oddělené lokální stores. UI preference jsou
+uložené samostatně v `bebia_preferences.json`; reset preferencí nemaže profily
+ani události. Databázové schéma ani application id rebuild nemění.
 
-- Flutter
-- Dart
-- Isar (local database)
+## Design systém
 
-## Status
+Vizuální tokeny jsou v `lib/core/design/bebia_theme.dart`, sdílené komponenty v
+`lib/shared/widgets/bebia_components.dart`. Pravidla identity, barev,
+typografie, responsivity a budoucích obrazovek popisuje
+[`docs/design_system.md`](docs/design_system.md).
 
-In development
+## Dokumentace
 
-## Release QA
+- [Statický audit a rebuild](docs/rebuild_audit.md)
+- [Design systém](docs/design_system.md)
+- [Release smoke checklist](docs/release_smoke_checklist.md)
+- [Rodinná synchronizace](docs/family_sync_architecture.md)
+- [Firebase setup](docs/firebase_family_sync_setup.md)
 
-- Pre-release smoke checklist: [docs/release_smoke_checklist.md](docs/release_smoke_checklist.md)
-- Release notes template: [docs/release_notes_template.md](docs/release_notes_template.md)
-- Current RC draft notes: [docs/release_notes_v1.0.0-rc1.md](docs/release_notes_v1.0.0-rc1.md)
-- Current RC QA log: [docs/qa_log_v1.0.0-rc1.md](docs/qa_log_v1.0.0-rc1.md)
+## Ruční ověření
+
+Na výslovný požadavek nejsou validační příkazy spouštěné automaticky. Po změně
+zdrojů spusťte v kořeni projektu:
+
+```powershell
+flutter pub get
+dart format .
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+Poté proveďte smoke test na malém telefonu, s 2× systémovým textem, otevřenou
+klávesnicí, v obou motivech a nad kopií existujících uživatelských dat.

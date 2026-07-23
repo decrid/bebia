@@ -964,7 +964,7 @@ class _MiniMetricCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      height: 112,
+      constraints: const BoxConstraints(minHeight: 112),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
