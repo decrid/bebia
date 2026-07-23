@@ -45,6 +45,14 @@ Tmavá varianta používá světlejší sémantické odstíny pro kontrast na tm
 plochách. Informace se nikdy nerozlišuje jen barvou: typ události má současně
 ikonu a textový popisek.
 
+Plochy, text a okraje se vždy párují z jedné sémantické rodiny:
+`surface/onSurface`, `primaryContainer/onPrimaryContainer`,
+`secondaryContainer/onSecondaryContainer`, `error/onError`. Event akcent se v
+tmavém režimu používá jako průsvitná vrstva nad `surface`, nikoli jako pevný
+světlý pastel. Profilové chipy vytvářejí vlastní `ColorScheme.fromSeed` pro
+aktuální brightness, takže modrá/růžová identita zůstává rozlišitelná bez
+světlé plochy v nočním režimu.
+
 ## Typografie
 
 Theme vychází z Material 2021 text scale, ale upravuje hierarchii:
@@ -70,6 +78,7 @@ jen u sekundárních metadat, nikdy u instrukce, chyby nebo primární akce.
 - `BebiaSettingsTile` – přístupný řádek preference,
 - `BebiaInfoBanner` – kontextová informace bez závislosti pouze na barvě,
 - `BebiaStatePanel` – základ pro empty/error state,
+- `BebiaFormIntroCard` – theme-aware hero formulářů s event akcentem,
 - `BebiaModalSurface` – bottom sheet omezený výškou, scrollovatelný a
   reagující na `viewInsets`,
 - `showBebiaConfirmDialog` – scrollovatelný adaptivní potvrzovací dialog.
@@ -101,6 +110,17 @@ navigaci, dialogy, bottom sheety a snackbary i ve starších feature widgetech.
   akci mimo scroll pouze tam, kde se bezpečně vejde do zbývající výšky.
 - Modální obsah používá `viewInsets`, maximálně 88 % výšky a vnitřní scroll.
 - Karty s uživatelským textem používají minimální, nikoli pevnou výšku.
+- Timeline s proměnlivými kartami nad historií používá jeden
+  `CustomScrollView`; dlouhý seznam zůstává líný přes `SliverList`.
+- Metrické karty používají obsahově řízený `Wrap`: při šířce pod 380 dp nebo
+  text scale alespoň 1,5 přecházejí na jeden sloupec.
+- Vícepoložkové kompaktní volby nesmějí spoléhat na jeden široký
+  `SegmentedButton`. Na 320 dp nebo při velkém textu se skládají do plnošířkových
+  `ChoiceChip` řádků a všechny možnosti zůstávají současně viditelné.
+- App bary s přepínačem profilu zvětšují výšku při systémovém textu alespoň
+  1,5×; samotné chipy zůstávají vodorovně scrollovatelné.
+- Otevřená klávesnice se testuje přes skutečné `viewInsets`; padding i maximální
+  výška sheetu se počítají z dostupné výšky, ne z celého viewportu.
 - Na širokém zařízení se obsah drží do 760 dp; nevznikají dlouhé nečitelné
   řádky.
 - Primární dotykové plochy mají nejméně 48 × 48 dp.
@@ -119,3 +139,9 @@ navigaci, dialogy, bottom sheety a snackbary i ve starších feature widgetech.
 7. Nevkládejte obsah pod systémové oblasti bez záměrného edge-to-edge návrhu.
 8. Nová preference musí být trvale uložená, mít výchozí hodnotu, reálný dopad
    a test round-tripu.
+9. Testovací minimum pro kritickou obrazovku je light i dark, 320 × 568 dp,
+   text scale 2,0 a `tester.takeException() == null`; keyboard workflow navíc
+   používá realistické `viewInsets`.
+10. Pevný `childAspectRatio`, `Spacer` v neomezeném vertikálním prostoru a
+    nesrolovatelný `Column` nad dlouhým seznamem jsou zakázané bez doložených
+    horních mezí obsahu.

@@ -7,10 +7,19 @@ import 'core/settings/bebia_preferences.dart';
 import 'shared/widgets/app_shell.dart';
 
 class BebiaApp extends StatelessWidget {
-  const BebiaApp({super.key, this.homeOverride, this.settingsController});
+  const BebiaApp({
+    super.key,
+    this.homeOverride,
+    this.settingsController,
+    this.shellScreensOverride,
+  }) : assert(
+         homeOverride == null || shellScreensOverride == null,
+         'homeOverride and shellScreensOverride cannot be used together.',
+       );
 
   final Widget? homeOverride;
   final BebiaSettingsController? settingsController;
+  final List<Widget>? shellScreensOverride;
 
   ThemeMode _themeMode(BebiaAppearance appearance) {
     return switch (appearance) {
@@ -72,7 +81,12 @@ class BebiaApp extends StatelessWidget {
               child: appChild ?? const SizedBox.shrink(),
             );
           },
-          home: homeOverride ?? const AppShell(),
+          home:
+              homeOverride ??
+              AppShell(
+                screensOverride: shellScreensOverride,
+                settingsController: settings,
+              ),
         );
       },
     );

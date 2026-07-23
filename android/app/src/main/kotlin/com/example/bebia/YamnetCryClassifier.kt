@@ -13,7 +13,7 @@ import kotlin.math.roundToInt
 class YamnetCryClassifier(
     private val context: Context,
 ) {
-    private val classifier: AudioClassifier by lazy {
+    private val classifierDelegate = lazy {
         val options = AudioClassifier.AudioClassifierOptions.builder()
             .setBaseOptions(
                 BaseOptions.builder()
@@ -27,6 +27,7 @@ class YamnetCryClassifier(
 
         AudioClassifier.createFromOptions(context, options)
     }
+    private val classifier: AudioClassifier by classifierDelegate
 
     fun classify(
         audioPath: String,
@@ -91,6 +92,12 @@ class YamnetCryClassifier(
         )
     }
 
+    fun close() {
+        if (classifierDelegate.isInitialized()) {
+            classifier.close()
+        }
+    }
+
     private fun readMono16kPcmWav(audioPath: String): WavClip {
         val file = File(audioPath)
         if (!file.exists()) {
@@ -122,14 +129,18 @@ class YamnetCryClassifier(
             val chunkId = String(bytes, offset, 4)
             val chunkSize = byteBuffer.getInt(offset + 4)
             val chunkDataStart = offset + 8
-            val chunkDataEnd = chunkDataStart + chunkSize
-
-            if (chunkDataEnd > bytes.size) {
+            if (chunkSize < 0 || chunkDataStart > bytes.size - chunkSize) {
                 break
             }
+            val chunkDataEnd = chunkDataStart + chunkSize
 
             when (chunkId) {
                 "fmt " -> {
+                    if (chunkSize < 16) {
+                        throw IllegalArgumentException(
+                            "WAV obsahuje neplatný fmt blok.",
+                        )
+                    }
                     audioFormat =
                         byteBuffer.getShort(chunkDataStart).toInt() and 0xFFFF
                     channelCount =

@@ -1,7 +1,15 @@
+import 'package:bebia/core/app_version_provider.dart';
 import 'package:bebia/core/design/bebia_theme.dart';
 import 'package:bebia/core/settings/bebia_preferences.dart';
+import 'package:bebia/features/crying/crying_form_screen.dart';
+import 'package:bebia/features/diaper/diaper_form_screen.dart';
+import 'package:bebia/features/family/family_sharing_screen.dart';
 import 'package:bebia/features/feeding/feeding_form_screen.dart';
+import 'package:bebia/features/home/home_screen.dart';
 import 'package:bebia/features/settings/settings_screen.dart';
+import 'package:bebia/features/sleep/sleep_form_screen.dart';
+import 'package:bebia/features/statistics/statistics_screen.dart';
+import 'package:bebia/features/timeline/timeline_screen.dart';
 import 'package:bebia/shared/widgets/app_shell.dart';
 import 'package:bebia/shared/widgets/bebia_components.dart';
 import 'package:flutter/material.dart';
@@ -9,98 +17,266 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/memory_preferences_store.dart';
 
-ThemeData _theme() =>
-    BebiaTheme.light(profileSex: null, preferences: const BebiaPreferences());
+ThemeData _theme(Brightness brightness) {
+  const preferences = BebiaPreferences();
+  return brightness == Brightness.dark
+      ? BebiaTheme.dark(profileSex: null, preferences: preferences)
+      : BebiaTheme.light(profileSex: null, preferences: preferences);
+}
+
+class _TestVersionProvider implements BebiaAppVersionProvider {
+  @override
+  Future<BebiaAppVersion> load() async {
+    return const BebiaAppVersion(version: '2.4.6', buildNumber: '88');
+  }
+}
+
+const _sampleStats = StatisticsSnapshot(
+  feedingCount: 1,
+  sleepCount: 0,
+  diaperCount: 0,
+  cryingCount: 0,
+  totalMl: 0,
+  totalSleepMinutes: 0,
+  averageCryingDurationMinutes: null,
+  cryingResolvedCount: 0,
+  cryingUnresolvedCount: 0,
+  cryingResolvedRate: null,
+  soothingFeedingCount: 0,
+  soothingRockingCount: 0,
+  soothingCarryingCount: 0,
+  soothingPacifierCount: 0,
+  soothingOtherCount: 0,
+);
+
+void _useNarrowKeyboardViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(320, 568);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Widget _largeTextApp({
+  required ThemeData theme,
+  required Widget home,
+  double keyboardInset = 220,
+}) {
+  return MaterialApp(
+    theme: theme,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        viewInsets: EdgeInsets.only(bottom: keyboardInset),
+        viewPadding: const EdgeInsets.only(top: 24, bottom: 34),
+        padding: EdgeInsets.only(top: 24, bottom: keyboardInset > 0 ? 0 : 34),
+        textScaler: const TextScaler.linear(2),
+      ),
+      child: child!,
+    ),
+    home: home,
+  );
+}
+
+Future<void> _scrollTo(WidgetTester tester, Finder target) async {
+  final verticalScrollable = find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  );
+  await tester.scrollUntilVisible(
+    target,
+    180,
+    scrollable: verticalScrollable.last,
+    maxScrolls: 40,
+  );
+  await tester.pump();
+}
 
 void main() {
-  testWidgets('main navigation preserves the state of visited sections', (
+  testWidgets('main navigation preserves state in real production forms', (
     tester,
   ) async {
+    final controller = BebiaSettingsController(store: MemoryPreferencesStore());
+    await controller.load();
+    addTearDown(controller.dispose);
+
     await tester.pumpWidget(
       MaterialApp(
-        theme: _theme(),
-        home: const AppShell(
+        theme: _theme(Brightness.light),
+        home: AppShell(
           screensOverride: <Widget>[
-            Center(child: Text('Domovská sekce')),
-            Center(child: Text('Časová osa')),
-            Center(child: Text('Souhrn statistik')),
-            Center(child: Text('Uživatelské nastavení')),
+            const FeedingFormScreen(),
+            const SleepFormScreen(),
+            const DiaperFormScreen(),
+            SettingsScreen(
+              controller: controller,
+              appVersionProvider: _TestVersionProvider(),
+            ),
           ],
         ),
       ),
     );
 
+    final firstField = find.byType(TextField).first;
+    await tester.enterText(firstField, '42');
+
     await tester.tap(find.text('Přehled'));
     await tester.pump();
-    expect(find.text('Časová osa'), findsOneWidget);
+    expect(find.byType(SleepFormScreen), findsOneWidget);
 
-    await tester.tap(find.text('Domů'));
+    await tester.tap(find.text('Statistiky'));
     await tester.pump();
-    expect(find.text('Domovská sekce'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+    expect(find.byType(DiaperFormScreen), findsOneWidget);
 
-  testWidgets('settings remain usable on a narrow viewport with large text', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 568);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final controller = BebiaSettingsController(store: MemoryPreferencesStore());
-    await controller.load();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: _theme(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: const TextScaler.linear(2)),
-          child: child!,
-        ),
-        home: SettingsScreen(controller: controller),
-      ),
-    );
+    await tester.tap(find.text('Nastavení'));
     await tester.pump();
+    expect(find.byType(SettingsScreen), findsOneWidget);
 
-    expect(find.text('Nastavení'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('feeding form avoids overflow with a simulated keyboard', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 568);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: _theme(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            viewInsets: const EdgeInsets.only(bottom: 220),
-            textScaler: const TextScaler.linear(1.8),
-          ),
-          child: child!,
-        ),
-        home: const FeedingFormScreen(),
-      ),
-    );
+    await tester.binding.handlePopRoute();
     await tester.pump();
-
     expect(find.byType(FeedingFormScreen), findsOneWidget);
+    expect(find.text('42'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final brightness in Brightness.values) {
+    final mode = brightness.name;
+
+    testWidgets('settings support 320 px, keyboard and 2x text in $mode mode', (
+      tester,
+    ) async {
+      _useNarrowKeyboardViewport(tester);
+      final controller = BebiaSettingsController(
+        store: MemoryPreferencesStore(),
+      );
+      await controller.load();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _largeTextApp(
+          theme: _theme(brightness),
+          home: SettingsScreen(
+            controller: controller,
+            appVersionProvider: _TestVersionProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    final forms = <String, Widget Function()>{
+      'feeding': () => const FeedingFormScreen(),
+      'sleep': () => const SleepFormScreen(),
+      'diaper': () => const DiaperFormScreen(),
+      'crying': () => const CryingFormScreen(),
+    };
+
+    for (final entry in forms.entries) {
+      testWidgets(
+        '${entry.key} form supports 320 px, keyboard and 2x text in $mode mode',
+        (tester) async {
+          _useNarrowKeyboardViewport(tester);
+          await tester.pumpWidget(
+            _largeTextApp(theme: _theme(brightness), home: entry.value()),
+          );
+          await tester.pump();
+
+          final expectedType = entry.value().runtimeType;
+          expect(
+            find.byWidgetPredicate(
+              (widget) => widget.runtimeType == expectedType,
+            ),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    testWidgets('timeline uses one safe scroll surface in $mode mode', (
+      tester,
+    ) async {
+      _useNarrowKeyboardViewport(tester);
+      await tester.pumpWidget(
+        _largeTextApp(
+          theme: _theme(brightness),
+          home: const TimelineScreen(loadOnInit: false),
+          keyboardInset: 0,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(CustomScrollView), findsOneWidget);
+      expect(find.byType(TimelineScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('home remains content-driven in $mode mode', (tester) async {
+      _useNarrowKeyboardViewport(tester);
+      await tester.pumpWidget(
+        _largeTextApp(
+          theme: _theme(brightness),
+          home: const HomeScreen(loadData: false, checkOnboarding: false),
+          keyboardInset: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.text('Pulse dne'));
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('Pulse dne'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('statistics grid is content-driven in $mode mode', (
+      tester,
+    ) async {
+      _useNarrowKeyboardViewport(tester);
+      await tester.pumpWidget(
+        _largeTextApp(
+          theme: _theme(brightness),
+          home: StatisticsScreen(loadStats: () async => _sampleStats),
+          keyboardInset: 0,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.byKey(const Key('statistics-metric-grid')));
+
+      expect(find.byType(StatisticsScreen), findsOneWidget);
+      expect(find.byKey(const Key('statistics-metric-grid')), findsOneWidget);
+      expect(find.byType(GridView), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('family sharing remains keyboard-safe in $mode mode', (
+      tester,
+    ) async {
+      _useNarrowKeyboardViewport(tester);
+      await tester.pumpWidget(
+        _largeTextApp(
+          theme: _theme(brightness),
+          home: const FamilySharingScreen(loadOnInit: false),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(FamilySharingScreen), findsOneWidget);
+      expect(find.text('Rodinné sdílení'), findsOneWidget);
+      final primaryAction = find.text('Otevřít účet a synchronizaci');
+      await _scrollTo(tester, primaryAction);
+      expect(primaryAction.hitTestable(), findsOneWidget);
+      expect(find.textContaining('Bez rodičovského účtu'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('shared empty state remains descriptive without color', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: _theme(),
+        theme: _theme(Brightness.light),
         home: const Scaffold(
           body: BebiaStatePanel(
             icon: Icons.event_note_outlined,

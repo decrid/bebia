@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
 import '../../shared/widgets/info_label.dart';
 import '../auth/app_account_provider.dart';
 import '../auth/app_account_session.dart';
@@ -17,7 +18,9 @@ import 'family_workspace_snapshot.dart';
 enum _FamilySetupStage { signIn, createFamily, invitePartner, connected }
 
 class FamilySharingScreen extends StatefulWidget {
-  const FamilySharingScreen({super.key});
+  const FamilySharingScreen({super.key, this.loadOnInit = true});
+
+  final bool loadOnInit;
 
   @override
   State<FamilySharingScreen> createState() => _FamilySharingScreenState();
@@ -41,7 +44,9 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
   @override
   void initState() {
     super.initState();
-    AppServices.familyConnectionController.load();
+    if (widget.loadOnInit) {
+      AppServices.familyConnectionController.load();
+    }
   }
 
   @override
@@ -296,194 +301,220 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
   Widget build(BuildContext context) {
     final controller = AppServices.familyConnectionController;
     final colorScheme = Theme.of(context).colorScheme;
-    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(10, 0, 10, 6 + bottomInset),
-        child: Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          child: Container(
-            height:
-                (MediaQuery.sizeOf(context).height -
-                    MediaQuery.viewInsetsOf(context).bottom) *
-                0.94,
-            decoration: BoxDecoration(
+      minimum: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+      child: AnimatedPadding(
+        duration: BebiaMotion.resolve(
+          BebiaMotion.standard,
+          reduceMotion: context.bebia.reduceMotion,
+        ),
+        curve: BebiaMotion.enter,
+        padding: EdgeInsets.only(bottom: keyboardInset),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: FractionallySizedBox(
+            widthFactor: 1,
+            heightFactor: 0.94,
+            child: Material(
+              color: colorScheme.surface,
+              clipBehavior: Clip.antiAlias,
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.16),
-              ),
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Rodinné sdílení',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.16),
                   ),
                 ),
-                Expanded(
-                  child: ValueListenableBuilder<AppAccountSession>(
-                    valueListenable: AppServices.appAccountController.session,
-                    builder: (context, session, _) {
-                      return ValueListenableBuilder<FamilyConnectionState>(
-                        valueListenable: controller.state,
-                        builder: (context, state, _) {
-                          final stage = _resolveStage(
-                            session: session,
-                            state: state,
-                          );
-                          final workspace = AppServices.familyWorkspaceService
-                              .buildSnapshot(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Rodinné sdílení',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ValueListenableBuilder<AppAccountSession>(
+                        valueListenable:
+                            AppServices.appAccountController.session,
+                        builder: (context, session, _) {
+                          return ValueListenableBuilder<FamilyConnectionState>(
+                            valueListenable: controller.state,
+                            builder: (context, state, _) {
+                              final stage = _resolveStage(
                                 session: session,
-                                familyState: state,
-                                childProfiles: AppServices
-                                    .childProfileController
-                                    .profiles
-                                    .value,
+                                state: state,
                               );
-                          final syncPayload = AppServices.familyCloudSyncService
-                              .buildPayload(
-                                session: session,
-                                familyState: state,
-                                workspace: workspace,
-                              );
-                          final syncPlan = AppServices
-                              .familySyncOrchestrationService
-                              .buildPlan(syncPayload);
+                              final workspace = AppServices
+                                  .familyWorkspaceService
+                                  .buildSnapshot(
+                                    session: session,
+                                    familyState: state,
+                                    childProfiles: AppServices
+                                        .childProfileController
+                                        .profiles
+                                        .value,
+                                  );
+                              final syncPayload = AppServices
+                                  .familyCloudSyncService
+                                  .buildPayload(
+                                    session: session,
+                                    familyState: state,
+                                    workspace: workspace,
+                                  );
+                              final syncPlan = AppServices
+                                  .familySyncOrchestrationService
+                                  .buildPlan(syncPayload);
 
-                          return ListView(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
-                            children: [
-                              _SharingHeaderCard(
-                                session: session,
-                                stage: stage,
-                                state: state,
-                              ),
-                              const SizedBox(height: 16),
-                              _SetupStateCard(
-                                session: session,
-                                state: state,
-                                stage: stage,
-                                onOpenSetup: _openAccountSetup,
-                                onCreateInvite: _createInvite,
-                                onMarkInviteShared: _markInviteShared,
-                                onMarkInviteAccepted: _markInviteAccepted,
-                                onMarkConnected: _markConnected,
-                              ),
-                              const SizedBox(height: 16),
-                              _AccountReadinessCard(
-                                session: session,
-                                onOpenSetup: _openAccountSetup,
-                              ),
-                              const SizedBox(height: 16),
-                              const _SyncRealityCard(),
-                              const SizedBox(height: 16),
-                              const _InviteLifecycleCard(),
-                              const SizedBox(height: 16),
-                              _WorkspacePreviewCard(
-                                workspace: workspace,
-                                onAssignChild: _assignChildToCurrentFamily,
-                                onRemoveChild: _removeChildFromCurrentFamily,
-                              ),
-                              const SizedBox(height: 16),
-                              _CloudSyncPreviewCard(payload: syncPayload),
-                              const SizedBox(height: 16),
-                              _SyncPlanPreviewCard(plan: syncPlan),
-                              const SizedBox(height: 16),
-                              _TestSyncCard(
-                                report: _testSyncReport,
-                                isRunning: _isRunningTestSync,
-                                onRun: _runTestSync,
-                                backendReport: _backendExecutionReport,
-                                isRunningBackend: _isRunningBackendSync,
-                                onRunBackend: _runBackendSyncTest,
-                              ),
-                              const SizedBox(height: 16),
-                              ValueListenableBuilder<bool>(
-                                valueListenable: controller.isLoading,
-                                builder: (context, isLoading, _) {
-                                  return _InviteCard(
+                              return ListView(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  0,
+                                  16,
+                                  22,
+                                ),
+                                children: [
+                                  _SharingHeaderCard(
+                                    session: session,
+                                    stage: stage,
+                                    state: state,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _SetupStateCard(
                                     session: session,
                                     state: state,
-                                    isLoading: isLoading,
+                                    stage: stage,
+                                    onOpenSetup: _openAccountSetup,
                                     onCreateInvite: _createInvite,
                                     onMarkInviteShared: _markInviteShared,
                                     onMarkInviteAccepted: _markInviteAccepted,
-                                    onCopyInviteCode: _copyInviteCode,
-                                    onCancelInvite: controller.cancelInvite,
                                     onMarkConnected: _markConnected,
-                                    formatDateTime: _formatDateTime,
-                                  );
-                                },
-                              ),
-                              if (state.hasInvite && !state.isConnected) ...[
-                                const SizedBox(height: 16),
-                                ValueListenableBuilder<bool>(
-                                  valueListenable: controller.isLoading,
-                                  builder: (context, isLoading, _) {
-                                    return _JoinByInviteCard(
-                                      state: state,
-                                      isLoading: isLoading,
-                                      codeController: _partnerCodeController,
-                                      nameController: _partnerNameController,
-                                      roleController: _partnerRoleController,
-                                      onAccept: _acceptInviteCode,
-                                    );
-                                  },
-                                ),
-                              ],
-                              if (state.familyId != null &&
-                                  state.familyId!.isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                _CaregiverForm(
-                                  nameController: _nameController,
-                                  roleController: _roleController,
-                                  onSubmit: _addCaregiver,
-                                ),
-                                const SizedBox(height: 16),
-                                _CaregiverList(
-                                  caregivers: state.caregivers,
-                                  onRemove: controller.removeCaregiver,
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              const _SyncRoadmapCard(),
-                              const SizedBox(height: 12),
-                              ValueListenableBuilder<String?>(
-                                valueListenable: controller.error,
-                                builder: (context, error, _) {
-                                  if (error == null) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Text(
-                                    error,
-                                    style: TextStyle(color: colorScheme.error),
-                                  );
-                                },
-                              ),
-                            ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _AccountReadinessCard(
+                                    session: session,
+                                    onOpenSetup: _openAccountSetup,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const _SyncRealityCard(),
+                                  const SizedBox(height: 16),
+                                  const _InviteLifecycleCard(),
+                                  const SizedBox(height: 16),
+                                  _WorkspacePreviewCard(
+                                    workspace: workspace,
+                                    onAssignChild: _assignChildToCurrentFamily,
+                                    onRemoveChild:
+                                        _removeChildFromCurrentFamily,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _CloudSyncPreviewCard(payload: syncPayload),
+                                  const SizedBox(height: 16),
+                                  _SyncPlanPreviewCard(plan: syncPlan),
+                                  const SizedBox(height: 16),
+                                  _TestSyncCard(
+                                    report: _testSyncReport,
+                                    isRunning: _isRunningTestSync,
+                                    onRun: _runTestSync,
+                                    backendReport: _backendExecutionReport,
+                                    isRunningBackend: _isRunningBackendSync,
+                                    onRunBackend: _runBackendSyncTest,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable: controller.isLoading,
+                                    builder: (context, isLoading, _) {
+                                      return _InviteCard(
+                                        session: session,
+                                        state: state,
+                                        isLoading: isLoading,
+                                        onCreateInvite: _createInvite,
+                                        onMarkInviteShared: _markInviteShared,
+                                        onMarkInviteAccepted:
+                                            _markInviteAccepted,
+                                        onCopyInviteCode: _copyInviteCode,
+                                        onCancelInvite: controller.cancelInvite,
+                                        onMarkConnected: _markConnected,
+                                        formatDateTime: _formatDateTime,
+                                      );
+                                    },
+                                  ),
+                                  if (state.hasInvite &&
+                                      !state.isConnected) ...[
+                                    const SizedBox(height: 16),
+                                    ValueListenableBuilder<bool>(
+                                      valueListenable: controller.isLoading,
+                                      builder: (context, isLoading, _) {
+                                        return _JoinByInviteCard(
+                                          state: state,
+                                          isLoading: isLoading,
+                                          codeController:
+                                              _partnerCodeController,
+                                          nameController:
+                                              _partnerNameController,
+                                          roleController:
+                                              _partnerRoleController,
+                                          onAccept: _acceptInviteCode,
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                  if (state.familyId != null &&
+                                      state.familyId!.isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    _CaregiverForm(
+                                      nameController: _nameController,
+                                      roleController: _roleController,
+                                      onSubmit: _addCaregiver,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _CaregiverList(
+                                      caregivers: state.caregivers,
+                                      onRemove: controller.removeCaregiver,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+                                  const _SyncRoadmapCard(),
+                                  const SizedBox(height: 12),
+                                  ValueListenableBuilder<String?>(
+                                    valueListenable: controller.error,
+                                    builder: (context, error, _) {
+                                      if (error == null) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Text(
+                                        error,
+                                        style: TextStyle(
+                                          color: colorScheme.error,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

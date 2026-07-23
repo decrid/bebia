@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
-import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
+import '../timeline/timeline_form_submission.dart';
 import 'sleep_model.dart';
 
 class SleepFormScreen extends StatefulWidget {
-  const SleepFormScreen({super.key, this.existingItem});
+  const SleepFormScreen({super.key, this.existingItem, this.submission});
 
   final TimelineItem? existingItem;
+  final TimelineFormSubmission? submission;
 
   @override
   State<SleepFormScreen> createState() => _SleepFormScreenState();
@@ -20,8 +23,11 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   DateTime _startTime = DateTime.now().subtract(const Duration(hours: 1));
   DateTime _endTime = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
+  bool _isSaving = false;
 
   bool get _isEdit => widget.existingItem != null;
+  TimelineFormSubmission get _submission =>
+      widget.submission ?? const AppTimelineFormSubmission();
 
   @override
   void initState() {
@@ -79,7 +85,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
       initialTime: TimeOfDay.fromDateTime(_startTime),
     );
 
-    if (pickedTime == null) return;
+    if (pickedTime == null || !mounted) return;
 
     final newStartTime = DateTime(
       pickedDate.year,
@@ -114,7 +120,7 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
       initialTime: TimeOfDay.fromDateTime(_endTime),
     );
 
-    if (pickedTime == null) return;
+    if (pickedTime == null || !mounted) return;
 
     final newEndTime = DateTime(
       pickedDate.year,
@@ -143,7 +149,8 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
   }
 
   Future<void> _save() async {
-    if (AppServices.childProfileController.activeProfile == null) {
+    if (_isSaving) return;
+    if (!_submission.hasActiveProfile) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -185,14 +192,23 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
       ..sleepEnd = record.endTime
       ..sleepDurationMinutes = durationMinutes;
 
-    if (_isEdit) {
-      await AppServices.timelineController.update(item);
-    } else {
-      await AppServices.timelineController.add(item);
+    setState(() => _isSaving = true);
+    try {
+      await _submission.save(item, isEdit: _isEdit);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Spánek se nepodařilo uložit: $error')),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
 
     if (!mounted) return;
-    Navigator.pop(context);
+    if (Navigator.of(context).canPop()) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -203,13 +219,15 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileSwitcherHeight =
+        MediaQuery.textScalerOf(context).scale(1) >= 1.5 ? 84.0 : 56.0;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit spánek' : 'Spánek'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(56),
-          child: ProfileSwitcher(
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(profileSwitcherHeight),
+          child: const ProfileSwitcher(
             embedded: true,
             padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
           ),
@@ -281,8 +299,14 @@ class _SleepFormScreenState extends State<SleepFormScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _save,
-                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                    onPressed: _isSaving ? null : _save,
+                    child: Text(
+                      _isSaving
+                          ? 'Ukládám…'
+                          : _isEdit
+                          ? 'Uložit změny'
+                          : 'Uložit',
+                    ),
                   ),
                 ),
               ),
@@ -302,30 +326,10 @@ class _FormIntroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF3F7FF), Color(0xFFFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle),
-        ],
-      ),
+    return BebiaFormIntroCard(
+      accent: context.bebia.sleep,
+      title: title,
+      subtitle: subtitle,
     );
   }
 }

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
-import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
+import '../timeline/timeline_form_submission.dart';
 import 'feeding_model.dart';
 
 class FeedingFormScreen extends StatefulWidget {
-  const FeedingFormScreen({super.key, this.existingItem});
+  const FeedingFormScreen({super.key, this.existingItem, this.submission});
 
   final TimelineItem? existingItem;
+  final TimelineFormSubmission? submission;
 
   @override
   State<FeedingFormScreen> createState() => _FeedingFormScreenState();
@@ -21,8 +24,11 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   DateTime _selectedTime = DateTime.now();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  bool _isSaving = false;
 
   bool get _isEdit => widget.existingItem != null;
+  TimelineFormSubmission get _submission =>
+      widget.submission ?? const AppTimelineFormSubmission();
 
   @override
   void initState() {
@@ -75,7 +81,7 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       initialTime: TimeOfDay.fromDateTime(_selectedTime),
     );
 
-    if (pickedTime == null) return;
+    if (pickedTime == null || !mounted) return;
 
     setState(() {
       _selectedTime = DateTime(
@@ -89,7 +95,8 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   }
 
   Future<void> _save() async {
-    if (AppServices.childProfileController.activeProfile == null) {
+    if (_isSaving) return;
+    if (!_submission.hasActiveProfile) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -102,6 +109,14 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
 
     final amountText = _amountController.text.trim();
     final parsedAmount = amountText.isEmpty ? null : int.tryParse(amountText);
+    if (amountText.isNotEmpty && (parsedAmount == null || parsedAmount <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Množství musí být kladné celé číslo v mililitrech.'),
+        ),
+      );
+      return;
+    }
     final note = _noteController.text.trim().isEmpty
         ? null
         : _noteController.text.trim();
@@ -126,14 +141,23 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       ..feedingType = record.type
       ..feedingAmountMl = record.amountMl;
 
-    if (_isEdit) {
-      await AppServices.timelineController.update(item);
-    } else {
-      await AppServices.timelineController.add(item);
+    setState(() => _isSaving = true);
+    try {
+      await _submission.save(item, isEdit: _isEdit);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Krmení se nepodařilo uložit: $error')),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
 
     if (!mounted) return;
-    Navigator.pop(context);
+    if (Navigator.of(context).canPop()) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -145,13 +169,15 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileSwitcherHeight =
+        MediaQuery.textScalerOf(context).scale(1) >= 1.5 ? 84.0 : 56.0;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit krmení' : 'Krmení'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(56),
-          child: ProfileSwitcher(
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(profileSwitcherHeight),
+          child: const ProfileSwitcher(
             embedded: true,
             padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
           ),
@@ -188,28 +214,53 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'breast',
-                            icon: Icon(Icons.favorite_border),
-                            label: Text('Kojení'),
-                          ),
-                          ButtonSegment(
-                            value: 'bottle',
-                            icon: Icon(Icons.local_drink_outlined),
-                            label: Text('Lahvička'),
-                          ),
-                        ],
-                        selected: {_type},
-                        onSelectionChanged: (selection) {
-                          setState(() {
-                            _type = selection.first;
-                          });
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final stackOptions =
+                              constraints.maxWidth < 340 ||
+                              MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                          const options = [
+                            (
+                              value: 'breast',
+                              label: 'Kojení',
+                              icon: Icons.favorite_border,
+                            ),
+                            (
+                              value: 'bottle',
+                              label: 'Lahvička',
+                              icon: Icons.local_drink_outlined,
+                            ),
+                          ];
+
+                          return Semantics(
+                            label: 'Typ krmení',
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: options.map((option) {
+                                return SizedBox(
+                                  width: stackOptions
+                                      ? constraints.maxWidth
+                                      : null,
+                                  child: ChoiceChip(
+                                    avatar: Icon(option.icon),
+                                    label: Text(option.label),
+                                    selected: _type == option.value,
+                                    onSelected: (_) {
+                                      setState(() {
+                                        _type = option.value;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
                         },
                       ),
                       const SizedBox(height: 14),
                       TextField(
+                        key: const Key('feeding-amount-field'),
                         controller: _amountController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -237,8 +288,14 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _save,
-                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                    onPressed: _isSaving ? null : _save,
+                    child: Text(
+                      _isSaving
+                          ? 'Ukládám…'
+                          : _isEdit
+                          ? 'Uložit změny'
+                          : 'Uložit',
+                    ),
                   ),
                 ),
               ),
@@ -258,30 +315,10 @@ class _FormIntroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF0F9F7), Color(0xFFFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle),
-        ],
-      ),
+    return BebiaFormIntroCard(
+      accent: context.bebia.feeding,
+      title: title,
+      subtitle: subtitle,
     );
   }
 }

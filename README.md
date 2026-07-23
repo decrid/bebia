@@ -10,7 +10,7 @@ Pomáhá rodičům rychle zaznamenat krmení, spánek, přebalování a pláč, 
 - záznam a editace krmení, spánku, přebalování a pláče,
 - časová osa s filtry a bezpečným mazáním,
 - statistiky, doporučení a predikce z existujících záznamů,
-- volitelná lokální analýza pláče pomocí TFLite,
+- volitelná lokální analýza pláče pomocí TFLite/MediaPipe,
 - volitelný účet a Firebase rodinná synchronizace,
 - systémový, světlý a tmavý vzhled,
 - komfortní nebo kompaktní hustota, omezení animací a haptika,
@@ -41,8 +41,37 @@ typografie, responsivity a budoucích obrazovek popisuje
 - [Statický audit a rebuild](docs/rebuild_audit.md)
 - [Design systém](docs/design_system.md)
 - [Release smoke checklist](docs/release_smoke_checklist.md)
+- [Android release a podepisování](docs/android_release.md)
+- [Technický privacy popis](PRIVACY.md)
+- [Bezpečnostní hlášení](SECURITY.md)
 - [Rodinná synchronizace](docs/family_sync_architecture.md)
 - [Firebase setup](docs/firebase_family_sync_setup.md)
+
+Kontrolu formátu, analýzu, testy a debug APK provádí také workflow
+`.github/workflows/flutter-quality.yml` pro pull requesty a změny na `main`.
+
+## Android release signing
+
+Release build nepoužívá debug klíč. Pro lokální podepsaný release:
+
+1. vytvořte nebo bezpečně získejte existující upload keystore,
+2. uložte jej mimo Git, typicky jako `android/app/upload-keystore.jks`,
+3. zkopírujte `android/key.properties.example` na
+   `android/key.properties`,
+4. nahraďte ukázkové hodnoty skutečnou cestou, aliasem a hesly,
+5. před buildem ověřte, že keystore ani `key.properties` nejsou sledované.
+
+Bez úplného `key.properties` release zůstane nepodepsaný; nikdy se tiše
+nepodepíše debug identitou. Podrobnosti a blokátor `com.example.bebia` jsou v
+[Android release dokumentaci](docs/android_release.md).
+
+## Licence
+
+Projekt zatím neobsahuje licenční soubor ani doložené rozhodnutí vlastníka o
+typu licence. Veřejná dostupnost repozitáře sama o sobě neuděluje právo software
+kopírovat, upravovat nebo distribuovat. Volba MIT, Apache-2.0, GPL nebo jiné
+licence zůstává blokujícím produktovým rozhodnutím vlastníka; žádná licence
+nebyla v rámci technického auditu domyšlena.
 
 ## Ruční ověření
 
@@ -58,4 +87,6 @@ flutter build apk --debug
 ```
 
 Poté proveďte smoke test na malém telefonu, s 2× systémovým textem, otevřenou
-klávesnicí, v obou motivech a nad kopií existujících uživatelských dat.
+klávesnicí, v obou motivech a nad kopií existujících uživatelských dat. Release
+build vyžaduje soukromou signing konfiguraci popsanou v Android release
+dokumentaci.

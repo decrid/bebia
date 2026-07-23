@@ -1,4 +1,3 @@
-import 'audio_capture_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../data/local/child_profile_store.dart';
 import '../data/local/event_assignment_store.dart';
@@ -77,8 +76,6 @@ class AppServices {
   static final InfantInsightsService infantInsightsService =
       InfantInsightsService();
   static const MonetizationService monetizationService = MonetizationService();
-
-  static final AudioCaptureService audioCaptureService = AudioCaptureService();
 
   static final AudioPreprocessingService audioPreprocessingService =
       const AudioPreprocessingService();

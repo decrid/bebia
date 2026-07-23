@@ -14,9 +14,10 @@ import 'timeline_cloud_sync_service.dart';
 import 'timeline_item.dart';
 
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key});
+  const TimelineScreen({super.key, this.loadOnInit = true});
 
   static const routeName = '/timeline';
+  final bool loadOnInit;
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -33,10 +34,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
     AppServices.childProfileController.activeProfileId.addListener(
       _handleContextChanged,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      AppServices.timelineController.load();
-    });
+    if (widget.loadOnInit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppServices.timelineController.load();
+      });
+    }
   }
 
   @override
@@ -322,308 +325,322 @@ class _TimelineScreenState extends State<TimelineScreen> {
     );
   }
 
+  Widget _buildTimelineEntry(
+    BuildContext context,
+    _TimelineListEntry entry,
+    ColorScheme colorScheme,
+  ) {
+    if (entry is _TimelineHeaderEntry) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
+        child: Text(
+          entry.title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+      );
+    }
+
+    final item = (entry as _TimelineItemEntry).item;
+    final subtitleParts = _buildSubtitleParts(item);
+    final isCrying = item.type == EventType.crying;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Dismissible(
+        key: ValueKey(item.id),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          decoration: BoxDecoration(
+            color: colorScheme.error,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Icon(Icons.delete, color: colorScheme.onError),
+        ),
+        confirmDismiss: (direction) {
+          return showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Smazat záznam?'),
+              content: const Text('Tuto akci nelze vrátit.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Zrušit'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Smazat'),
+                ),
+              ],
+            ),
+          );
+        },
+        onDismissed: (_) {
+          AppServices.timelineController.delete(item.id);
+        },
+        child: Card(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => _openEditForm(item),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: isCrying
+                            ? colorScheme.tertiaryContainer
+                            : colorScheme.secondaryContainer,
+                        foregroundColor: isCrying
+                            ? colorScheme.onTertiaryContainer
+                            : colorScheme.onSecondaryContainer,
+                        child: Icon(_iconFor(item.type)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _eventTypeLabel(item.type),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatTime(item.time),
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
+                  if (subtitleParts.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: subtitleParts
+                          .map((part) => InfoLabel(label: part))
+                          .toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final accountSession = AppServices.appAccountController.session.value;
     final familyState = AppServices.familyConnectionController.state.value;
     final activeProfile = AppServices.childProfileController.activeProfile;
+    final usesLargeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final profileBarHeight = usesLargeText ? 116.0 : 92.0;
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(92),
+        preferredSize: Size.fromHeight(profileBarHeight),
         child: AppBar(
           automaticallyImplyLeading: false,
-          toolbarHeight: 92,
+          toolbarHeight: profileBarHeight,
           titleSpacing: 0,
-          title: ProfileSwitcher(
+          title: const ProfileSwitcher(
             embedded: true,
             padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.primaryContainer.withValues(alpha: 0.32),
-                    colorScheme.surface,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Historie událostí',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Surová data, filtry a editace. Tady se díváš na to, co se přesně stalo a kdy.',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: _TimelineFamilyContextCard(
-              session: accountSession,
-              familyState: familyState,
-              activeProfile: activeProfile,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: ValueListenableBuilder<List<TimelineItem>>(
-              valueListenable: AppServices.timelineController.items,
-              builder: (context, items, _) {
-                final syncPayload = AppServices.timelineCloudSyncService
-                    .buildPayload(
-                      session: accountSession,
-                      familyState: familyState,
-                      activeProfile: activeProfile,
-                      items: items,
-                    );
-                final syncPlan = AppServices.timelineCloudSyncService.buildPlan(
-                  syncPayload,
-                );
-
-                return Column(
-                  children: [
-                    _TimelineShareReadinessCard(
-                      session: accountSession,
-                      familyState: familyState,
-                      activeProfile: activeProfile,
-                      payload: syncPayload,
-                    ),
-                    const SizedBox(height: 12),
-                    _TimelineCloudPreviewCard(
-                      payload: syncPayload,
-                      plan: syncPlan,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          ValueListenableBuilder<EventType?>(
+      body: ValueListenableBuilder<List<TimelineItem>>(
+        valueListenable: AppServices.timelineController.items,
+        builder: (context, items, _) {
+          return ValueListenableBuilder<EventType?>(
             valueListenable: AppServices.timelineController.selectedFilter,
-            builder: (context, selectedType, child) {
-              return _buildFilterChips(selectedType);
-            },
-          ),
-          Expanded(
-            child: ValueListenableBuilder<bool>(
-              valueListenable: AppServices.timelineController.isLoading,
-              builder: (context, isLoading, child) {
-                if (isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                return ValueListenableBuilder<String?>(
-                  valueListenable: AppServices.timelineController.error,
-                  builder: (context, error, child) {
-                    if (error != null) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(error),
-                        ),
-                      );
-                    }
-
-                    return ValueListenableBuilder<List<TimelineItem>>(
-                      valueListenable: AppServices.timelineController.items,
-                      builder: (context, items, child) {
-                        if (items.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'Zatím nejsou k dispozici žádné záznamy.',
-                            ),
+            builder: (context, selectedType, _) {
+              return ValueListenableBuilder<bool>(
+                valueListenable: AppServices.timelineController.isLoading,
+                builder: (context, isLoading, _) {
+                  return ValueListenableBuilder<String?>(
+                    valueListenable: AppServices.timelineController.error,
+                    builder: (context, error, _) {
+                      final syncPayload = AppServices.timelineCloudSyncService
+                          .buildPayload(
+                            session: accountSession,
+                            familyState: familyState,
+                            activeProfile: activeProfile,
+                            items: items,
                           );
-                        }
+                      final syncPlan = AppServices.timelineCloudSyncService
+                          .buildPlan(syncPayload);
 
-                        final entries = _buildEntries(items);
-                        final summary = _buildTodaySummary(items);
-
-                        return ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                          itemCount: entries.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _TimelineSummaryCard(summary: summary),
-                              );
-                            }
-
-                            final entry = entries[index - 1];
-
-                            if (entry is _TimelineHeaderEntry) {
-                              return Padding(
-                                padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
-                                child: Text(
-                                  entry.title,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            final item = (entry as _TimelineItemEntry).item;
-                            final subtitleParts = _buildSubtitleParts(item);
-                            final isCrying = item.type == EventType.crying;
-
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Dismissible(
-                                key: ValueKey(item.id),
-                                direction: DismissDirection.endToStart,
-                                background: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                confirmDismiss: (direction) async {
-                                  return await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Smazat záznam?'),
-                                      content: const Text(
-                                        'Tuto akci nelze vrátit.',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text('Zrušit'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text('Smazat'),
-                                        ),
-                                      ],
+                      final slivers = <Widget>[
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    colorScheme.primaryContainer.withValues(
+                                      alpha: 0.32,
                                     ),
-                                  );
-                                },
-                                onDismissed: (_) {
-                                  AppServices.timelineController.delete(
-                                    item.id,
-                                  );
-                                },
-                                child: Card(
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(24),
-                                    onTap: () => _openEditForm(item),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              CircleAvatar(
-                                                backgroundColor: isCrying
-                                                    ? colorScheme
-                                                          .tertiaryContainer
-                                                    : colorScheme
-                                                          .secondaryContainer,
-                                                foregroundColor: isCrying
-                                                    ? colorScheme
-                                                          .onTertiaryContainer
-                                                    : colorScheme
-                                                          .onSecondaryContainer,
-                                                child: Icon(
-                                                  _iconFor(item.type),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      _eventTypeLabel(
-                                                        item.type,
-                                                      ),
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      _formatTime(item.time),
-                                                      style: Theme.of(
-                                                        context,
-                                                      ).textTheme.bodyMedium,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(
-                                                Icons.chevron_right_rounded,
-                                              ),
-                                            ],
-                                          ),
-                                          if (subtitleParts.isNotEmpty) ...[
-                                            const SizedBox(height: 14),
-                                            Wrap(
-                                              spacing: 8,
-                                              runSpacing: 8,
-                                              children: subtitleParts
-                                                  .map(
-                                                    (part) =>
-                                                        InfoLabel(label: part),
-                                                  )
-                                                  .toList(),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                    colorScheme.surface,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
                               ),
-                            );
-                          },
+                              child: const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Historie událostí',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'Surová data, filtry a editace. Tady se díváš na to, co se přesně stalo a kdy.',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            child: _TimelineFamilyContextCard(
+                              session: accountSession,
+                              familyState: familyState,
+                              activeProfile: activeProfile,
+                            ),
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            child: Column(
+                              children: [
+                                _TimelineShareReadinessCard(
+                                  session: accountSession,
+                                  familyState: familyState,
+                                  activeProfile: activeProfile,
+                                  payload: syncPayload,
+                                ),
+                                const SizedBox(height: 12),
+                                _TimelineCloudPreviewCard(
+                                  payload: syncPayload,
+                                  plan: syncPlan,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _buildFilterChips(selectedType),
+                        ),
+                      ];
+
+                      if (isLoading) {
+                        slivers.add(
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
                         );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+                      } else if (error != null) {
+                        slivers.add(
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(error),
+                              ),
+                            ),
+                          ),
+                        );
+                      } else if (items.isEmpty) {
+                        slivers.add(
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Text(
+                                  'Zatím nejsou k dispozici žádné záznamy.',
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        final entries = _buildEntries(items);
+                        final summary = _buildTodaySummary(items);
+                        slivers
+                          ..add(
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  4,
+                                  16,
+                                  12,
+                                ),
+                                child: _TimelineSummaryCard(summary: summary),
+                              ),
+                            ),
+                          )
+                          ..add(
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                0,
+                                16,
+                                110,
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) => _buildTimelineEntry(
+                                    context,
+                                    entries[index],
+                                    colorScheme,
+                                  ),
+                                  childCount: entries.length,
+                                ),
+                              ),
+                            ),
+                          );
+                      }
+
+                      return CustomScrollView(slivers: slivers);
+                    },
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -720,15 +737,16 @@ class _TimelineShareReadinessCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               InfoLabel(
                 label: payload.canSync ? 'Připraveno' : 'Kontrolní režim',
@@ -806,15 +824,16 @@ class _TimelineFamilyContextCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               InfoLabel(
                 label: activeProfileLinked ? 'Sdílená rodina' : 'Lokální režim',
@@ -937,12 +956,14 @@ class _TimelineCloudPreviewCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(operation.description),
+                          const SizedBox(height: 6),
+                          InfoLabel(
+                            label: operation.isReady
+                                ? 'Připraveno'
+                                : 'Blokováno',
+                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    InfoLabel(
-                      label: operation.isReady ? 'Připraveno' : 'Blokováno',
                     ),
                   ],
                 ),

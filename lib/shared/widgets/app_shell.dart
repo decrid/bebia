@@ -15,9 +15,10 @@ import '../../features/timeline/timeline_screen.dart';
 import 'bebia_components.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.screensOverride});
+  const AppShell({super.key, this.screensOverride, this.settingsController});
 
   final List<Widget>? screensOverride;
+  final BebiaSettingsController? settingsController;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -26,13 +27,6 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
   final Set<int> _visitedSections = <int>{0};
-
-  static const List<Widget> _screens = <Widget>[
-    HomeScreen(),
-    TimelineScreen(),
-    StatisticsScreen(),
-    SettingsScreen(),
-  ];
 
   static const List<NavigationDestination> _destinations =
       <NavigationDestination>[
@@ -58,10 +52,19 @@ class _AppShellState extends State<AppShell> {
         ),
       ];
 
-  List<Widget> get _activeScreens => widget.screensOverride ?? _screens;
+  BebiaSettingsController get _settingsController =>
+      widget.settingsController ?? BebiaSettingsController.instance;
+  List<Widget> get _activeScreens =>
+      widget.screensOverride ??
+      <Widget>[
+        const HomeScreen(),
+        const TimelineScreen(),
+        const StatisticsScreen(),
+        SettingsScreen(controller: _settingsController),
+      ];
 
   Future<void> _feedback() async {
-    if (BebiaSettingsController.instance.preferences.hapticsEnabled) {
+    if (_settingsController.preferences.hapticsEnabled) {
       await HapticFeedback.selectionClick();
     }
   }
@@ -206,18 +209,29 @@ class _AppShellState extends State<AppShell> {
                   )
                 : content,
             floatingActionButton: _currentIndex == 0
-                ? FloatingActionButton.extended(
+                ? Semantics(
                     key: const Key('quick-add-button'),
-                    onPressed: _openQuickAddSheet,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Zapsat událost'),
+                    container: true,
+                    button: true,
+                    label: 'Zapsat událost',
+                    child: FloatingActionButton.extended(
+                      tooltip: 'Zapsat událost',
+                      onPressed: _openQuickAddSheet,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Zapsat událost'),
+                    ),
                   )
                 : _currentIndex < 3
-                ? FloatingActionButton(
+                ? Semantics(
                     key: const Key('quick-add-button-compact'),
-                    onPressed: _openQuickAddSheet,
-                    tooltip: 'Zapsat událost',
-                    child: const Icon(Icons.add_rounded),
+                    container: true,
+                    button: true,
+                    label: 'Zapsat událost',
+                    child: FloatingActionButton(
+                      onPressed: _openQuickAddSheet,
+                      tooltip: 'Zapsat událost',
+                      child: const Icon(Icons.add_rounded),
+                    ),
                   )
                 : null,
             floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,

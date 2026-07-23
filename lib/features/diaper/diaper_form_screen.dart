@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
-import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
+import '../timeline/timeline_form_submission.dart';
 import 'diaper_model.dart';
 
 class DiaperFormScreen extends StatefulWidget {
-  const DiaperFormScreen({super.key, this.existingItem});
+  const DiaperFormScreen({super.key, this.existingItem, this.submission});
 
   final TimelineItem? existingItem;
+  final TimelineFormSubmission? submission;
 
   @override
   State<DiaperFormScreen> createState() => _DiaperFormScreenState();
@@ -20,8 +23,11 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   String _type = 'wet';
   DateTime _selectedTime = DateTime.now();
   final TextEditingController _noteController = TextEditingController();
+  bool _isSaving = false;
 
   bool get _isEdit => widget.existingItem != null;
+  TimelineFormSubmission get _submission =>
+      widget.submission ?? const AppTimelineFormSubmission();
 
   @override
   void initState() {
@@ -74,7 +80,7 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
       initialTime: TimeOfDay.fromDateTime(_selectedTime),
     );
 
-    if (pickedTime == null) return;
+    if (pickedTime == null || !mounted) return;
 
     setState(() {
       _selectedTime = DateTime(
@@ -88,7 +94,8 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
   }
 
   Future<void> _save() async {
-    if (AppServices.childProfileController.activeProfile == null) {
+    if (_isSaving) return;
+    if (!_submission.hasActiveProfile) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -125,14 +132,23 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
       ..note = note
       ..diaperType = record.type;
 
-    if (_isEdit) {
-      await AppServices.timelineController.update(item);
-    } else {
-      await AppServices.timelineController.add(item);
+    setState(() => _isSaving = true);
+    try {
+      await _submission.save(item, isEdit: _isEdit);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Přebalení se nepodařilo uložit: $error')),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
 
     if (!mounted) return;
-    Navigator.pop(context);
+    if (Navigator.of(context).canPop()) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -143,13 +159,15 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileSwitcherHeight =
+        MediaQuery.textScalerOf(context).scale(1) >= 1.5 ? 84.0 : 56.0;
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit přebalení' : 'Přebalení'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(56),
-          child: ProfileSwitcher(
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(profileSwitcherHeight),
+          child: const ProfileSwitcher(
             embedded: true,
             padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
           ),
@@ -184,29 +202,53 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'wet',
-                            icon: Icon(Icons.water_drop_outlined),
-                            label: Text('Mokrá'),
-                          ),
-                          ButtonSegment(
-                            value: 'poop',
-                            icon: Icon(Icons.circle_outlined),
-                            label: Text('Stolice'),
-                          ),
-                          ButtonSegment(
-                            value: 'both',
-                            icon: Icon(Icons.done_all),
-                            label: Text('Oboje'),
-                          ),
-                        ],
-                        selected: {_type},
-                        onSelectionChanged: (selection) {
-                          setState(() {
-                            _type = selection.first;
-                          });
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          const options =
+                              <({String value, String label, IconData icon})>[
+                                (
+                                  value: 'wet',
+                                  label: 'Mokrá',
+                                  icon: Icons.water_drop_outlined,
+                                ),
+                                (
+                                  value: 'poop',
+                                  label: 'Stolice',
+                                  icon: Icons.circle_outlined,
+                                ),
+                                (
+                                  value: 'both',
+                                  label: 'Oboje',
+                                  icon: Icons.done_all,
+                                ),
+                              ];
+                          final textScale = MediaQuery.textScalerOf(
+                            context,
+                          ).scale(1);
+                          final stacked =
+                              constraints.maxWidth < 360 || textScale >= 1.5;
+                          return Semantics(
+                            label: 'Typ přebalení',
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: options.map((option) {
+                                final selected = _type == option.value;
+                                return SizedBox(
+                                  width: stacked ? constraints.maxWidth : null,
+                                  child: ChoiceChip(
+                                    avatar: Icon(option.icon),
+                                    label: Text(option.label),
+                                    selected: selected,
+                                    showCheckmark: true,
+                                    onSelected: (_) {
+                                      setState(() => _type = option.value);
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
                         },
                       ),
                       const SizedBox(height: 14),
@@ -230,8 +272,14 @@ class _DiaperFormScreenState extends State<DiaperFormScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _save,
-                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                    onPressed: _isSaving ? null : _save,
+                    child: Text(
+                      _isSaving
+                          ? 'Ukládám…'
+                          : _isEdit
+                          ? 'Uložit změny'
+                          : 'Uložit',
+                    ),
                   ),
                 ),
               ),
@@ -251,30 +299,10 @@ class _FormIntroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF7EE), Color(0xFFFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle),
-        ],
-      ),
+    return BebiaFormIntroCard(
+      accent: context.bebia.diaper,
+      title: title,
+      subtitle: subtitle,
     );
   }
 }

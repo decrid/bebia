@@ -23,3 +23,48 @@ class MemoryPreferencesStore implements BebiaPreferencesStore {
     value = preferences;
   }
 }
+
+class SerialProbePreferencesStore implements BebiaPreferencesStore {
+  SerialProbePreferencesStore({
+    this.value = const BebiaPreferences(),
+    this.writeDelay = const Duration(milliseconds: 5),
+  });
+
+  BebiaPreferences value;
+  final Duration writeDelay;
+  int activeWrites = 0;
+  int maximumConcurrentWrites = 0;
+  final List<BebiaPreferences> writes = <BebiaPreferences>[];
+
+  @override
+  Future<BebiaPreferences> load() async => value;
+
+  @override
+  Future<void> save(BebiaPreferences preferences) async {
+    activeWrites++;
+    maximumConcurrentWrites = activeWrites > maximumConcurrentWrites
+        ? activeWrites
+        : maximumConcurrentWrites;
+    await Future<void>.delayed(writeDelay);
+    writes.add(preferences);
+    value = preferences;
+    activeWrites--;
+  }
+}
+
+class FailFirstPreferencesStore implements BebiaPreferencesStore {
+  BebiaPreferences value = const BebiaPreferences();
+  int saveCalls = 0;
+
+  @override
+  Future<BebiaPreferences> load() async => value;
+
+  @override
+  Future<void> save(BebiaPreferences preferences) async {
+    saveCalls++;
+    if (saveCalls == 1) {
+      throw StateError('first write failed');
+    }
+    value = preferences;
+  }
+}

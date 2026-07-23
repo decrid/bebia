@@ -453,7 +453,7 @@ abstract final class BebiaTheme {
             ? scheme.surfaceContainerHighest
             : const Color(0xFF22352E),
         contentTextStyle: textTheme.bodyMedium?.copyWith(
-          color: isDark ? scheme.onSurface : Colors.white,
+          color: isDark ? scheme.onSurface : scheme.onInverseSurface,
           fontWeight: FontWeight.w600,
         ),
         shape: RoundedRectangleBorder(

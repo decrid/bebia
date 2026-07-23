@@ -1,22 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/app_version_provider.dart';
 import '../../core/design/bebia_theme.dart';
 import '../../core/settings/bebia_preferences.dart';
 import '../../shared/widgets/bebia_components.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, this.controller});
+  const SettingsScreen({super.key, this.controller, this.appVersionProvider});
 
   final BebiaSettingsController? controller;
+  final BebiaAppVersionProvider? appVersionProvider;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  late Future<BebiaAppVersion> _appVersion;
+
   BebiaSettingsController get _controller =>
       widget.controller ?? BebiaSettingsController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _appVersion = _loadAppVersion();
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.appVersionProvider != widget.appVersionProvider) {
+      _appVersion = _loadAppVersion();
+    }
+  }
+
+  Future<BebiaAppVersion> _loadAppVersion() async {
+    try {
+      return await (widget.appVersionProvider ??
+              const PackageInfoAppVersionProvider())
+          .load();
+    } on Object {
+      return const BebiaAppVersion.unavailable();
+    }
+  }
 
   Future<void> _showAppearance() async {
     final current = _controller.preferences.appearance;
@@ -249,24 +277,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: BebiaSpace.lg),
               const BebiaSectionHeader(title: 'O aplikaci'),
-              const BebiaCard(
+              BebiaCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    const Text(
                       'Bebia',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: BebiaSpace.xs),
-                    Text(
+                    const SizedBox(height: BebiaSpace.xs),
+                    const Text(
                       'Přehledný pomocník pro krmení, spánek, přebalování, '
                       'pláč a společnou péči o dítě.',
                     ),
-                    SizedBox(height: BebiaSpace.sm),
-                    Text('Verze 1.0.0 (1)'),
+                    const SizedBox(height: BebiaSpace.sm),
+                    FutureBuilder<BebiaAppVersion>(
+                      future: _appVersion,
+                      builder: (context, snapshot) {
+                        final version = snapshot.data;
+                        if (version == null) {
+                          return const Text('Načítám verzi…');
+                        }
+                        return Text(version.displayLabel);
+                      },
+                    ),
                   ],
                 ),
               ),

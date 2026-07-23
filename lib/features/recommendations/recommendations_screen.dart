@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
 import '../../shared/widgets/info_label.dart';
 import '../predictions/prediction_model.dart';
 import 'recommendation_model.dart';
@@ -46,10 +47,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     await _futureData;
   }
 
-  Color _scoreColor(double score) {
-    if (score >= 0.8) return Colors.redAccent;
-    if (score >= 0.55) return Colors.orange;
-    return Colors.blueGrey;
+  Color _scoreColor(BuildContext context, double score) {
+    if (score >= 0.8) return context.bebia.danger;
+    if (score >= 0.55) return context.bebia.warning;
+    return Theme.of(context).colorScheme.primary;
   }
 
   String _scoreLabel(double score) {
@@ -172,7 +173,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                             subtitle:
                                 'Čas ${_timeLabel(prediction.predictedTime)} • jistota ${(prediction.confidence * 100).round()} %',
                             badge: _windowLabel(prediction.predictedTime),
-                            color: Colors.teal,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -182,7 +183,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   _SectionTitle(title: 'Doporučené kroky'),
                   const SizedBox(height: 8),
                   ...recommendations.map((item) {
-                    final color = _scoreColor(item.score);
+                    final color = _scoreColor(context, item.score);
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),

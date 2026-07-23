@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../auth/app_account_session.dart';
@@ -9,19 +10,21 @@ import '../profile/child_profile.dart';
 import '../timeline/timeline_item.dart';
 
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  const StatisticsScreen({super.key, this.loadStats});
+
+  final Future<StatisticsSnapshot> Function()? loadStats;
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
-  late Future<_Stats> _future;
+  late Future<StatisticsSnapshot> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = _loadStats();
+    _future = _loadStatsForView();
     AppServices.childProfileController.activeProfileId.addListener(
       _handleChildProfileChanged,
     );
@@ -49,7 +52,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     super.dispose();
   }
 
-  Future<_Stats> _loadStats() async {
+  Future<StatisticsSnapshot> _loadStats() async {
     final items = await AppServices.timelineRepository.getAll(
       childId: AppServices.childProfileController.activeProfileId.value,
     );
@@ -139,7 +142,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         ? null
         : ((cryingResolvedCount / cryingCount) * 100).round();
 
-    return _Stats(
+    return StatisticsSnapshot(
       feedingCount: feedingCount,
       sleepCount: sleepCount,
       diaperCount: diaperCount,
@@ -160,9 +163,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   Future<void> _refresh() async {
     setState(() {
-      _future = _loadStats();
+      _future = _loadStatsForView();
     });
     await _future;
+  }
+
+  Future<StatisticsSnapshot> _loadStatsForView() {
+    return widget.loadStats?.call() ?? _loadStats();
   }
 
   void _handleChildProfileChanged() {
@@ -186,21 +193,23 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final session = AppServices.appAccountController.session.value;
     final familyState = AppServices.familyConnectionController.state.value;
     final activeProfile = AppServices.childProfileController.activeProfile;
+    final usesLargeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final profileBarHeight = usesLargeText ? 116.0 : 92.0;
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(92),
+        preferredSize: Size.fromHeight(profileBarHeight),
         child: AppBar(
           automaticallyImplyLeading: false,
-          toolbarHeight: 92,
+          toolbarHeight: profileBarHeight,
           titleSpacing: 0,
-          title: ProfileSwitcher(
+          title: const ProfileSwitcher(
             embedded: true,
             padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
           ),
         ),
       ),
-      body: FutureBuilder<_Stats>(
+      body: FutureBuilder<StatisticsSnapshot>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -347,27 +356,22 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   subtitle: 'Souhrn hlavních metrik za dnešek.',
                 ),
                 const SizedBox(height: 10),
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.06,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                _AdaptiveMetricGrid(
+                  key: const Key('statistics-metric-grid'),
                   children: [
                     _MetricCard(
                       label: 'Celkem ml',
                       value: '${stats.totalMl}',
                       suffix: 'ml',
                       icon: Icons.local_drink_outlined,
-                      tint: const Color(0xFFEAF8F7),
+                      tint: context.bebia.feeding.withValues(alpha: .14),
                     ),
                     _MetricCard(
                       label: 'Spánek',
                       value: '${stats.totalSleepMinutes}',
                       suffix: 'min',
                       icon: Icons.bedtime_outlined,
-                      tint: const Color(0xFFE9F3FB),
+                      tint: context.bebia.sleep.withValues(alpha: .14),
                     ),
                     _MetricCard(
                       label: 'Průměr pláče',
@@ -377,14 +381,14 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                           ? ''
                           : 'min',
                       icon: Icons.campaign_outlined,
-                      tint: const Color(0xFFFFF1E8),
+                      tint: context.bebia.crying.withValues(alpha: .14),
                     ),
                     _MetricCard(
                       label: 'Uklidnění',
                       value: stats.cryingResolvedRate?.toString() ?? '-',
                       suffix: stats.cryingResolvedRate == null ? '' : '%',
                       icon: Icons.favorite_border,
-                      tint: const Color(0xFFF4F0FF),
+                      tint: context.bebia.success.withValues(alpha: .14),
                     ),
                   ],
                 ),
@@ -471,6 +475,33 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _AdaptiveMetricGrid extends StatelessWidget {
+  const _AdaptiveMetricGrid({required this.children, super.key});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final singleColumn = constraints.maxWidth < 380 || textScale >= 1.5;
+        const spacing = 12.0;
+        final itemWidth = singleColumn
+            ? constraints.maxWidth
+            : (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children
+              .map((child) => SizedBox(width: itemWidth, child: child))
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
 class _StatisticsFamilyContextCard extends StatelessWidget {
   const _StatisticsFamilyContextCard({
     required this.session,
@@ -524,15 +555,16 @@ class _StatisticsFamilyContextCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               InfoLabel(
                 label: activeProfileLinked ? 'Sdílená rodina' : 'Lokální režim',
@@ -609,26 +641,30 @@ class _MetricCard extends StatelessWidget {
               foregroundColor: colorScheme.primary,
               child: Icon(icon),
             ),
-            const Spacer(),
+            const SizedBox(height: 16),
             Text(label, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 6),
-            RichText(
-              text: TextSpan(
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w800,
-                ),
-                children: [
-                  TextSpan(text: value),
-                  if (suffix.isNotEmpty)
-                    TextSpan(
-                      text: ' $suffix',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: RichText(
+                text: TextSpan(
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  children: [
+                    TextSpan(text: value),
+                    if (suffix.isNotEmpty)
+                      TextSpan(
+                        text: ' $suffix',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -662,7 +698,7 @@ class _CalmChip extends StatelessWidget {
   }
 }
 
-class _Stats {
+class StatisticsSnapshot {
   final int feedingCount;
   final int sleepCount;
   final int diaperCount;
@@ -681,7 +717,7 @@ class _Stats {
   final int soothingPacifierCount;
   final int soothingOtherCount;
 
-  _Stats({
+  const StatisticsSnapshot({
     required this.feedingCount,
     required this.sleepCount,
     required this.diaperCount,

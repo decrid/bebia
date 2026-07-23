@@ -285,6 +285,64 @@ class BebiaEventActionTile extends StatelessWidget {
   }
 }
 
+class BebiaFormIntroCard extends StatelessWidget {
+  const BebiaFormIntroCard({
+    required this.accent,
+    required this.title,
+    required this.subtitle,
+    super.key,
+    this.trailing,
+  });
+
+  final Color accent;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(BebiaSpace.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(BebiaRadius.large),
+        gradient: LinearGradient(
+          colors: <Color>[
+            accent.withValues(alpha: isDark ? .2 : .14),
+            scheme.surface,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: accent.withValues(alpha: isDark ? .34 : .2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Wrap(
+            spacing: BebiaSpace.xs,
+            runSpacing: BebiaSpace.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              ?trailing,
+            ],
+          ),
+          const SizedBox(height: BebiaSpace.xs),
+          Text(
+            subtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: context.bebia.mutedText),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class BebiaInfoBanner extends StatelessWidget {
   const BebiaInfoBanner({
     required this.icon,
@@ -417,7 +475,9 @@ Future<bool> showBebiaConfirmDialog(
                     style: destructive
                         ? FilledButton.styleFrom(
                             backgroundColor: context.bebia.danger,
-                            foregroundColor: Colors.white,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onError,
                           )
                         : null,
                     onPressed: () => Navigator.pop(dialogContext, true),

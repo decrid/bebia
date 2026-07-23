@@ -82,7 +82,8 @@ class MonetizationPlanScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: _FeatureCard(
                 feature: feature,
-                tint: const Color(0xFFFFF3E7),
+                tint: colorScheme.tertiaryContainer,
+                foreground: colorScheme.onTertiaryContainer,
                 badge: feature.launchPhase,
               ),
             ),
@@ -121,7 +122,8 @@ class MonetizationPlanScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: _FeatureCard(
                 feature: feature,
-                tint: const Color(0xFFEAF8F7),
+                tint: colorScheme.secondaryContainer,
+                foreground: colorScheme.onSecondaryContainer,
                 badge: 'Zdarma',
               ),
             ),
@@ -182,59 +184,64 @@ class _FeatureCard extends StatelessWidget {
   const _FeatureCard({
     required this.feature,
     required this.tint,
+    required this.foreground,
     required this.badge,
   });
 
   final MonetizationFeature feature;
   final Color tint;
+  final Color foreground;
   final String badge;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              backgroundColor: tint,
-              foregroundColor: colorScheme.primary,
-              child: Icon(
-                feature.includedInFree
-                    ? Icons.lock_open_rounded
-                    : Icons.auto_awesome_outlined,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: tint,
+                  foregroundColor: foreground,
+                  child: Icon(
+                    feature.includedInFree
+                        ? Icons.lock_open_rounded
+                        : Icons.auto_awesome_outlined,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        feature.title,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(feature.description),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${feature.plusPillar} • ${feature.launchPhase}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        feature.businessReason,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    feature.title,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(feature.description),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${feature.plusPillar} • ${feature.launchPhase}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    feature.businessReason,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
+            const SizedBox(height: 10),
             Chip(label: Text(badge)),
           ],
         ),

@@ -1,24 +1,45 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/app_services.dart';
+import '../../core/audio_capture_service.dart';
+import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../timeline/timeline_item.dart';
+import '../timeline/timeline_form_submission.dart';
 import 'ai_crying_analysis_result.dart';
 import 'crying_source.dart';
 
+typedef CryingAnalysisCallback =
+    Future<AiCryingAnalysisResult> Function(TimelineItem item);
+
 class CryingFormScreen extends StatefulWidget {
-  const CryingFormScreen({super.key, this.existingItem});
+  const CryingFormScreen({
+    super.key,
+    this.existingItem,
+    this.audioCapture,
+    this.submission,
+    this.analyzeCrying,
+  });
 
   final TimelineItem? existingItem;
+  final AudioCapture? audioCapture;
+  final TimelineFormSubmission? submission;
+  final CryingAnalysisCallback? analyzeCrying;
 
   @override
   State<CryingFormScreen> createState() => _CryingFormScreenState();
 }
 
 class _CryingFormScreenState extends State<CryingFormScreen> {
+  late final AudioCapture _audioCapture;
+  late final bool _ownsAudioCapture;
+  late final String? _originalAudioPath;
   double _intensity = 3;
   DateTime _selectedTime = DateTime.now();
   final TextEditingController _durationController = TextEditingController();
@@ -28,10 +49,13 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   String? _audioSamplePath;
   bool _isRecording = false;
   bool _isAudioBusy = false;
+  bool _recordingSessionRequested = false;
+  bool _retainAudioAfterDispose = false;
   String? _audioStatus;
 
   AiCryingAnalysisResult? _aiPreview;
   bool _isAnalyzingAi = false;
+  bool _isSaving = false;
   String? _aiPreviewError;
 
   bool? _aiUserConfirmedCry;
@@ -39,10 +63,20 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   String? _aiUserCorrectedCause;
 
   bool get _isEdit => widget.existingItem != null;
+  TimelineFormSubmission get _submission =>
+      widget.submission ?? const AppTimelineFormSubmission();
+
+  Future<AiCryingAnalysisResult> _analyzeCrying(TimelineItem item) {
+    return widget.analyzeCrying?.call(item) ??
+        AppServices.cryingAiService.analyzeCryingItem(item);
+  }
 
   @override
   void initState() {
     super.initState();
+    _ownsAudioCapture = widget.audioCapture == null;
+    _audioCapture = widget.audioCapture ?? AudioCaptureService();
+    _originalAudioPath = widget.existingItem?.audioSamplePath;
 
     final existingItem = widget.existingItem;
     if (existingItem != null) {
@@ -145,7 +179,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       initialTime: TimeOfDay.fromDateTime(_selectedTime),
     );
 
-    if (pickedTime == null) return;
+    if (pickedTime == null || !mounted) return;
 
     setState(() {
       _selectedTime = DateTime(
@@ -208,9 +242,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     });
 
     try {
-      final result = await AppServices.cryingAiService.analyzeCryingItem(
-        _buildDraftItem(),
-      );
+      final result = await _analyzeCrying(_buildDraftItem());
 
       if (!mounted) return;
 
@@ -240,13 +272,18 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
     setState(() {
       _isAudioBusy = true;
+      _isRecording = false;
+      _recordingSessionRequested = true;
       _audioStatus = null;
     });
 
     try {
-      final path = await AppServices.audioCaptureService.startRecording();
+      final path = await _audioCapture.startRecording();
 
-      if (!mounted) return;
+      if (!mounted) {
+        await _releaseAudioResourcesAfterDispose();
+        return;
+      }
 
       setState(() {
         _isRecording = true;
@@ -256,11 +293,26 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
       _invalidateAiPreview();
       _resetAiFeedback();
-    } catch (e) {
+    } on AudioPermissionDeniedException catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _audioStatus = 'Nepodařilo se spustit nahrávání: $e';
+        _recordingSessionRequested = false;
+        _audioStatus = error.message;
+      });
+    } on AudioCaptureException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _recordingSessionRequested = false;
+        _audioStatus = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _recordingSessionRequested = false;
+        _audioStatus = 'Nepodařilo se spustit nahrávání: $error';
       });
     } finally {
       if (mounted) {
@@ -279,12 +331,13 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
     });
 
     try {
-      final path = await AppServices.audioCaptureService.stopRecording();
+      final path = await _audioCapture.stopRecording();
 
       if (!mounted) return;
 
       setState(() {
         _isRecording = false;
+        _recordingSessionRequested = false;
         _audioSamplePath = path ?? _audioSamplePath;
         _audioStatus = _audioSamplePath == null
             ? 'Nahrávání bylo zastaveno'
@@ -293,11 +346,17 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
 
       _invalidateAiPreview();
       _resetAiFeedback();
-    } catch (e) {
+    } on AudioCaptureException catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _audioStatus = 'Nepodařilo se zastavit nahrávání: $e';
+        _audioStatus = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _audioStatus = 'Nepodařilo se zastavit nahrávání: $error';
       });
     } finally {
       if (mounted) {
@@ -311,36 +370,55 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
   Future<void> _clearRecording() async {
     if (_isAudioBusy) return;
 
-    if (_isRecording) {
-      setState(() {
-        _isAudioBusy = true;
-      });
-
-      try {
-        await AppServices.audioCaptureService.cancelRecording();
-      } catch (_) {
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isRecording = false;
-            _isAudioBusy = false;
-          });
-        }
-      }
-    }
-
+    final pathToDelete = _audioSamplePath;
     setState(() {
-      _audioSamplePath = null;
-      _audioStatus = 'Audio vzorek byl odebrán';
+      _isAudioBusy = true;
     });
 
-    _invalidateAiPreview();
-    _resetAiFeedback();
+    try {
+      if (_isRecording) {
+        await _audioCapture.cancelRecording();
+      }
+      if (pathToDelete != null &&
+          pathToDelete.isNotEmpty &&
+          pathToDelete != _originalAudioPath) {
+        await _audioCapture.deleteRecording(pathToDelete);
+      }
+      if (!mounted) return;
+
+      setState(() {
+        _isRecording = false;
+        _recordingSessionRequested = false;
+        _audioSamplePath = null;
+        _audioStatus = 'Audio vzorek byl odebrán';
+      });
+      _invalidateAiPreview();
+      _resetAiFeedback();
+    } catch (error) {
+      var recorderStillActive = _isRecording;
+      try {
+        recorderStillActive = await _audioCapture.isRecording();
+      } catch (_) {
+        // Zachováme poslední známý stav, když ani kontrola recorderu neuspěje.
+      }
+      if (!mounted) return;
+      setState(() {
+        _isRecording = recorderStillActive;
+        _recordingSessionRequested = recorderStillActive;
+        _audioStatus = 'Audio vzorek se nepodařilo odebrat: $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAudioBusy = false;
+        });
+      }
+    }
   }
 
   Future<void> _save() async {
-    if (_isRecording) return;
-    if (AppServices.childProfileController.activeProfile == null) {
+    if (_isRecording || _isSaving) return;
+    if (!_submission.hasActiveProfile) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -351,39 +429,108 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       return;
     }
 
-    final item = _buildDraftItem();
+    final durationText = _durationController.text.trim();
+    final durationMinutes = durationText.isEmpty
+        ? null
+        : int.tryParse(durationText);
+    if (durationText.isNotEmpty &&
+        (durationMinutes == null || durationMinutes <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Délka pláče musí být kladné celé číslo v minutách.'),
+        ),
+      );
+      return;
+    }
 
-    final aiResult =
-        _aiPreview ?? await AppServices.cryingAiService.analyzeCryingItem(item);
+    setState(() => _isSaving = true);
+    try {
+      final item = _buildDraftItem();
+      final aiResult = _aiPreview ?? await _analyzeCrying(item);
 
-    item
-      ..aiCryProbability = aiResult.cryProbability
-      ..aiProbableCause = aiResult.probableCause
-      ..aiConfidence = aiResult.confidence
-      ..aiModelVersion = aiResult.modelVersion
-      ..aiAnalyzedAt = DateTime.now()
-      ..aiSignalsSerialized = aiResult.signals.isEmpty
-          ? null
-          : aiResult.signals.join(' | ');
+      item
+        ..aiCryProbability = aiResult.cryProbability
+        ..aiProbableCause = aiResult.probableCause
+        ..aiConfidence = aiResult.confidence
+        ..aiModelVersion = aiResult.modelVersion
+        ..aiAnalyzedAt = DateTime.now()
+        ..aiSignalsSerialized = aiResult.signals.isEmpty
+            ? null
+            : aiResult.signals.join(' | ');
 
-    if (_isEdit) {
-      await AppServices.timelineController.update(item);
-    } else {
-      await AppServices.timelineController.add(item);
+      await _submission.save(item, isEdit: _isEdit);
+
+      final originalAudioPath = _originalAudioPath;
+      if (originalAudioPath != null &&
+          originalAudioPath.isNotEmpty &&
+          originalAudioPath != _audioSamplePath) {
+        try {
+          await _audioCapture.deleteRecording(originalAudioPath);
+        } catch (_) {
+          // Záznam je uložený; úklid starého temp souboru je best effort.
+        }
+      }
+      _retainAudioAfterDispose = true;
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Pláč se nepodařilo uložit: $error')),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
 
     if (!mounted) return;
-    Navigator.pop(context);
+    if (Navigator.of(context).canPop()) {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _releaseAudioResourcesAfterDispose() async {
+    final pathToDelete = _audioSamplePath;
+    try {
+      if (_recordingSessionRequested) {
+        await _audioCapture.cancelRecording();
+      }
+      if (!_retainAudioAfterDispose &&
+          pathToDelete != null &&
+          pathToDelete.isNotEmpty &&
+          pathToDelete != _originalAudioPath) {
+        await _audioCapture.deleteRecording(pathToDelete);
+      }
+    } catch (_) {
+      // Widget už není aktivní; důležité je nenechat chybu uniknout do zóny.
+    } finally {
+      _recordingSessionRequested = false;
+      if (_ownsAudioCapture) {
+        try {
+          await (_audioCapture as AudioCaptureService).dispose();
+        } catch (_) {
+          // Ani chyba platformního dispose nesmí uniknout z lifecycle úklidu.
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
+    final hasTemporaryAudio =
+        !_retainAudioAfterDispose &&
+        _audioSamplePath != null &&
+        _audioSamplePath!.isNotEmpty &&
+        _audioSamplePath != _originalAudioPath;
+    if (_recordingSessionRequested || hasTemporaryAudio || _ownsAudioCapture) {
+      unawaited(_releaseAudioResourcesAfterDispose());
+    }
     _durationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final profileSwitcherHeight =
+        MediaQuery.textScalerOf(context).scale(1) >= 1.5 ? 84.0 : 56.0;
     final hasAudio = _audioSamplePath != null && _audioSamplePath!.isNotEmpty;
     final showCauseFeedback =
         _aiPreview != null &&
@@ -398,9 +545,9 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isEdit ? 'Upravit pláč' : 'Pláč'),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(56),
-          child: ProfileSwitcher(
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(profileSwitcherHeight),
+          child: const ProfileSwitcher(
             embedded: true,
             padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
           ),
@@ -449,9 +596,10 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   const Text(
                                     'Intenzita pláče',
@@ -481,6 +629,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                       ),
                       const SizedBox(height: 12),
                       TextField(
+                        key: const Key('crying-duration-field'),
                         controller: _durationController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -556,6 +705,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                 runSpacing: 8,
                                 children: [
                                   ElevatedButton.icon(
+                                    key: const Key('crying-start-recording'),
                                     onPressed: (_isRecording || _isAudioBusy)
                                         ? null
                                         : _startRecording,
@@ -563,6 +713,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                     label: const Text('Spustit nahrávání'),
                                   ),
                                   ElevatedButton.icon(
+                                    key: const Key('crying-stop-recording'),
                                     onPressed: (!_isRecording || _isAudioBusy)
                                         ? null
                                         : _stopRecording,
@@ -572,6 +723,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                                     label: const Text('Zastavit'),
                                   ),
                                   TextButton(
+                                    key: const Key('crying-clear-recording'),
                                     onPressed:
                                         (!hasAudio && !_isRecording) ||
                                             _isAudioBusy
@@ -583,6 +735,7 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
+                                key: const Key('crying-audio-status'),
                                 _audioStatus ??
                                     (hasAudio
                                         ? 'Audio vzorek je připraven pro AI analýzu.'
@@ -765,8 +918,14 @@ class _CryingFormScreenState extends State<CryingFormScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isRecording ? null : _save,
-                    child: Text(_isEdit ? 'Uložit změny' : 'Uložit'),
+                    onPressed: _isRecording || _isSaving ? null : _save,
+                    child: Text(
+                      _isSaving
+                          ? 'Ukládám…'
+                          : _isEdit
+                          ? 'Uložit změny'
+                          : 'Uložit',
+                    ),
                   ),
                 ),
               ),
@@ -791,38 +950,11 @@ class _IntroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF1F1), Color(0xFFFFFFFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              InfoLabel(label: trailingLabel),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle),
-        ],
-      ),
+    return BebiaFormIntroCard(
+      accent: context.bebia.crying,
+      title: title,
+      subtitle: subtitle,
+      trailing: InfoLabel(label: trailingLabel),
     );
   }
 }

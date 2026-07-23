@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
 import '../../features/profile/child_profile.dart';
 
 class ProfileSwitcher extends StatelessWidget {
@@ -107,10 +108,13 @@ class _ProfileChipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _profilePalette(profile.sex);
+    final palette = _profilePalette(context, profile.sex);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: BebiaMotion.resolve(
+        const Duration(milliseconds: 180),
+        reduceMotion: context.bebia.reduceMotion,
+      ),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
@@ -154,27 +158,21 @@ class _ProfileChipButton extends StatelessWidget {
   }
 }
 
-_ProfilePalette _profilePalette(String? sex) {
-  switch (sex) {
-    case 'boy':
-      return const _ProfilePalette(
-        background: Color(0xFFDDEEFF),
-        border: Color(0xFF4B8DDB),
-        foreground: Color(0xFF1B4F8A),
-      );
-    case 'girl':
-      return const _ProfilePalette(
-        background: Color(0xFFFFE0EA),
-        border: Color(0xFFD36A94),
-        foreground: Color(0xFF91355A),
-      );
-    default:
-      return const _ProfilePalette(
-        background: Color(0xFFE8F6ED),
-        border: Color(0xFF58A176),
-        foreground: Color(0xFF29613F),
-      );
-  }
+_ProfilePalette _profilePalette(BuildContext context, String? sex) {
+  final seed = switch (sex) {
+    'boy' => BebiaColors.sky,
+    'girl' => BebiaColors.rose,
+    _ => BebiaColors.sage,
+  };
+  final scheme = ColorScheme.fromSeed(
+    seedColor: seed,
+    brightness: Theme.of(context).brightness,
+  );
+  return _ProfilePalette(
+    background: scheme.secondaryContainer,
+    border: scheme.secondary,
+    foreground: scheme.onSecondaryContainer,
+  );
 }
 
 class _ProfilePalette {

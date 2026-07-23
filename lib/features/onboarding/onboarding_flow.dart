@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design/bebia_theme.dart';
+
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({
     required this.onCreateProfile,
@@ -284,13 +286,7 @@ class _OnboardingPage extends StatelessWidget {
                 border: Border.all(
                   color: colorScheme.outlineVariant.withValues(alpha: 0.18),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 22,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+                boxShadow: context.bebia.cardShadow,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),

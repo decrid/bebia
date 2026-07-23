@@ -16,27 +16,38 @@ class InfoLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final effectiveColor = color ?? colorScheme.onSurfaceVariant;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final maxWidth = (viewportWidth * (textScale >= 1.5 ? 0.36 : 0.55))
+        .clamp(96.0, 240.0)
+        .toDouble();
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 5,
-          height: 5,
-          decoration: BoxDecoration(
-            color: effectiveColor.withValues(alpha: 0.5),
-            shape: BoxShape.circle,
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color: effectiveColor.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
           ),
-        ),
-        const SizedBox(width: 7),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: effectiveColor,
-            fontWeight: fontWeight,
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              label,
+              softWrap: true,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: effectiveColor,
+                fontWeight: fontWeight,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

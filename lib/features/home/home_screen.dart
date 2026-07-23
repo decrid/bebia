@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../auth/app_account_session.dart';
@@ -24,7 +25,14 @@ enum _HomeMenuAction { profiles, accountSync, onboarding, connectParent, plus }
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
 
-  const HomeScreen({super.key});
+  const HomeScreen({
+    super.key,
+    this.loadData = true,
+    this.checkOnboarding = true,
+  });
+
+  final bool loadData;
+  final bool checkOnboarding;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -45,7 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
     AppServices.timelineController.revision.addListener(_refresh);
     AppServices.appAccountController.session.addListener(_refresh);
     AppServices.familyConnectionController.state.addListener(_refresh);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeOpenOnboarding());
+    if (widget.checkOnboarding) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _maybeOpenOnboarding(),
+      );
+    }
   }
 
   @override
@@ -58,6 +70,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _reloadData() {
+    if (!widget.loadData) {
+      _futureRecommendations = Future<List<Recommendation>>.value(
+        const <Recommendation>[],
+      );
+      _futureCryingAnalysis = Future<CryingAnalysisResult?>.value();
+      _futurePredictions = Future<List<Prediction>>.value(const <Prediction>[]);
+      _futureOverview = Future<_HomeOverview>.value(
+        const _HomeOverview(
+          totalToday: 0,
+          feedingsToday: 0,
+          sleepsToday: 0,
+          diapersToday: 0,
+          cryingsToday: 0,
+          lastEventTime: null,
+          readinessTitle: 'Začni dnešním prvním záznamem',
+          readinessText: 'První zápisy odemknou hodnotu přehledu a doporučení.',
+        ),
+      );
+      return;
+    }
+
     _futureRecommendations = AppServices.recommendationService
         .getRecommendations();
     _futureCryingAnalysis = AppServices.cryingAnalysisService
@@ -285,8 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Color _confidenceColor(BuildContext context, double confidence) {
-    if (confidence >= 0.8) return Colors.redAccent;
-    if (confidence >= 0.55) return Colors.orange;
+    if (confidence >= 0.8) return context.bebia.danger;
+    if (confidence >= 0.55) return context.bebia.warning;
     return Theme.of(context).colorScheme.primary;
   }
 
@@ -317,11 +350,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final profile = AppServices.childProfileController.activeProfile;
     final accountSession = AppServices.appAccountController.session.value;
     final familyState = AppServices.familyConnectionController.state.value;
+    final profileBarHeight = MediaQuery.textScalerOf(context).scale(1) >= 1.5
+        ? 116.0
+        : 92.0;
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        toolbarHeight: 92,
+        toolbarHeight: profileBarHeight,
         titleSpacing: 0,
         title: const ProfileSwitcher(
           embedded: true,
@@ -612,7 +648,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               badge: _predictionWindowLabel(
                                 prediction.predictedTime,
                               ),
-                              tint: const Color(0xFFE6F7F4),
+                              tint: context.bebia.success.withValues(
+                                alpha: .14,
+                              ),
                             ),
                           ),
                       ...(recommendationSnapshot.data ?? [])
@@ -625,7 +663,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               badge: _recommendationPriorityLabel(
                                 recommendation.score,
                               ),
-                              tint: const Color(0xFFFFF3E7),
+                              tint: context.bebia.warning.withValues(
+                                alpha: .14,
+                              ),
                             ),
                           ),
                     ];
@@ -896,52 +936,65 @@ class _TodayOverviewCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Row(
+            _HomeMetricGrid(
               children: [
-                Expanded(
-                  child: _MiniMetricCard(
-                    icon: Icons.local_drink_outlined,
-                    label: 'Krmení',
-                    value: overview.feedingsToday,
-                    tint: const Color(0xFFEAF8F7),
-                  ),
+                _MiniMetricCard(
+                  icon: Icons.local_drink_outlined,
+                  label: 'Krmení',
+                  value: overview.feedingsToday,
+                  tint: context.bebia.feeding.withValues(alpha: .14),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MiniMetricCard(
-                    icon: Icons.bedtime_outlined,
-                    label: 'Spánek',
-                    value: overview.sleepsToday,
-                    tint: const Color(0xFFE9F3FB),
-                  ),
+                _MiniMetricCard(
+                  icon: Icons.bedtime_outlined,
+                  label: 'Spánek',
+                  value: overview.sleepsToday,
+                  tint: context.bebia.sleep.withValues(alpha: .14),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _MiniMetricCard(
-                    icon: Icons.baby_changing_station_outlined,
-                    label: 'Přebalení',
-                    value: overview.diapersToday,
-                    tint: const Color(0xFFFFF3E7),
-                  ),
+                _MiniMetricCard(
+                  icon: Icons.baby_changing_station_outlined,
+                  label: 'Přebalení',
+                  value: overview.diapersToday,
+                  tint: context.bebia.diaper.withValues(alpha: .14),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MiniMetricCard(
-                    icon: Icons.campaign_outlined,
-                    label: 'Pláč',
-                    value: overview.cryingsToday,
-                    tint: const Color(0xFFF7EDF8),
-                  ),
+                _MiniMetricCard(
+                  icon: Icons.campaign_outlined,
+                  label: 'Pláč',
+                  value: overview.cryingsToday,
+                  tint: context.bebia.crying.withValues(alpha: .14),
                 ),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _HomeMetricGrid extends StatelessWidget {
+  const _HomeMetricGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final singleColumn =
+            constraints.maxWidth < 380 ||
+            MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+        const spacing = 10.0;
+        final itemWidth = singleColumn
+            ? constraints.maxWidth
+            : (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children
+              .map((child) => SizedBox(width: itemWidth, child: child))
+              .toList(),
+        );
+      },
     );
   }
 }
@@ -974,13 +1027,8 @@ class _MiniMetricCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: colorScheme.primary),
-          const Spacer(),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          const SizedBox(height: 16),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 2),
           Text(
             '$value',
@@ -1126,7 +1174,7 @@ class _AssistantAgendaCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white,
+        color: colorScheme.surface,
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.16),
         ),
@@ -1152,11 +1200,11 @@ class _AssistantAgendaCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(item.subtitle),
+                  const SizedBox(height: 8),
+                  InfoLabel(label: item.badge),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            InfoLabel(label: item.badge),
           ],
         ),
       ),
