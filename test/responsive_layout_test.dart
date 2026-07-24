@@ -222,14 +222,19 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await _scrollTo(tester, find.byKey(const Key('log-action-crying')));
 
       expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byKey(const Key('log-screen-hero')), findsOneWidget);
       expect(find.text('Zapsat novou událost'), findsOneWidget);
-      expect(find.text('Krmení'), findsOneWidget);
-      expect(find.text('Spánek'), findsOneWidget);
-      expect(find.text('Přebalení'), findsOneWidget);
-      expect(find.text('Pláč'), findsOneWidget);
+      for (final key in <Key>[
+        const Key('log-action-feeding'),
+        const Key('log-action-sleep'),
+        const Key('log-action-diaper'),
+        const Key('log-action-crying'),
+      ]) {
+        await _scrollTo(tester, find.byKey(key));
+        expect(find.byKey(key).hitTestable(), findsOneWidget);
+      }
       expect(find.text('Pulse dne'), findsNothing);
       expect(find.text('Rodinné sdílení'), findsNothing);
       expect(tester.takeException(), isNull);

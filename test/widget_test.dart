@@ -41,6 +41,20 @@ const _widgetTestStats = StatisticsSnapshot(
   soothingOtherCount: 0,
 );
 
+Future<void> _scrollHomeTo(WidgetTester tester, Finder target) async {
+  final verticalScrollable = find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  );
+  await tester.scrollUntilVisible(
+    target,
+    180,
+    scrollable: verticalScrollable.last,
+    maxScrolls: 40,
+  );
+  await tester.pump();
+}
+
 void main() {
   testWidgets('Bebia starts with the real app shell and production screens', (
     tester,
@@ -78,10 +92,6 @@ void main() {
       expect(find.text('Domů'), findsNothing);
       expect(find.text('Pulse dne'), findsNothing);
       expect(find.text('Rodinné sdílení'), findsNothing);
-      expect(find.text('Krmení'), findsOneWidget);
-      expect(find.text('Spánek'), findsOneWidget);
-      expect(find.text('Přebalení'), findsOneWidget);
-      expect(find.text('Pláč'), findsOneWidget);
       expect(find.byKey(const Key('quick-add-button')), findsNothing);
       expect(find.byKey(const Key('quick-add-button-compact')), findsNothing);
 
@@ -125,6 +135,7 @@ void main() {
     };
 
     for (final entry in actions.entries) {
+      await _scrollHomeTo(tester, find.byKey(entry.key));
       await tester.tap(find.byKey(entry.key));
       await tester.pumpAndSettle();
       expect(find.byType(entry.value), findsOneWidget);
