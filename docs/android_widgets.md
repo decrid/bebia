@@ -20,6 +20,9 @@ Snapshot neobsahuje jméno dítěte, poznámky, audio cesty, AI metadata ani jin
 citlivé údaje. Ztráta nebo poškození snapshotu nemá vliv na Isar; widget přejde
 do empty stavu a po příštím startu či změně dat se obnoví.
 
+Widget picker používá vlastní statické preview drawable bez skutečných dat
+dítěte nebo událostí; nepoužívá launcher ikonu jako zástupný náhled.
+
 ## Varianty
 
 - `BebiaFeedingWidget`: čas od posledního krmení, stručný typ/množství a akce
@@ -39,7 +42,8 @@ Widget používá explicitní immutable `PendingIntent` do `MainActivity`:
 - `bebia://timeline/feeding` – přehled filtrovaný na krmení,
 - `bebia://add/feeding`,
 - `bebia://add/sleep`,
-- `bebia://add/diaper`.
+- `bebia://add/diaper`,
+- `bebia://add/crying`.
 
 `MainActivity` přijímá počáteční i nový intent a předá validovaný cíl do
 `AppShell`. Shell nejprve zavře případnou vnořenou stránku, potom přepne sekci

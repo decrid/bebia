@@ -1,32 +1,38 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/family/family_connection.dart';
+import 'atomic_json_file.dart';
 
 class FamilyConnectionStore {
-  static const _fileName = 'family_connection.json';
+  FamilyConnectionStore({
+    Future<File> Function()? fileResolver,
+    this.beforeReplace,
+  }) : _fileResolver = fileResolver;
+
+  static const fileName = 'family_connection.json';
+
+  final Future<File> Function()? _fileResolver;
+  final Future<void> Function()? beforeReplace;
+  AtomicJsonFile? _jsonFile;
 
   Future<FamilyConnectionState> read() async {
-    final file = await _file();
-    if (!await file.exists()) {
+    final decoded = await _json.read();
+    if (decoded == null) {
       return FamilyConnectionState.empty();
     }
 
-    final raw = await file.readAsString();
-    if (raw.trim().isEmpty) {
-      return FamilyConnectionState.empty();
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Neplatný formát rodinného sdílení.');
     }
 
-    final json = jsonDecode(raw) as Map<String, dynamic>;
-    return FamilyConnectionState.fromJson(json);
+    return FamilyConnectionState.fromJson(decoded);
   }
 
   Future<void> write(FamilyConnectionState state) async {
-    final file = await _file();
-    await file.writeAsString(jsonEncode(state.toJson()));
+    await _json.write(state.toJson());
   }
 
   Future<void> clear() async {
@@ -37,7 +43,14 @@ class FamilyConnectionStore {
   }
 
   Future<File> _file() async {
+    final resolver = _fileResolver;
+    if (resolver != null) return resolver();
     final dir = await getApplicationSupportDirectory();
-    return File(p.join(dir.path, _fileName));
+    return File(p.join(dir.path, fileName));
   }
+
+  AtomicJsonFile get _json => _jsonFile ??= AtomicJsonFile(
+    resolveFile: _file,
+    beforeReplace: beforeReplace,
+  );
 }

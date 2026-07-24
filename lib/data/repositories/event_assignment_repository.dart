@@ -37,6 +37,10 @@ class EventAssignmentRepository {
     await _store.write(assignments);
   }
 
+  Future<void> replaceAll(Map<int, String> assignments) async {
+    await _store.write(assignments);
+  }
+
   Future<List<int>> getEventIdsForChild(String childId) async {
     final assignments = await _store.read();
     return assignments.entries

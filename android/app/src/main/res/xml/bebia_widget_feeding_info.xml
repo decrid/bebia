@@ -4,7 +4,7 @@
     android:initialLayout="@layout/widget_feeding"
     android:minWidth="110dp"
     android:minHeight="110dp"
-    android:previewImage="@mipmap/ic_launcher"
+    android:previewImage="@drawable/bebia_widget_preview_feeding"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="2"
     android:targetCellHeight="2"

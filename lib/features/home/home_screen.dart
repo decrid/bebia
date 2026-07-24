@@ -74,7 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refresh() async {
     if (!mounted) return;
     setState(_reloadData);
-    await _futureRecentEvents;
+    try {
+      await _futureRecentEvents;
+    } catch (error, stackTrace) {
+      debugPrint('Home recent events load failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   Future<void> _openForm(Widget screen) async {
@@ -274,6 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: <Widget>[
             _LogHero(
+              key: const Key('log-screen-hero'),
               eyebrow: profile == null ? 'Bez vybraného dítěte' : profile.name,
               title: 'Zapsat novou událost',
               subtitle: profile == null
@@ -336,7 +342,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   return const _RecentEventsLoading();
                 }
                 if (snapshot.hasError) {
-                  return _RecentEventsError(error: snapshot.error);
+                  debugPrint(
+                    'Home recent events FutureBuilder error: ${snapshot.error}',
+                  );
+                  return _RecentEventsError(onRetry: _refresh);
                 }
 
                 final items = snapshot.data ?? const <TimelineItem>[];
@@ -384,6 +393,7 @@ class _LogHero extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.trailing,
+    super.key,
   });
 
   final String eyebrow;
@@ -441,10 +451,7 @@ class _LogHero extends StatelessWidget {
           ),
           if (trailing != null) ...<Widget>[
             const SizedBox(height: BebiaSpace.sm),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: trailing!,
-            ),
+            Align(alignment: Alignment.centerLeft, child: trailing!),
           ],
         ],
       ),
@@ -556,16 +563,28 @@ class _RecentEventsLoading extends StatelessWidget {
 }
 
 class _RecentEventsError extends StatelessWidget {
-  const _RecentEventsError({required this.error});
+  const _RecentEventsError({required this.onRetry});
 
-  final Object? error;
+  final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return BebiaInfoBanner(
-      icon: Icons.sync_problem_outlined,
-      title: 'Poslední záznamy se nepodařilo načíst',
-      message: '$error',
+    return BebiaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            'Poslední záznamy se nepodařilo načíst.',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: BebiaSpace.sm),
+          FilledButton.tonalIcon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Zkusit znovu'),
+          ),
+        ],
+      ),
     );
   }
 }

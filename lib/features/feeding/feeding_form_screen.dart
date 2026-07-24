@@ -5,6 +5,7 @@ import '../../core/design/bebia_theme.dart';
 import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/event_form_context_card.dart';
 import '../../shared/widgets/profile_switcher.dart';
+import '../timeline/event_time_validation.dart';
 import '../timeline/timeline_item.dart';
 import '../timeline/timeline_form_submission.dart';
 import 'feeding_model.dart';
@@ -69,9 +70,9 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
   Future<void> _pickDateTime() async {
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _selectedTime,
+      initialDate: clampEventPickerInitialDate(_selectedTime),
       firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now(),
     );
 
     if (pickedDate == null || !mounted) return;
@@ -117,6 +118,13 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
       );
       return;
     }
+    if (isEventTimeInFuture(_selectedTime)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(futureEventMessage('Krmení'))));
+      return;
+    }
+
     final note = _noteController.text.trim().isEmpty
         ? null
         : _noteController.text.trim();
@@ -147,7 +155,9 @@ class _FeedingFormScreenState extends State<FeedingFormScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Krmení se nepodařilo uložit: $error')),
+        const SnackBar(
+          content: Text('Krmení se nepodařilo uložit. Zkus to znovu.'),
+        ),
       );
       return;
     } finally {

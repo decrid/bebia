@@ -125,6 +125,24 @@ class TimelineRepository {
     await _notifyMutation();
   }
 
+  Future<void> assignUnassignedEventsToChild(String childId) async {
+    final items = await _isar.timelineItems.where().findAll();
+    final assignments = await _assignments.getAllAssignments();
+    final nextAssignments = Map<int, String>.from(assignments);
+    var changed = false;
+
+    for (final item in items) {
+      if (!nextAssignments.containsKey(item.id)) {
+        nextAssignments[item.id] = childId;
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+    await _assignments.replaceAll(nextAssignments);
+    await _notifyMutation();
+  }
+
   Future<void> deleteEventsForChild(String childId) async {
     final ids = await _assignments.getEventIdsForChild(childId);
     if (ids.isEmpty) return;

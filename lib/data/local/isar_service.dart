@@ -1,4 +1,5 @@
 import 'package:isar_community/isar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/timeline/timeline_item.dart';
@@ -28,6 +29,11 @@ class IsarService {
       );
     }
     return db;
+  }
+
+  @visibleForTesting
+  static void setInstanceForTesting(Isar isar) {
+    _isar = isar;
   }
 
   static Future<void> close() async {

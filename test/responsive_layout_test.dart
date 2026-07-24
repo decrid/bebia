@@ -277,6 +277,39 @@ void main() {
     });
   }
 
+  testWidgets('home log actions open the existing production forms', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _largeTextApp(
+        theme: _theme(Brightness.light),
+        home: const HomeScreen(loadData: false, checkOnboarding: false),
+        keyboardInset: 0,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final actions = <Key, Type>{
+      const Key('log-action-feeding'): FeedingFormScreen,
+      const Key('log-action-sleep'): SleepFormScreen,
+      const Key('log-action-diaper'): DiaperFormScreen,
+      const Key('log-action-crying'): CryingFormScreen,
+    };
+
+    for (final entry in actions.entries) {
+      final action = find.byKey(entry.key);
+      await _scrollTo(tester, action);
+      expect(action.hitTestable(), findsOneWidget);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.byType(entry.value), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    }
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shared empty state remains descriptive without color', (
     tester,
   ) async {

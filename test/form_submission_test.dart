@@ -137,12 +137,127 @@ void main() {
         await tester.tap(find.widgetWithText(ElevatedButton, 'Uložit'));
         await tester.pumpAndSettle();
 
-        expect(find.textContaining('test write failure'), findsOneWidget);
+        expect(find.textContaining('test write failure'), findsNothing);
+        expect(find.textContaining('se nepodařilo uložit'), findsOneWidget);
         expect(find.widgetWithText(ElevatedButton, 'Uložit'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
   }
+
+  testWidgets('feeding rejects a future event time at save', (tester) async {
+    final submission = _FakeSubmission();
+    final existing = TimelineItem()
+      ..id = 501
+      ..type = EventType.feeding
+      ..time = DateTime.now().add(const Duration(days: 1))
+      ..title = 'Kojení'
+      ..subtitle = ''
+      ..feedingType = 'breast';
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _formTheme(),
+        home: FeedingFormScreen(existingItem: existing, submission: submission),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Uložit změny'));
+    await tester.pump();
+
+    expect(
+      find.text('Krmení nelze uložit s časem v budoucnosti.'),
+      findsOneWidget,
+    );
+    expect(submission.savedItems, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sleep rejects future start and end at save', (tester) async {
+    final submission = _FakeSubmission();
+    final start = DateTime.now().add(const Duration(hours: 2));
+    final existing = TimelineItem()
+      ..id = 502
+      ..type = EventType.sleep
+      ..time = start.add(const Duration(hours: 1))
+      ..title = 'Spánek'
+      ..subtitle = '60 min'
+      ..sleepStart = start
+      ..sleepEnd = start.add(const Duration(hours: 1));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _formTheme(),
+        home: SleepFormScreen(existingItem: existing, submission: submission),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Uložit změny'));
+    await tester.pump();
+
+    expect(
+      find.text('Spánek nelze uložit s časem v budoucnosti.'),
+      findsOneWidget,
+    );
+    expect(submission.savedItems, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('diaper rejects a future event time at save', (tester) async {
+    final submission = _FakeSubmission();
+    final existing = TimelineItem()
+      ..id = 503
+      ..type = EventType.diaper
+      ..time = DateTime.now().add(const Duration(days: 1))
+      ..title = 'Přebalení'
+      ..subtitle = 'Mokrá'
+      ..diaperType = 'wet';
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _formTheme(),
+        home: DiaperFormScreen(existingItem: existing, submission: submission),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Uložit změny'));
+    await tester.pump();
+
+    expect(
+      find.text('Přebalení nelze uložit s časem v budoucnosti.'),
+      findsOneWidget,
+    );
+    expect(submission.savedItems, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('crying rejects a future event time at save', (tester) async {
+    final submission = _FakeSubmission();
+    final existing = TimelineItem()
+      ..id = 504
+      ..type = EventType.crying
+      ..time = DateTime.now().add(const Duration(days: 1))
+      ..title = 'Pláč'
+      ..subtitle = 'Intenzita: 3'
+      ..cryingIntensity = 3;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _formTheme(),
+        home: CryingFormScreen(
+          existingItem: existing,
+          submission: submission,
+          analyzeCrying: (_) async => _analysisResult,
+        ),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Uložit změny'));
+    await tester.pump();
+
+    expect(
+      find.text('Pláč nelze uložit s časem v budoucnosti.'),
+      findsOneWidget,
+    );
+    expect(submission.savedItems, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('feeding rejects a non-numeric amount', (tester) async {
     final submission = _FakeSubmission();

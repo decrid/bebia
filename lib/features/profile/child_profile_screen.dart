@@ -16,6 +16,15 @@ class ChildProfileScreen extends StatefulWidget {
 }
 
 class _ChildProfileScreenState extends State<ChildProfileScreen> {
+  void _showProfileError() {
+    final message =
+        AppServices.childProfileController.error.value ??
+        'Změnu profilu se nepodařilo uložit. Zkus to znovu.';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   String _ageLabel(DateTime dateOfBirth) {
     final now = DateTime.now();
     int months =
@@ -93,7 +102,12 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   }
 
   Future<void> _setActive(ChildProfile profile) async {
-    await AppServices.childProfileController.setActiveProfile(profile.id);
+    try {
+      await AppServices.childProfileController.setActiveProfile(profile.id);
+    } catch (_) {
+      if (mounted) _showProfileError();
+      return;
+    }
     if (mounted) {
       setState(() {});
     }
@@ -106,10 +120,15 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       return;
     }
 
-    await AppServices.childProfileController.assignProfileToFamily(
-      profileId: profile.id,
-      familyId: familyId,
-    );
+    try {
+      await AppServices.childProfileController.assignProfileToFamily(
+        profileId: profile.id,
+        familyId: familyId,
+      );
+    } catch (_) {
+      if (mounted) _showProfileError();
+      return;
+    }
 
     if (mounted) {
       setState(() {});
@@ -117,9 +136,14 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
   }
 
   Future<void> _removeFromFamily(ChildProfile profile) async {
-    await AppServices.childProfileController.removeProfileFromFamily(
-      profile.id,
-    );
+    try {
+      await AppServices.childProfileController.removeProfileFromFamily(
+        profile.id,
+      );
+    } catch (_) {
+      if (mounted) _showProfileError();
+      return;
+    }
     if (mounted) {
       setState(() {});
     }
@@ -150,10 +174,15 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
       return;
     }
 
-    await AppServices.childProfileController.deleteProfile(
-      profile.id,
-      deleteEvents: true,
-    );
+    try {
+      await AppServices.childProfileController.deleteProfile(
+        profile.id,
+        deleteEvents: true,
+      );
+    } catch (_) {
+      if (mounted) _showProfileError();
+      return;
+    }
 
     if (mounted) {
       setState(() {});
@@ -205,7 +234,7 @@ class _ChildProfileScreenState extends State<ChildProfileScreen> {
                 const SizedBox(height: 6),
                 Text(
                   activeProfile == null
-                      ? 'Nové události se zatím ukládají jako nepřiřazené.'
+                      ? 'Nové události půjde uložit až po vytvoření nebo výběru profilu dítěte.'
                       : '${activeProfile.name} • ${_ageLabel(activeProfile.dateOfBirth)}',
                 ),
                 if (activeProfile != null) ...[
@@ -542,6 +571,7 @@ class _ProfileEditorDialogState extends State<_ProfileEditorDialog> {
   late final TextEditingController _nameController;
   late DateTime _dateOfBirth;
   String? _sex;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -581,6 +611,7 @@ class _ProfileEditorDialogState extends State<_ProfileEditorDialog> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(
@@ -601,7 +632,21 @@ class _ProfileEditorDialogState extends State<_ProfileEditorDialog> {
       linkedToFamilyAt: existingProfile?.linkedToFamilyAt,
     );
 
-    await AppServices.childProfileController.saveProfile(profile);
+    setState(() => _isSaving = true);
+    try {
+      await AppServices.childProfileController.saveProfile(profile);
+    } catch (_) {
+      if (!mounted) return;
+      final message =
+          AppServices.childProfileController.error.value ??
+          'Profil se nepodařilo uložit. Zkus to znovu.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
 
     if (!mounted) {
       return;
@@ -691,9 +736,13 @@ class _ProfileEditorDialogState extends State<_ProfileEditorDialog> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _save,
+                  onPressed: _isSaving ? null : _save,
                   child: Text(
-                    widget.profile == null ? 'Vytvořit profil' : 'Uložit změny',
+                    _isSaving
+                        ? 'Ukládám...'
+                        : widget.profile == null
+                        ? 'Vytvořit profil'
+                        : 'Uložit změny',
                   ),
                 ),
               ),

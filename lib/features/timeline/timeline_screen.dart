@@ -362,8 +362,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Icon(Icons.delete, color: colorScheme.onError),
         ),
-        confirmDismiss: (direction) {
-          return showDialog<bool>(
+        confirmDismiss: (direction) async {
+          final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Smazat záznam?'),
@@ -380,9 +380,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
               ],
             ),
           );
-        },
-        onDismissed: (_) {
-          AppServices.timelineController.delete(item.id);
+          if (confirmed != true) return false;
+
+          try {
+            await AppServices.timelineController.delete(item.id);
+            return false;
+          } catch (_) {
+            if (!context.mounted) return false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Záznam se nepodařilo smazat. Zkus to znovu.'),
+              ),
+            );
+            return false;
+          }
         },
         child: Card(
           child: InkWell(

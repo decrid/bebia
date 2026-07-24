@@ -86,10 +86,16 @@ void main() {
       expect(find.byKey(const Key('quick-add-button-compact')), findsNothing);
 
       await tester.tap(find.text('Přehled'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final quickAdd = find.byKey(const Key('quick-add-button-compact'));
-      final quickAddSize = tester.getSize(quickAdd);
+      expect(quickAdd, findsOneWidget);
+      final quickAddButton = find.descendant(
+        of: quickAdd,
+        matching: find.byType(FloatingActionButton),
+      );
+      expect(quickAddButton.hitTestable(), findsOneWidget);
+      final quickAddSize = tester.getSize(quickAddButton);
       expect(quickAddSize.width, greaterThanOrEqualTo(48));
       expect(quickAddSize.height, greaterThanOrEqualTo(48));
       expect(tester.getSemantics(quickAdd).label, contains('Zapsat událost'));

@@ -20,7 +20,10 @@ void main() {
       ..subtitle = '90 ml'
       ..note = 'další soukromá poznámka'
       ..feedingType = 'bottle'
-      ..feedingAmountMl = 90;
+      ..feedingAmountMl = 90
+      ..audioSamplePath = '/private/audio.wav'
+      ..aiModelVersion = 'internal-model'
+      ..aiSignalsSerialized = 'private signal';
     final diaper = TimelineItem()
       ..id = 3
       ..type = EventType.diaper
@@ -46,6 +49,9 @@ void main() {
     });
     expect(snapshot.toString(), isNot(contains('soukromá')));
     expect(snapshot.toString(), isNot(contains('nezveřejnit')));
+    expect(snapshot.toString(), isNot(contains('/private/audio.wav')));
+    expect(snapshot.toString(), isNot(contains('internal-model')));
+    expect(snapshot.toString(), isNot(contains('private signal')));
     expect(snapshot, isNot(contains('childName')));
   });
 }

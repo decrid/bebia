@@ -5,11 +5,14 @@ void main() {
   test('widget launch targets accept only known app sections', () {
     final timeline = BebiaLaunchTarget.parse('timeline/feeding');
     final add = BebiaLaunchTarget.parse('add/sleep');
+    final crying = BebiaLaunchTarget.parse('add/crying');
 
     expect(timeline?.section, BebiaLaunchSection.timeline);
     expect(timeline?.eventType, 'feeding');
     expect(add?.section, BebiaLaunchSection.add);
     expect(add?.eventType, 'sleep');
+    expect(crying?.section, BebiaLaunchSection.add);
+    expect(crying?.eventType, 'crying');
     expect(BebiaLaunchTarget.parse('timeline/unknown'), isNull);
     expect(BebiaLaunchTarget.parse('add'), isNull);
     expect(BebiaLaunchTarget.parse('home/feeding'), isNull);

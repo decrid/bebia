@@ -1,5 +1,12 @@
 # Bebia Family Sync Architecture
 
+## Aktuální stav v aplikaci
+
+Tento dokument popisuje cílovou architekturu. Aktuální build má
+`BebiaFirebaseConfig.currentPlatform == null`, přihlášení běží přes lokální
+`signInPreview` a timeline synchronizace je převážně payload/plan preview.
+Nejde tedy o hotovou synchronizaci dvou telefonů.
+
 ## Cíl
 
 Bebia má být použitelná pro oba rodiče současně, ne jen pro jedno zařízení.

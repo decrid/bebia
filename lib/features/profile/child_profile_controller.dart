@@ -16,6 +16,16 @@ class ChildProfileController {
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
   final ValueNotifier<String?> error = ValueNotifier<String?>(null);
 
+  bool _isMutating = false;
+
+  void _beginMutation() {
+    if (_isMutating) {
+      error.value = 'Počkej, předchozí změna profilu se ještě ukládá.';
+      throw StateError('profile mutation already in progress');
+    }
+    _isMutating = true;
+  }
+
   ChildProfile? get activeProfile {
     final currentId = activeProfileId.value;
     for (final profile in profiles.value) {
@@ -33,17 +43,30 @@ class ChildProfileController {
     error.value = null;
 
     try {
-      final state = await _repository.loadState();
+      var state = await _repository.loadState();
+      final migrationChildId = state.legacyUnassignedEventsMigrationChildId;
+      if (migrationChildId != null &&
+          !state.unassignedEventsMigrationCompleted) {
+        await _timelineRepository.assignUnassignedEventsToChild(
+          migrationChildId,
+        );
+        state = state.copyWith(
+          clearLegacyUnassignedEventsMigrationChildId: true,
+          unassignedEventsMigrationCompleted: true,
+        );
+        await _repository.saveState(state);
+      }
       profiles.value = state.profiles;
       activeProfileId.value = state.activeProfileId;
     } catch (e) {
-      error.value = 'Nepodařilo se načíst profily dětí: $e';
+      error.value = 'Nepodařilo se načíst profily dětí.';
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<void> saveProfile(ChildProfile profile) async {
+    _beginMutation();
     isLoading.value = true;
     error.value = null;
 
@@ -66,21 +89,26 @@ class ChildProfileController {
           : (activeProfileId.value ?? profile.id);
       await _persist(updatedProfiles, nextActiveId);
     } catch (e) {
-      error.value = 'Nepodařilo se uložit profil dítěte: $e';
+      error.value = 'Nepodařilo se uložit profil dítěte.';
+      rethrow;
     } finally {
+      _isMutating = false;
       isLoading.value = false;
     }
   }
 
   Future<void> setActiveProfile(String profileId) async {
+    _beginMutation();
     isLoading.value = true;
     error.value = null;
 
     try {
       await _persist(profiles.value, profileId);
     } catch (e) {
-      error.value = 'Nepodařilo se přepnout aktivní dítě: $e';
+      error.value = 'Nepodařilo se přepnout aktivní dítě.';
+      rethrow;
     } finally {
+      _isMutating = false;
       isLoading.value = false;
     }
   }
@@ -89,6 +117,7 @@ class ChildProfileController {
     required String profileId,
     required String familyId,
   }) async {
+    _beginMutation();
     isLoading.value = true;
     error.value = null;
 
@@ -103,13 +132,16 @@ class ChildProfileController {
 
       await _persist(updatedProfiles, activeProfileId.value);
     } catch (e) {
-      error.value = 'Nepodařilo se přidat dítě do rodiny: $e';
+      error.value = 'Nepodařilo se přidat dítě do rodiny.';
+      rethrow;
     } finally {
+      _isMutating = false;
       isLoading.value = false;
     }
   }
 
   Future<void> removeProfileFromFamily(String profileId) async {
+    _beginMutation();
     isLoading.value = true;
     error.value = null;
 
@@ -123,8 +155,10 @@ class ChildProfileController {
 
       await _persist(updatedProfiles, activeProfileId.value);
     } catch (e) {
-      error.value = 'Nepodařilo se odebrat dítě z rodiny: $e';
+      error.value = 'Nepodařilo se odebrat dítě z rodiny.';
+      rethrow;
     } finally {
+      _isMutating = false;
       isLoading.value = false;
     }
   }
@@ -133,6 +167,7 @@ class ChildProfileController {
     String profileId, {
     required bool deleteEvents,
   }) async {
+    _beginMutation();
     isLoading.value = true;
     error.value = null;
 
@@ -156,8 +191,10 @@ class ChildProfileController {
 
       await _persist(updatedProfiles, nextActiveId);
     } catch (e) {
-      error.value = 'Nepodařilo se smazat profil dítěte: $e';
+      error.value = 'Nepodařilo se smazat profil dítěte.';
+      rethrow;
     } finally {
+      _isMutating = false;
       isLoading.value = false;
     }
   }
@@ -169,6 +206,7 @@ class ChildProfileController {
     final state = ChildProfilesState(
       profiles: nextProfiles,
       activeProfileId: nextActiveId,
+      unassignedEventsMigrationCompleted: true,
     );
     await _repository.saveState(state);
     profiles.value = nextProfiles;

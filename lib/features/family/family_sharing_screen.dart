@@ -127,10 +127,21 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
       return;
     }
 
-    await AppServices.childProfileController.assignProfileToFamily(
-      profileId: childId,
-      familyId: familyId,
-    );
+    try {
+      await AppServices.childProfileController.assignProfileToFamily(
+        profileId: childId,
+        familyId: familyId,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      final message =
+          AppServices.childProfileController.error.value ??
+          'Dítě se nepodařilo přidat do rodiny. Zkus to znovu.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
 
     if (mounted) {
       setState(() {});
@@ -138,7 +149,18 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
   }
 
   Future<void> _removeChildFromCurrentFamily(String childId) async {
-    await AppServices.childProfileController.removeProfileFromFamily(childId);
+    try {
+      await AppServices.childProfileController.removeProfileFromFamily(childId);
+    } catch (_) {
+      if (!mounted) return;
+      final message =
+          AppServices.childProfileController.error.value ??
+          'Dítě se nepodařilo odebrat z rodiny. Zkus to znovu.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
 
     if (mounted) {
       setState(() {});

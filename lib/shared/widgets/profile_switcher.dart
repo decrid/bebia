@@ -59,8 +59,20 @@ class ProfileSwitcher extends StatelessWidget {
                         _ProfileChipButton(
                           profile: profiles[index],
                           isActive: profiles[index].id == activeProfileId,
-                          onPressed: () {
-                            controller.setActiveProfile(profiles[index].id);
+                          onPressed: () async {
+                            try {
+                              await controller.setActiveProfile(
+                                profiles[index].id,
+                              );
+                            } catch (_) {
+                              if (!context.mounted) return;
+                              final message =
+                                  controller.error.value ??
+                                  'Profil se nepodařilo přepnout.';
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(message)));
+                            }
                           },
                         ),
                         if (index < profiles.length - 1)

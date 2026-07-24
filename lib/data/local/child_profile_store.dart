@@ -5,41 +5,49 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../features/profile/child_profile.dart';
+import 'atomic_json_file.dart';
 
 class ChildProfileStore {
-  static const _fileName = 'child_profiles.json';
+  ChildProfileStore({Future<File> Function()? fileResolver, this.beforeReplace})
+    : _fileResolver = fileResolver;
+
+  static const fileName = 'child_profiles.json';
+
+  final Future<File> Function()? _fileResolver;
+  final Future<void> Function()? beforeReplace;
+  AtomicJsonFile? _jsonFile;
 
   Future<ChildProfilesState> read() async {
-    final file = await _file();
-    if (!await file.exists()) {
+    final decoded = await _json.read();
+    if (decoded == null) {
       return ChildProfilesState.empty();
     }
 
-    final raw = await file.readAsString();
-    if (raw.trim().isEmpty) {
-      return ChildProfilesState.empty();
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Neplatný formát profilů dětí.');
     }
 
-    final json = jsonDecode(raw) as Map<String, dynamic>;
-
-    if (json.containsKey('profiles') || json.containsKey('activeProfileId')) {
-      return ChildProfilesState.fromJson(json);
+    if (decoded.containsKey('profiles') ||
+        decoded.containsKey('activeProfileId')) {
+      return ChildProfilesState.fromJson(decoded);
     }
 
     // Backward compatibility for the original single-profile file shape.
     final legacyProfile = ChildProfile.fromJson(
-      json,
-    ).copyWith(id: 'child-${DateTime.now().millisecondsSinceEpoch}');
+      decoded,
+    ).copyWith(id: _stableLegacyId(decoded));
 
-    return ChildProfilesState(
+    final migrated = ChildProfilesState(
       profiles: [legacyProfile],
       activeProfileId: legacyProfile.id,
+      legacyUnassignedEventsMigrationChildId: legacyProfile.id,
     );
+    await write(migrated);
+    return migrated;
   }
 
   Future<void> write(ChildProfilesState state) async {
-    final file = await _file();
-    await file.writeAsString(jsonEncode(state.toJson()));
+    await _json.write(state.toJson());
   }
 
   Future<void> clear() async {
@@ -50,7 +58,28 @@ class ChildProfileStore {
   }
 
   Future<File> _file() async {
+    final resolver = _fileResolver;
+    if (resolver != null) return resolver();
     final dir = await getApplicationSupportDirectory();
-    return File(p.join(dir.path, _fileName));
+    return File(p.join(dir.path, fileName));
+  }
+
+  AtomicJsonFile get _json => _jsonFile ??= AtomicJsonFile(
+    resolveFile: _file,
+    beforeReplace: beforeReplace,
+  );
+
+  String _stableLegacyId(Map<String, dynamic> json) {
+    final canonical = jsonEncode(<String, Object?>{
+      'name': json['name'],
+      'dateOfBirth': json['dateOfBirth'],
+      'sex': json['sex'],
+    });
+    var hash = 0x811c9dc5;
+    for (final codeUnit in canonical.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return 'child-legacy-${hash.toRadixString(16).padLeft(8, '0')}';
   }
 }

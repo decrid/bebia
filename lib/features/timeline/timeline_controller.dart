@@ -21,6 +21,8 @@ class TimelineController {
     null,
   );
 
+  int _loadGeneration = 0;
+
   String? get _activeChildId => _childProfileController.activeProfileId.value;
 
   void _handleChildChange() {
@@ -28,6 +30,7 @@ class TimelineController {
   }
 
   Future<void> load([EventType? type]) async {
+    final generation = ++_loadGeneration;
     isLoading.value = true;
     error.value = null;
 
@@ -36,12 +39,17 @@ class TimelineController {
     }
 
     try {
-      final data = await _repository.getFiltered(type, childId: _activeChildId);
+      final childId = _activeChildId;
+      final data = await _repository.getFiltered(type, childId: childId);
+      if (generation != _loadGeneration) return;
       items.value = data;
     } catch (e) {
-      error.value = 'Nepodařilo se načíst přehled: $e';
+      if (generation != _loadGeneration) return;
+      error.value = 'Nepodařilo se načíst přehled.';
     } finally {
-      isLoading.value = false;
+      if (generation == _loadGeneration) {
+        isLoading.value = false;
+      }
     }
   }
 
@@ -57,7 +65,8 @@ class TimelineController {
       await reloadCurrent();
       revision.value++;
     } catch (e) {
-      error.value = 'Nepodařilo se uložit záznam: $e';
+      error.value = 'Nepodařilo se uložit záznam.';
+      rethrow;
     }
   }
 
@@ -69,7 +78,8 @@ class TimelineController {
       await reloadCurrent();
       revision.value++;
     } catch (e) {
-      error.value = 'Nepodařilo se upravit záznam: $e';
+      error.value = 'Nepodařilo se upravit záznam.';
+      rethrow;
     }
   }
 
@@ -81,7 +91,8 @@ class TimelineController {
       await reloadCurrent();
       revision.value++;
     } catch (e) {
-      error.value = 'Nepodařilo se smazat záznam: $e';
+      error.value = 'Nepodařilo se smazat záznam.';
+      rethrow;
     }
   }
 

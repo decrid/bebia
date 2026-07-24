@@ -7,11 +7,14 @@ Pomáhá rodičům rychle zaznamenat krmení, spánek, přebalování a pláč, 
 ## Funkce
 
 - profily dětí a rychlé přepínání aktivního profilu,
+- první záložka `Zapsat` pro krmení, spánek, přebalování a pláč bez
+  dashboardových karet,
 - záznam a editace krmení, spánku, přebalování a pláče,
 - časová osa s filtry a bezpečným mazáním,
 - statistiky, doporučení a predikce z existujících záznamů,
 - volitelná lokální analýza pláče pomocí TFLite/MediaPipe,
-- volitelný účet a Firebase rodinná synchronizace,
+- volitelný účet a rodinné sdílení dostupné přes profil dítěte; Firebase
+  synchronizace je zatím preview, ne hotový sync dvou telefonů,
 - systémový, světlý a tmavý vzhled,
 - komfortní nebo kompaktní hustota, omezení animací a haptika,
 - adaptivní navigace pro telefon i širší displej.
@@ -25,7 +28,8 @@ Pomáhá rodičům rychle zaznamenat krmení, spánek, přebalování a pláč, 
 - `test` – preference, theme, navigace a rizikové responzivní scénáře.
 
 Timeline je offline-first v Isar Community. Profily, onboarding, přiřazení a
-rodinné spojení používají stávající oddělené lokální stores. UI preference jsou
+rodinné spojení používají oddělené lokální JSON stores s atomickým zápisem,
+flush, recovery zálohou a izolací neplatných položek. UI preference jsou
 uložené samostatně v `bebia_preferences.json`; reset preferencí nemaže profily
 ani události. Databázové schéma ani application id rebuild nemění.
 

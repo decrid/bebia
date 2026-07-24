@@ -21,9 +21,11 @@ vlastníka; samotná veřejnost zdrojů automaticky neuděluje právo k dalším
 použití. Bezpečnostní hlášení popisuje `SECURITY.md` a skutečné datové toky
 technicky shrnuje `PRIVACY.md`.
 
-Nejčastější cesta je nyní: **Domů → Zapsat událost → typ události → formulář →
-uložení → aktualizovaná časová osa**. Historie a statistiky jsou samostatné
-hlavní sekce. Nastavení je nově čtvrtá hlavní sekce.
+Nejčastější cesta je nyní: **Zapsat → typ události → formulář → uložení →
+aktualizovaná časová osa**. První záložka není dashboard: neobsahuje `Pulse dne`
+ani Rodinné sdílení, pouze čtyři přímé akce Krmení, Spánek, Přebalení a Pláč.
+Historie a statistiky jsou samostatné hlavní sekce. Nastavení je čtvrtá hlavní
+sekce a Rodinné sdílení zůstává dostupné přes profil dítěte.
 
 ## Původní technický stav
 
@@ -33,7 +35,8 @@ hlavní sekce. Nastavení je nově čtvrtá hlavní sekce.
   `ValueNotifier` přes statický `AppServices`. Pro současný rozsah je to
   srozumitelné, ale service locator komplikuje izolované widget testy.
 - Timeline je uložena v Isar Community. Profily, přiřazení událostí, stav
-  onboardingu a rodinného spojení používají samostatné lokální stores.
+  onboardingu a rodinného spojení používají samostatné lokální JSON stores s
+  atomickým zápisem, recovery zálohou a izolací neplatných položek.
 - Volitelná vzdálená vrstva používá Firebase Core, Auth, Firestore, Google a
   Apple sign-in. Audio používá `record`; inference `tflite_flutter`.
 - Theme byl pouze světlý, s několika barvami odvozenými od pohlaví aktivního
@@ -51,8 +54,8 @@ hlavní sekce. Nastavení je nově čtvrtá hlavní sekce.
 
 ### Hlavní sekce
 
-1. `HomeScreen` – aktivní profil, poslední události, rychlé akce, doporučení a
-   vstupy do profilu, onboardingu, účtu, rodiny a monetizačního plánu.
+1. `HomeScreen` – první záložka `Zapsat`, čtyři přímé akce pro Krmení, Spánek,
+   Přebalení a Pláč, informace o aktivním profilu a volitelná poslední aktivita.
 2. `TimelineScreen` – filtry, seznam událostí, editace a potvrzené mazání.
 3. `StatisticsScreen` – souhrny a časové/statistické přehledy.
 4. `SettingsScreen` – nový vzhled, hustota, omezení pohybu, haptika, soukromí,
@@ -80,7 +83,7 @@ hlavní sekce. Nastavení je nově čtvrtá hlavní sekce.
 - bottom sheety pro rychlé přidání, výběr profilu a rodinné workflow.
 
 Systémové tlačítko Zpět nyní z vedlejší hlavní sekce nejdřív vrátí uživatele
-na Domů. Vnořené formuláře a detailní workflow zůstávají na standardním
+na Zapsat. Vnořené formuláře a detailní workflow zůstávají na standardním
 Navigator stacku.
 
 ## Datová vrstva a kompatibilita
@@ -89,7 +92,8 @@ Navigator stacku.
 
 - model `TimelineItem` a jeho generované Isar schéma,
 - existující Isar inicializace, název databáze a kolekce,
-- soubory profilů, rodinného spojení, přiřazení událostí a onboardingu,
+- soubory profilů, rodinného spojení, přiřazení událostí a onboardingu; jejich
+  cílové názvy zůstaly stejné,
 - Firebase cesty, identifikátory rodiny a synchronizační orchestrace,
 - Android application id. Zůstal beze změny podle zadání; před publikací je
   `com.example.bebia` samostatný blokátor popsaný v `android_release.md`.
@@ -145,9 +149,9 @@ se nikdy nedotýká rodičovských dat.
    `Wrap`.
 8. Informační a settings řádky nyní dávají text do `Expanded` a trailing prvky
    oddělují mezerou, takže šířku neurčuje délka titulku.
-9. Široké FAB ve vizuální referenci zakrývalo spodní statistické karty. Domů
-   zachovává výraznou popsanou primární akci, v Přehledu a Statistikách se akce
-   mění na kompaktní přístupné FAB s tooltipem.
+9. Široké FAB ve vizuální referenci zakrývalo spodní statistické karty. Na
+   první záložce Zapsat je globální FAB skrytý, protože čtyři akce jsou přímo v
+   obsahu. V Přehledu a Statistikách zůstává kompaktní přístupné FAB s tooltipem.
 
 ### Místa vyžadující runtime kontrolu
 

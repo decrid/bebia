@@ -70,10 +70,14 @@ class ChildProfilesState {
   const ChildProfilesState({
     required this.profiles,
     required this.activeProfileId,
+    this.legacyUnassignedEventsMigrationChildId,
+    this.unassignedEventsMigrationCompleted = false,
   });
 
   final List<ChildProfile> profiles;
   final String? activeProfileId;
+  final String? legacyUnassignedEventsMigrationChildId;
+  final bool unassignedEventsMigrationCompleted;
 
   ChildProfile? get activeProfile {
     for (final profile in profiles) {
@@ -88,6 +92,9 @@ class ChildProfilesState {
     return {
       'activeProfileId': activeProfileId,
       'profiles': profiles.map((profile) => profile.toJson()).toList(),
+      'legacyUnassignedEventsMigrationChildId':
+          legacyUnassignedEventsMigrationChildId,
+      'unassignedEventsMigrationCompleted': unassignedEventsMigrationCompleted,
     };
   }
 
@@ -97,18 +104,57 @@ class ChildProfilesState {
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
 
-    final profiles = rawProfiles.map(ChildProfile.fromJson).toList();
+    final profiles = <ChildProfile>[];
+    for (final rawProfile in rawProfiles) {
+      try {
+        final profile = ChildProfile.fromJson(rawProfile);
+        if (profile.id.isNotEmpty && profile.name.isNotEmpty) {
+          profiles.add(profile);
+        }
+      } on Object {
+        // Keep the rest of the profile file usable when one entry is invalid.
+      }
+    }
     final activeProfileId = json['activeProfileId'] as String?;
+    final migrationChildId =
+        json['legacyUnassignedEventsMigrationChildId'] as String?;
 
     return ChildProfilesState(
       profiles: profiles,
       activeProfileId: profiles.any((profile) => profile.id == activeProfileId)
           ? activeProfileId
           : (profiles.isNotEmpty ? profiles.first.id : null),
+      legacyUnassignedEventsMigrationChildId:
+          profiles.any((profile) => profile.id == migrationChildId)
+          ? migrationChildId
+          : null,
+      unassignedEventsMigrationCompleted:
+          json['unassignedEventsMigrationCompleted'] == true,
     );
   }
 
   factory ChildProfilesState.empty() {
     return const ChildProfilesState(profiles: [], activeProfileId: null);
+  }
+
+  ChildProfilesState copyWith({
+    List<ChildProfile>? profiles,
+    String? activeProfileId,
+    String? legacyUnassignedEventsMigrationChildId,
+    bool clearLegacyUnassignedEventsMigrationChildId = false,
+    bool? unassignedEventsMigrationCompleted,
+  }) {
+    return ChildProfilesState(
+      profiles: profiles ?? this.profiles,
+      activeProfileId: activeProfileId ?? this.activeProfileId,
+      legacyUnassignedEventsMigrationChildId:
+          clearLegacyUnassignedEventsMigrationChildId
+          ? null
+          : (legacyUnassignedEventsMigrationChildId ??
+                this.legacyUnassignedEventsMigrationChildId),
+      unassignedEventsMigrationCompleted:
+          unassignedEventsMigrationCompleted ??
+          this.unassignedEventsMigrationCompleted,
+    );
   }
 }
