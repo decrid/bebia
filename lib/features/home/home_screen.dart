@@ -1,30 +1,22 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../../core/design/bebia_theme.dart';
-import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/bebia_brand_mark.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
-import '../auth/app_account_session.dart';
 import '../auth/app_account_setup_screen.dart';
-import '../crying/crying_analysis_result.dart';
+import '../crying/crying_form_screen.dart';
 import '../diaper/diaper_form_screen.dart';
-import '../family/family_connection.dart';
-import '../family/family_sharing_screen.dart';
 import '../feeding/feeding_form_screen.dart';
 import '../monetization/monetization_plan_screen.dart';
 import '../onboarding/onboarding_flow.dart';
-import '../predictions/prediction_model.dart';
 import '../profile/child_profile_screen.dart';
-import '../recommendations/recommendation_model.dart';
-import '../recommendations/recommendations_screen.dart';
 import '../sleep/sleep_form_screen.dart';
 import '../timeline/timeline_item.dart';
 
-enum _HomeMenuAction { profiles, accountSync, onboarding, connectParent, plus }
+enum _HomeMenuAction { profiles, accountSync, onboarding, plus }
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -43,10 +35,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<Recommendation>> _futureRecommendations;
-  late Future<CryingAnalysisResult?> _futureCryingAnalysis;
-  late Future<List<Prediction>> _futurePredictions;
-  late Future<_HomeOverview> _futureOverview;
+  late Future<List<TimelineItem>> _futureRecentEvents;
   bool _didCheckOnboarding = false;
 
   @override
@@ -55,8 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _reloadData();
     AppServices.childProfileController.activeProfileId.addListener(_refresh);
     AppServices.timelineController.revision.addListener(_refresh);
-    AppServices.appAccountController.session.addListener(_refresh);
-    AppServices.familyConnectionController.state.addListener(_refresh);
     if (widget.checkOnboarding) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _maybeOpenOnboarding(),
@@ -68,86 +55,26 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     AppServices.childProfileController.activeProfileId.removeListener(_refresh);
     AppServices.timelineController.revision.removeListener(_refresh);
-    AppServices.appAccountController.session.removeListener(_refresh);
-    AppServices.familyConnectionController.state.removeListener(_refresh);
     super.dispose();
   }
 
   void _reloadData() {
-    if (!widget.loadData) {
-      _futureRecommendations = Future<List<Recommendation>>.value(
-        const <Recommendation>[],
-      );
-      _futureCryingAnalysis = Future<CryingAnalysisResult?>.value();
-      _futurePredictions = Future<List<Prediction>>.value(const <Prediction>[]);
-      _futureOverview = Future<_HomeOverview>.value(
-        const _HomeOverview(
-          totalToday: 0,
-          lastEventTime: null,
-          lastFeeding: null,
-          lastSleep: null,
-          lastDiaper: null,
-          lastCrying: null,
-          readinessTitle: 'Začni dnešním prvním záznamem',
-        ),
-      );
-      return;
-    }
-
-    _futureRecommendations = AppServices.recommendationService
-        .getRecommendations();
-    _futureCryingAnalysis = AppServices.cryingAnalysisService
-        .analyzeLatestCrying();
-    _futurePredictions = AppServices.predictionService.getPredictions();
-    _futureOverview = _buildOverview();
+    _futureRecentEvents = widget.loadData
+        ? _loadRecentEvents()
+        : Future<List<TimelineItem>>.value(const <TimelineItem>[]);
   }
 
-  Future<_HomeOverview> _buildOverview() async {
+  Future<List<TimelineItem>> _loadRecentEvents() async {
     final items = await AppServices.timelineRepository.getAll(
       childId: AppServices.childProfileController.activeProfileId.value,
     );
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final todayItems = items
-        .where((item) => !item.time.isBefore(todayStart))
-        .toList();
-
-    String readinessTitle;
-    if (todayItems.isEmpty) {
-      readinessTitle = 'Začni dnešním prvním záznamem';
-    } else if (todayItems.length < 4) {
-      readinessTitle = 'Dnešní rytmus se začíná skládat';
-    } else {
-      readinessTitle = 'Dnešní přehled je aktuální';
-    }
-
-    return _HomeOverview(
-      totalToday: todayItems.length,
-      lastEventTime: items.isEmpty ? null : items.first.time,
-      lastFeeding: _lastOfType(items, EventType.feeding),
-      lastSleep: _lastOfType(items, EventType.sleep),
-      lastDiaper: _lastOfType(items, EventType.diaper),
-      lastCrying: _lastOfType(items, EventType.crying),
-      readinessTitle: readinessTitle,
-    );
-  }
-
-  TimelineItem? _lastOfType(List<TimelineItem> items, EventType type) {
-    for (final item in items) {
-      if (item.type == type) return item;
-    }
-    return null;
+    return items.take(3).toList();
   }
 
   Future<void> _refresh() async {
     if (!mounted) return;
     setState(_reloadData);
-    await Future.wait([
-      _futureRecommendations,
-      _futureCryingAnalysis,
-      _futurePredictions,
-      _futureOverview,
-    ]);
+    await _futureRecentEvents;
   }
 
   Future<void> _openForm(Widget screen) async {
@@ -160,18 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const ChildProfileScreen()),
-    );
-    if (!mounted) return;
-    await _refresh();
-  }
-
-  Future<void> _openFamilySharing() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const FamilySharingScreen(),
     );
     if (!mounted) return;
     await _refresh();
@@ -190,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           onConnectParent: () {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _openFamilySharing();
+              if (mounted) _openAccountSetup();
             });
           },
         ),
@@ -240,30 +155,10 @@ class _HomeScreenState extends State<HomeScreen> {
       case _HomeMenuAction.onboarding:
         _openOnboarding();
         return;
-      case _HomeMenuAction.connectParent:
-        _openFamilySharing();
-        return;
       case _HomeMenuAction.plus:
         _openPlusScreen();
         return;
     }
-  }
-
-  String _formatTime(DateTime? value) {
-    if (value == null) return '-';
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  String _relativeTime(DateTime? value) {
-    if (value == null) return '—';
-    final difference = DateTime.now().difference(value);
-    if (difference.isNegative || difference.inMinutes < 1) return 'právě teď';
-    if (difference.inMinutes < 60) return 'před ${difference.inMinutes} min';
-    if (difference.inHours < 24) return 'před ${difference.inHours} h';
-    if (difference.inDays == 1) return 'včera';
-    return 'před ${difference.inDays} d';
   }
 
   String _ageLabel(DateTime dateOfBirth) {
@@ -284,76 +179,45 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$years r. $remainingMonths měs.';
   }
 
-  String _predictionWindowLabel(DateTime? time) {
-    if (time == null) return 'Bez odhadu';
-    final diff = time.difference(DateTime.now()).inMinutes;
-    if (diff <= 15) return 'Teď';
-    if (diff <= 60) return 'Do hodiny';
-    return 'Později';
+  String _relativeTime(DateTime value) {
+    final difference = DateTime.now().difference(value);
+    if (difference.isNegative || difference.inMinutes < 1) return 'právě teď';
+    if (difference.inMinutes < 60) return 'před ${difference.inMinutes} min';
+    if (difference.inHours < 24) return 'před ${difference.inHours} h';
+    if (difference.inDays == 1) return 'včera';
+    return 'před ${difference.inDays} d';
   }
 
-  String _recommendationPriorityLabel(double score) {
-    if (score >= 0.8) return 'Vysoká priorita';
-    if (score >= 0.55) return 'Střední priorita';
-    return 'Nízká priorita';
+  String _eventTitle(TimelineItem item) {
+    return switch (item.type) {
+      EventType.feeding => 'Krmení',
+      EventType.sleep => 'Spánek',
+      EventType.diaper => 'Přebalení',
+      EventType.crying => 'Pláč',
+    };
   }
 
-  String _cryingCauseLabel(String cause) {
-    switch (cause) {
-      case 'hunger':
-        return 'hlad';
-      case 'tired':
-        return 'únava';
-      case 'discomfort':
-        return 'diskomfort';
-      case 'other':
-        return 'jiné';
-      case 'unknown':
-        return 'nevím';
-      default:
-        return cause;
-    }
+  IconData _eventIcon(TimelineItem item) {
+    return switch (item.type) {
+      EventType.feeding => Icons.local_drink_outlined,
+      EventType.sleep => Icons.bedtime_outlined,
+      EventType.diaper => Icons.baby_changing_station_outlined,
+      EventType.crying => Icons.graphic_eq_rounded,
+    };
   }
 
-  String _confidenceLabel(double confidence) {
-    if (confidence >= 0.8) return 'Vysoká jistota';
-    if (confidence >= 0.55) return 'Střední jistota';
-    return 'Nižší jistota';
-  }
-
-  Color _confidenceColor(BuildContext context, double confidence) {
-    if (confidence >= 0.8) return context.bebia.danger;
-    if (confidence >= 0.55) return context.bebia.warning;
-    return Theme.of(context).colorScheme.primary;
-  }
-
-  Future<void> _handleAnalysisNextStep(CryingAnalysisResult analysis) async {
-    switch (analysis.nextStepType) {
-      case CryingNextStepType.feeding:
-        await _openForm(const FeedingFormScreen());
-        return;
-      case CryingNextStepType.sleep:
-        await _openForm(const SleepFormScreen());
-        return;
-      case CryingNextStepType.diaper:
-        await _openForm(const DiaperFormScreen());
-        return;
-      case CryingNextStepType.soothing:
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tip: zkuste chování, nošení nebo jemné houpání.'),
-          ),
-        );
-        return;
-    }
+  Color _eventColor(BuildContext context, TimelineItem item) {
+    return switch (item.type) {
+      EventType.feeding => context.bebia.feeding,
+      EventType.sleep => context.bebia.sleep,
+      EventType.diaper => context.bebia.diaper,
+      EventType.crying => context.bebia.crying,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     final profile = AppServices.childProfileController.activeProfile;
-    final accountSession = AppServices.appAccountController.session.value;
-    final familyState = AppServices.familyConnectionController.state.value;
     final profileBarHeight = MediaQuery.textScalerOf(context).scale(1) >= 1.5
         ? 116.0
         : 92.0;
@@ -367,40 +231,33 @@ class _HomeScreenState extends State<HomeScreen> {
           embedded: true,
           padding: EdgeInsets.fromLTRB(16, 12, 8, 12),
         ),
-        actions: [
+        actions: <Widget>[
           PopupMenuButton<_HomeMenuAction>(
-            tooltip: 'Menu',
+            tooltip: 'Menu obrazovky Zapsat',
             onSelected: _handleMenuAction,
-            itemBuilder: (context) => const [
-              PopupMenuItem(
+            itemBuilder: (context) => const <PopupMenuEntry<_HomeMenuAction>>[
+              PopupMenuItem<_HomeMenuAction>(
                 value: _HomeMenuAction.profiles,
                 child: ListTile(
                   leading: Icon(Icons.child_care_outlined),
                   title: Text('Profily'),
                 ),
               ),
-              PopupMenuItem(
+              PopupMenuItem<_HomeMenuAction>(
                 value: _HomeMenuAction.accountSync,
                 child: ListTile(
                   leading: Icon(Icons.cloud_sync_outlined),
                   title: Text('Účet a synchronizace'),
                 ),
               ),
-              PopupMenuItem(
+              PopupMenuItem<_HomeMenuAction>(
                 value: _HomeMenuAction.onboarding,
                 child: ListTile(
                   leading: Icon(Icons.map_outlined),
                   title: Text('Průvodce'),
                 ),
               ),
-              PopupMenuItem(
-                value: _HomeMenuAction.connectParent,
-                child: ListTile(
-                  leading: Icon(Icons.group_add_outlined),
-                  title: Text('Rodinné sdílení'),
-                ),
-              ),
-              PopupMenuItem(
+              PopupMenuItem<_HomeMenuAction>(
                 value: _HomeMenuAction.plus,
                 child: ListTile(
                   leading: Icon(Icons.workspace_premium_outlined),
@@ -414,292 +271,83 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-          children: [
-            _HeroPanel(
-              eyebrow: profile == null ? 'Dnes' : profile.name,
-              title: 'Péče v klidu a přehledně',
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          children: <Widget>[
+            _LogHero(
+              eyebrow: profile == null ? 'Bez vybraného dítěte' : profile.name,
+              title: 'Zapsat novou událost',
               subtitle: profile == null
-                  ? 'Začněte prvním záznamem dne.'
-                  : '${_ageLabel(profile.dateOfBirth)} · dnešní přehled',
+                  ? 'Nejdřív můžete vybrat nebo vytvořit profil dítěte.'
+                  : _ageLabel(profile.dateOfBirth),
+              trailing: profile == null
+                  ? FilledButton.tonalIcon(
+                      onPressed: _openChildProfile,
+                      icon: const Icon(Icons.child_care_outlined),
+                      label: const Text('Profil'),
+                    )
+                  : null,
             ),
-            const SizedBox(height: 14),
-            _FamilyStatusBanner(
-              session: accountSession,
-              familyState: familyState,
-              onOpenAccountSetup: _openAccountSetup,
-              onOpenFamilySharing: _openFamilySharing,
-            ),
-            const SizedBox(height: 14),
-            FutureBuilder<_HomeOverview>(
-              future: _futureOverview,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const _LoadingCard();
-                }
-                if (snapshot.hasError) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Text(
-                        'Souhrn dne se nepodařilo načíst: ${snapshot.error}',
-                      ),
-                    ),
-                  );
-                }
-                return _TodayOverviewCard(
-                  overview: snapshot.data!,
-                  ageLabel: profile == null
-                      ? null
-                      : _ageLabel(profile.dateOfBirth),
-                  formatTime: _formatTime,
-                  relativeTime: _relativeTime,
-                );
-              },
-            ),
-            const SizedBox(height: 22),
-            _SectionHeader(
-              title: 'Co může pomoci',
-              subtitle: profile == null
-                  ? 'Po prvních záznamech se objeví jemné doporučení.'
-                  : 'Nejdůležitější signál z posledního pláče.',
-            ),
-            const SizedBox(height: 10),
-            FutureBuilder<CryingAnalysisResult?>(
-              future: _futureCryingAnalysis,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const _LoadingCard();
-                }
-                if (snapshot.hasError) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Text(
-                        'Analýzu pláče se nepodařilo načíst: ${snapshot.error}',
-                      ),
-                    ),
-                  );
-                }
-
-                final analysis = snapshot.data;
-                if (analysis == null) {
-                  return const _EmptyInsightCard(
-                    text:
-                        'Jakmile přidáš záznam pláče, zobrazí se tady AI souhrn.',
-                  );
-                }
-
-                final confidenceColor = _confidenceColor(
-                  context,
-                  analysis.confidence,
-                );
-
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 25,
-                              backgroundColor: confidenceColor.withValues(
-                                alpha: 0.14,
-                              ),
-                              foregroundColor: confidenceColor,
-                              child: const Icon(Icons.psychology_alt_outlined),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _cryingCauseLabel(
-                                      analysis.probableCause,
-                                    ).toUpperCase(),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${(analysis.confidence * 100).round()} % · ${_confidenceLabel(analysis.confidence)}',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer
-                                .withValues(alpha: 0.42),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                analysis.nextStepTitle,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(analysis.nextStepDescription),
-                              const SizedBox(height: 12),
-                              FilledButton.tonalIcon(
-                                onPressed: () =>
-                                    _handleAnalysisNextStep(analysis),
-                                icon: const Icon(Icons.arrow_forward_rounded),
-                                label: const Text('Otevřít'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 22),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Expanded(
-                  child: _SectionHeader(
-                    title: 'Další krok',
-                    subtitle: 'Nejbližší odhad a jedno praktické doporučení.',
-                  ),
+            const SizedBox(height: BebiaSpace.lg),
+            _LogActionGrid(
+              actions: <_LogAction>[
+                _LogAction(
+                  key: const Key('log-action-feeding'),
+                  icon: Icons.local_drink_outlined,
+                  color: context.bebia.feeding,
+                  title: 'Krmení',
+                  subtitle: 'Kojení, lahev nebo množství',
+                  semanticsLabel: 'Zapsat krmení',
+                  onTap: () => _openForm(const FeedingFormScreen()),
                 ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RecommendationsScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text('Všechna'),
+                _LogAction(
+                  key: const Key('log-action-sleep'),
+                  icon: Icons.bedtime_outlined,
+                  color: context.bebia.sleep,
+                  title: 'Spánek',
+                  subtitle: 'Začátek, konec a délka',
+                  semanticsLabel: 'Zapsat spánek',
+                  onTap: () => _openForm(const SleepFormScreen()),
+                ),
+                _LogAction(
+                  key: const Key('log-action-diaper'),
+                  icon: Icons.baby_changing_station_outlined,
+                  color: context.bebia.diaper,
+                  title: 'Přebalení',
+                  subtitle: 'Mokrá plena nebo stolice',
+                  semanticsLabel: 'Zapsat přebalení',
+                  onTap: () => _openForm(const DiaperFormScreen()),
+                ),
+                _LogAction(
+                  key: const Key('log-action-crying'),
+                  icon: Icons.graphic_eq_rounded,
+                  color: context.bebia.crying,
+                  title: 'Pláč',
+                  subtitle: 'Délka a volitelný zvuk',
+                  semanticsLabel: 'Zapsat pláč',
+                  onTap: () => _openForm(const CryingFormScreen()),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            FutureBuilder<List<Prediction>>(
-              future: _futurePredictions,
-              builder: (context, predictionSnapshot) {
-                if (predictionSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const _LoadingCard();
+            const SizedBox(height: BebiaSpace.lg),
+            FutureBuilder<List<TimelineItem>>(
+              future: _futureRecentEvents,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const _RecentEventsLoading();
+                }
+                if (snapshot.hasError) {
+                  return _RecentEventsError(error: snapshot.error);
                 }
 
-                return FutureBuilder<List<Recommendation>>(
-                  future: _futureRecommendations,
-                  builder: (context, recommendationSnapshot) {
-                    if (recommendationSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const _LoadingCard();
-                    }
+                final items = snapshot.data ?? const <TimelineItem>[];
+                if (items.isEmpty) return const SizedBox.shrink();
 
-                    if (predictionSnapshot.hasError ||
-                        recommendationSnapshot.hasError) {
-                      final error =
-                          predictionSnapshot.error ??
-                          recommendationSnapshot.error;
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Text('Asistenta se nepodařilo načíst: $error'),
-                        ),
-                      );
-                    }
-
-                    final items = <_AssistantAgendaItem>[
-                      ...(predictionSnapshot.data ?? [])
-                          .take(1)
-                          .map(
-                            (prediction) => _AssistantAgendaItem(
-                              icon: Icons.schedule_outlined,
-                              title: prediction.title,
-                              subtitle:
-                                  'Odhad ${_formatTime(prediction.predictedTime)} • jistota ${(prediction.confidence * 100).round()} %',
-                              badge: _predictionWindowLabel(
-                                prediction.predictedTime,
-                              ),
-                              tint: context.bebia.success.withValues(
-                                alpha: .14,
-                              ),
-                            ),
-                          ),
-                      ...(recommendationSnapshot.data ?? [])
-                          .take(1)
-                          .map(
-                            (recommendation) => _AssistantAgendaItem(
-                              icon: Icons.lightbulb_outline,
-                              title: recommendation.title,
-                              subtitle: recommendation.description,
-                              badge: _recommendationPriorityLabel(
-                                recommendation.score,
-                              ),
-                              tint: context.bebia.warning.withValues(
-                                alpha: .14,
-                              ),
-                            ),
-                          ),
-                    ];
-
-                    if (items.isEmpty) {
-                      return const _EmptyInsightCard(
-                        text: 'Zatím nejsou k dispozici žádné kroky asistenta.',
-                      );
-                    }
-
-                    final colorScheme = Theme.of(context).colorScheme;
-                    return Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        gradient: LinearGradient(
-                          colors: [
-                            colorScheme.primaryContainer.withValues(
-                              alpha: 0.22,
-                            ),
-                            colorScheme.surface,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(
-                            alpha: 0.16,
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        children: items
-                            .map(
-                              (item) => Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _AssistantAgendaCard(item: item),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    );
-                  },
+                return _RecentEventsSection(
+                  items: items,
+                  titleFor: _eventTitle,
+                  iconFor: _eventIcon,
+                  colorFor: (item) => _eventColor(context, item),
+                  relativeTimeFor: _relativeTime,
                 );
               },
             ),
@@ -710,277 +358,126 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeOverview {
-  const _HomeOverview({
-    required this.totalToday,
-    required this.lastEventTime,
-    required this.lastFeeding,
-    required this.lastSleep,
-    required this.lastDiaper,
-    required this.lastCrying,
-    required this.readinessTitle,
+class _LogAction {
+  const _LogAction({
+    required this.key,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.semanticsLabel,
+    required this.onTap,
   });
 
-  final int totalToday;
-  final DateTime? lastEventTime;
-  final TimelineItem? lastFeeding;
-  final TimelineItem? lastSleep;
-  final TimelineItem? lastDiaper;
-  final TimelineItem? lastCrying;
-  final String readinessTitle;
+  final Key key;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String semanticsLabel;
+  final VoidCallback onTap;
 }
 
-class _FamilyStatusBanner extends StatelessWidget {
-  const _FamilyStatusBanner({
-    required this.session,
-    required this.familyState,
-    required this.onOpenAccountSetup,
-    required this.onOpenFamilySharing,
+class _LogHero extends StatelessWidget {
+  const _LogHero({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
   });
 
-  final AppAccountSession session;
-  final FamilyConnectionState familyState;
-  final Future<void> Function() onOpenAccountSetup;
-  final Future<void> Function() onOpenFamilySharing;
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final title = !session.isSignedIn
-        ? 'Rodinné sdílení'
-        : switch (familyState.inviteStatus) {
-            FamilyInviteStatus.none => 'Rodina čeká na založení',
-            FamilyInviteStatus.draft => 'Pozvánka je připravená',
-            FamilyInviteStatus.waitingForAcceptance => 'Čeká na přijetí',
-            FamilyInviteStatus.accepted => 'Pozvánka přijata',
-            FamilyInviteStatus.connected => 'Rodina je propojená',
-          };
-
-    final subtitle = !session.isSignedIn
-        ? 'Připojte druhého rodiče, až budete připraveni.'
-        : switch (familyState.inviteStatus) {
-            FamilyInviteStatus.none => 'Vytvořte rodinu a pozvánku.',
-            FamilyInviteStatus.draft => 'Odešlete kód druhému rodiči.',
-            FamilyInviteStatus.waitingForAcceptance => 'Kód byl sdílen.',
-            FamilyInviteStatus.accepted => 'Dokončete propojení.',
-            FamilyInviteStatus.connected => 'Péči můžete spravovat společně.',
-          };
-
-    final label = !session.isSignedIn
-        ? 'Krok 1'
-        : switch (familyState.inviteStatus) {
-            FamilyInviteStatus.none => 'Krok 2',
-            FamilyInviteStatus.draft => 'Návrh',
-            FamilyInviteStatus.waitingForAcceptance => 'Čeká',
-            FamilyInviteStatus.accepted => 'Přijato',
-            FamilyInviteStatus.connected => 'Připraveno',
-          };
-
-    return BebiaCard(
-      padding: const EdgeInsets.all(BebiaSpace.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: colorScheme.secondaryContainer,
-                foregroundColor: colorScheme.primary,
-                child: const Icon(Icons.groups_2_outlined),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              InfoLabel(label: label),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(subtitle),
-          const SizedBox(height: 14),
-          if (!session.isSignedIn)
-            FilledButton.tonalIcon(
-              onPressed: () {
-                onOpenAccountSetup();
-              },
-              icon: const Icon(Icons.manage_accounts_outlined),
-              label: const Text('Otevřít účet'),
-            )
-          else
-            FilledButton.tonalIcon(
-              onPressed: () {
-                onOpenFamilySharing();
-              },
-              icon: const Icon(Icons.family_restroom_outlined),
-              label: Text(
-                familyState.isConnected
-                    ? 'Zobrazit rodinu'
-                    : 'Dokončit sdílení',
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TodayOverviewCard extends StatelessWidget {
-  const _TodayOverviewCard({
-    required this.overview,
-    required this.ageLabel,
-    required this.formatTime,
-    required this.relativeTime,
-  });
-
-  final _HomeOverview overview;
-  final String? ageLabel;
-  final String Function(DateTime?) formatTime;
-  final String Function(DateTime?) relativeTime;
-
-  @override
-  Widget build(BuildContext context) {
-    return BebiaCard(
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
       padding: const EdgeInsets.all(BebiaSpace.lg),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(BebiaRadius.large),
+        color: scheme.primaryContainer.withValues(alpha: .42),
+        border: Border.all(color: scheme.primary.withValues(alpha: .16)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Row(
-            children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const BebiaBrandMark(size: 48),
+              const SizedBox(width: BebiaSpace.sm),
               Expanded(
-                child: Text(
-                  'Pulse dne',
-                  style: Theme.of(context).textTheme.titleLarge,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      eyebrow,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: BebiaSpace.xxs),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: BebiaSpace.xxs),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.bebia.mutedText,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              InfoLabel(label: '${overview.totalToday} dnes'),
-            ],
-          ),
-          const SizedBox(height: BebiaSpace.xs),
-          Text(
-            overview.readinessTitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: context.bebia.mutedText),
-          ),
-          const SizedBox(height: BebiaSpace.md),
-          _HomeMetricGrid(
-            children: [
-              _MiniMetricCard(
-                icon: Icons.local_drink_outlined,
-                label: 'Krmení',
-                value: relativeTime(overview.lastFeeding?.time),
-                meta: _feedingMeta(overview.lastFeeding),
-                color: context.bebia.feeding,
-              ),
-              _MiniMetricCard(
-                icon: Icons.bedtime_outlined,
-                label: 'Spánek',
-                value: relativeTime(
-                  overview.lastSleep?.sleepStart ?? overview.lastSleep?.time,
-                ),
-                meta: _sleepMeta(overview.lastSleep),
-                color: context.bebia.sleep,
-              ),
-              _MiniMetricCard(
-                icon: Icons.baby_changing_station_outlined,
-                label: 'Přebalení',
-                value: relativeTime(overview.lastDiaper?.time),
-                meta: _diaperMeta(overview.lastDiaper),
-                color: context.bebia.diaper,
-              ),
-              _MiniMetricCard(
-                icon: Icons.graphic_eq_rounded,
-                label: 'Pláč',
-                value: relativeTime(overview.lastCrying?.time),
-                meta: _cryingMeta(overview.lastCrying),
-                color: context.bebia.crying,
               ),
             ],
           ),
-          if (ageLabel != null || overview.lastEventTime != null) ...[
-            const SizedBox(height: BebiaSpace.md),
-            Wrap(
-              spacing: BebiaSpace.xs,
-              runSpacing: BebiaSpace.xs,
-              children: [
-                if (ageLabel != null) InfoLabel(label: ageLabel!),
-                if (overview.lastEventTime != null)
-                  InfoLabel(
-                    label:
-                        'Poslední zápis ${formatTime(overview.lastEventTime)}',
-                  ),
-              ],
+          if (trailing != null) ...<Widget>[
+            const SizedBox(height: BebiaSpace.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: trailing!,
             ),
           ],
         ],
       ),
     );
   }
-
-  String _feedingMeta(TimelineItem? item) {
-    if (item == null) return 'Bez záznamu';
-    final type = item.feedingType == 'breast'
-        ? 'Kojení'
-        : item.feedingType == 'bottle'
-        ? 'Láhev'
-        : 'Zaznamenáno';
-    return item.feedingAmountMl == null
-        ? type
-        : '$type · ${item.feedingAmountMl} ml';
-  }
-
-  String _sleepMeta(TimelineItem? item) {
-    if (item == null) return 'Bez záznamu';
-    if (item.sleepEnd == null) return 'Právě probíhá';
-    final minutes = item.sleepDurationMinutes;
-    return minutes == null ? 'Ukončeno' : '$minutes min';
-  }
-
-  String _diaperMeta(TimelineItem? item) {
-    return switch (item?.diaperType) {
-      'wet' => 'Mokrá plena',
-      'poop' => 'Stolice',
-      'both' => 'Mokrá i stolice',
-      _ => item == null ? 'Bez záznamu' : 'Zaznamenáno',
-    };
-  }
-
-  String _cryingMeta(TimelineItem? item) {
-    if (item == null) return 'Bez záznamu';
-    final minutes = item.cryingDurationMinutes;
-    return minutes == null ? 'Zaznamenáno' : '$minutes min';
-  }
 }
 
-class _HomeMetricGrid extends StatelessWidget {
-  const _HomeMetricGrid({required this.children});
+class _LogActionGrid extends StatelessWidget {
+  const _LogActionGrid({required this.actions});
 
-  final List<Widget> children;
+  final List<_LogAction> actions;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final singleColumn =
-            constraints.maxWidth < 380 ||
-            MediaQuery.textScalerOf(context).scale(1) >= 1.5;
-        const spacing = 10.0;
-        final itemWidth = singleColumn
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final singleColumn = constraints.maxWidth < 420 || textScale >= 1.45;
+        const spacing = BebiaSpace.sm;
+        final tileWidth = singleColumn
             ? constraints.maxWidth
             : (constraints.maxWidth - spacing) / 2;
+
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
-          children: children
-              .map((child) => SizedBox(width: itemWidth, child: child))
+          children: actions
+              .map(
+                (action) => SizedBox(
+                  width: tileWidth,
+                  child: _LogActionCard(action: action),
+                ),
+              )
               .toList(),
         );
       },
@@ -988,254 +485,214 @@ class _HomeMetricGrid extends StatelessWidget {
   }
 }
 
-class _MiniMetricCard extends StatelessWidget {
-  const _MiniMetricCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.meta,
-    required this.color,
-  });
+class _LogActionCard extends StatelessWidget {
+  const _LogActionCard({required this.action});
 
-  final IconData icon;
-  final String label;
-  final String value;
-  final String meta;
-  final Color color;
+  final _LogAction action;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 118),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(BebiaRadius.medium),
-        color: color.withValues(alpha: .1),
-        border: Border.all(color: color.withValues(alpha: .2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: BebiaIconSize.small),
-              const SizedBox(width: BebiaSpace.xs),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
+    return BebiaCard(
+      key: action.key,
+      onTap: action.onTap,
+      semanticsLabel: action.semanticsLabel,
+      color: action.color.withValues(alpha: .08),
+      borderColor: action.color.withValues(alpha: .22),
+      padding: const EdgeInsets.all(BebiaSpace.md),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 124),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              width: BebiaMetrics.minimumTouchTarget,
+              height: BebiaMetrics.minimumTouchTarget,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: action.color.withValues(alpha: .16),
+                borderRadius: BorderRadius.circular(BebiaRadius.medium),
               ),
-            ],
-          ),
-          const SizedBox(height: BebiaSpace.sm),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
+              child: Icon(
+                action.icon,
+                color: action.color,
+                size: BebiaIconSize.large,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            meta,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: context.bebia.mutedText),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroPanel extends StatelessWidget {
-  const _HeroPanel({
-    required this.eyebrow,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String eyebrow;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primaryContainer.withValues(alpha: 0.62),
-            colorScheme.surface,
+            const SizedBox(height: BebiaSpace.sm),
+            Text(
+              action.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: BebiaSpace.xxs),
+            Text(
+              action.subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.bebia.mutedText,
+              ),
+            ),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const BebiaBrandMark(size: 48),
-              const SizedBox(width: BebiaSpace.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      eyebrow,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: context.bebia.mutedText),
-          ),
-        ],
-      ),
     );
   }
 }
 
-class _LoadingCard extends StatelessWidget {
-  const _LoadingCard();
+class _RecentEventsLoading extends StatelessWidget {
+  const _RecentEventsLoading();
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      ),
+    return Semantics(
+      label: 'Načítání posledních záznamů',
+      child: const LinearProgressIndicator(),
     );
   }
 }
 
-class _EmptyInsightCard extends StatelessWidget {
-  const _EmptyInsightCard({required this.text});
+class _RecentEventsError extends StatelessWidget {
+  const _RecentEventsError({required this.error});
 
-  final String text;
+  final Object? error;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(padding: const EdgeInsets.all(18), child: Text(text)),
+    return BebiaInfoBanner(
+      icon: Icons.sync_problem_outlined,
+      title: 'Poslední záznamy se nepodařilo načíst',
+      message: '$error',
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.subtitle});
+class _RecentEventsSection extends StatelessWidget {
+  const _RecentEventsSection({
+    required this.items,
+    required this.titleFor,
+    required this.iconFor,
+    required this.colorFor,
+    required this.relativeTimeFor,
+  });
 
-  final String title;
-  final String subtitle;
+  final List<TimelineItem> items;
+  final String Function(TimelineItem item) titleFor;
+  final IconData Function(TimelineItem item) iconFor;
+  final Color Function(TimelineItem item) colorFor;
+  final String Function(DateTime time) relativeTimeFor;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+      children: <Widget>[
+        const BebiaSectionHeader(title: 'Nedávno zapsáno'),
+        BebiaCard(
+          padding: const EdgeInsets.all(BebiaSpace.sm),
+          child: Column(
+            children: <Widget>[
+              for (var index = 0; index < items.length; index++) ...<Widget>[
+                _RecentEventTile(
+                  item: items[index],
+                  title: titleFor(items[index]),
+                  icon: iconFor(items[index]),
+                  color: colorFor(items[index]),
+                  relativeTime: relativeTimeFor(items[index].time),
+                ),
+                if (index != items.length - 1)
+                  Divider(
+                    height: BebiaSpace.sm,
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }
 }
 
-class _AssistantAgendaItem {
-  const _AssistantAgendaItem({
-    required this.icon,
+class _RecentEventTile extends StatelessWidget {
+  const _RecentEventTile({
+    required this.item,
     required this.title,
-    required this.subtitle,
-    required this.badge,
-    required this.tint,
+    required this.icon,
+    required this.color,
+    required this.relativeTime,
   });
 
-  final IconData icon;
+  final TimelineItem item;
   final String title;
-  final String subtitle;
-  final String badge;
-  final Color tint;
-}
-
-class _AssistantAgendaCard extends StatelessWidget {
-  const _AssistantAgendaCard({required this.item});
-
-  final _AssistantAgendaItem item;
+  final IconData icon;
+  final Color color;
+  final String relativeTime;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: colorScheme.surface,
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.16),
-        ),
-      ),
+    return Semantics(
+      label: '$title, $relativeTime',
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(BebiaSpace.xs),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              backgroundColor: item.tint,
-              foregroundColor: colorScheme.primary,
-              child: Icon(item.icon),
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .14),
+                borderRadius: BorderRadius.circular(BebiaRadius.medium),
+              ),
+              child: Icon(icon, color: color),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: BebiaSpace.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: <Widget>[
+                  Text(title, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: BebiaSpace.xxs),
                   Text(
-                    item.title,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    _eventMeta(item),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.bebia.mutedText,
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(item.subtitle),
-                  const SizedBox(height: 8),
-                  InfoLabel(label: item.badge),
                 ],
               ),
             ),
+            const SizedBox(width: BebiaSpace.xs),
+            InfoLabel(label: relativeTime),
           ],
         ),
       ),
     );
+  }
+
+  String _eventMeta(TimelineItem item) {
+    return switch (item.type) {
+      EventType.feeding => item.feedingAmountMl == null
+          ? 'Zapsáno'
+          : '${item.feedingAmountMl} ml',
+      EventType.sleep => item.sleepDurationMinutes == null
+          ? 'Zapsáno'
+          : '${item.sleepDurationMinutes} min',
+      EventType.diaper => switch (item.diaperType) {
+        'wet' => 'Mokrá plena',
+        'poop' => 'Stolice',
+        'both' => 'Mokrá i stolice',
+        _ => 'Zapsáno',
+      },
+      EventType.crying => item.cryingDurationMinutes == null
+          ? 'Zapsáno'
+          : '${item.cryingDurationMinutes} min',
+    };
   }
 }

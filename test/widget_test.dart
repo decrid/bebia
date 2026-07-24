@@ -1,8 +1,13 @@
 import 'package:bebia/app.dart';
 import 'package:bebia/core/app_version_provider.dart';
+import 'package:bebia/core/design/bebia_theme.dart';
 import 'package:bebia/core/settings/bebia_preferences.dart';
+import 'package:bebia/features/crying/crying_form_screen.dart';
+import 'package:bebia/features/diaper/diaper_form_screen.dart';
+import 'package:bebia/features/feeding/feeding_form_screen.dart';
 import 'package:bebia/features/home/home_screen.dart';
 import 'package:bebia/features/settings/settings_screen.dart';
+import 'package:bebia/features/sleep/sleep_form_screen.dart';
 import 'package:bebia/features/statistics/statistics_screen.dart';
 import 'package:bebia/features/timeline/timeline_screen.dart';
 import 'package:bebia/shared/widgets/app_shell.dart';
@@ -66,11 +71,24 @@ void main() {
       expect(controller.initialized, isTrue);
       expect(find.byType(AppShell), findsOneWidget);
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('Domů'), findsOneWidget);
+      expect(find.text('Zapsat'), findsOneWidget);
       expect(find.text('Přehled'), findsOneWidget);
       expect(find.text('Statistiky'), findsOneWidget);
       expect(find.text('Nastavení'), findsOneWidget);
-      final quickAdd = find.byKey(const Key('quick-add-button'));
+      expect(find.text('Domů'), findsNothing);
+      expect(find.text('Pulse dne'), findsNothing);
+      expect(find.text('Rodinné sdílení'), findsNothing);
+      expect(find.text('Krmení'), findsOneWidget);
+      expect(find.text('Spánek'), findsOneWidget);
+      expect(find.text('Přebalení'), findsOneWidget);
+      expect(find.text('Pláč'), findsOneWidget);
+      expect(find.byKey(const Key('quick-add-button')), findsNothing);
+      expect(find.byKey(const Key('quick-add-button-compact')), findsNothing);
+
+      await tester.tap(find.text('Přehled'));
+      await tester.pump();
+
+      final quickAdd = find.byKey(const Key('quick-add-button-compact'));
       final quickAddSize = tester.getSize(quickAdd);
       expect(quickAddSize.width, greaterThanOrEqualTo(48));
       expect(quickAddSize.height, greaterThanOrEqualTo(48));
@@ -79,6 +97,36 @@ void main() {
     } finally {
       semanticsHandle.dispose();
     }
+  });
+
+  testWidgets('Zapsat actions open existing event forms', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BebiaTheme.light(
+          profileSex: null,
+          preferences: const BebiaPreferences(),
+        ),
+        home: const HomeScreen(loadData: false, checkOnboarding: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final actions = <Key, Type>{
+      const Key('log-action-feeding'): FeedingFormScreen,
+      const Key('log-action-sleep'): SleepFormScreen,
+      const Key('log-action-diaper'): DiaperFormScreen,
+      const Key('log-action-crying'): CryingFormScreen,
+    };
+
+    for (final entry in actions.entries) {
+      await tester.tap(find.byKey(entry.key));
+      await tester.pumpAndSettle();
+      expect(find.byType(entry.value), findsOneWidget);
+      Navigator.of(tester.element(find.byType(entry.value))).pop();
+      await tester.pumpAndSettle();
+    }
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Bebia loads and applies a persistent appearance change', (

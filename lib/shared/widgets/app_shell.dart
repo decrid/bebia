@@ -36,9 +36,9 @@ class _AppShellState extends State<AppShell> {
   static const List<NavigationDestination> _destinations =
       <NavigationDestination>[
         NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Domů',
+          icon: Icon(Icons.note_add_outlined),
+          selectedIcon: Icon(Icons.note_add_rounded),
+          label: 'Zapsat',
         ),
         NavigationDestination(
           icon: Icon(Icons.view_timeline_outlined),
@@ -278,20 +278,7 @@ class _AppShellState extends State<AppShell> {
                     ],
                   )
                 : content,
-            floatingActionButton: _currentIndex == 0
-                ? Semantics(
-                    key: const Key('quick-add-button'),
-                    container: true,
-                    button: true,
-                    label: 'Zapsat událost',
-                    child: FloatingActionButton.extended(
-                      tooltip: 'Zapsat událost',
-                      onPressed: _openQuickAddSheet,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Zapsat událost'),
-                    ),
-                  )
-                : _currentIndex < 3
+            floatingActionButton: _currentIndex > 0 && _currentIndex < 3
                 ? Semantics(
                     key: const Key('quick-add-button-compact'),
                     container: true,

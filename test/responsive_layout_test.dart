@@ -212,7 +212,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('home remains content-driven in $mode mode', (tester) async {
+    testWidgets('Zapsat remains action-driven in $mode mode', (tester) async {
       _useNarrowKeyboardViewport(tester);
       await tester.pumpWidget(
         _largeTextApp(
@@ -222,10 +222,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await _scrollTo(tester, find.text('Pulse dne'));
+      await _scrollTo(tester, find.byKey(const Key('log-action-crying')));
 
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('Pulse dne'), findsOneWidget);
+      expect(find.text('Zapsat novou událost'), findsOneWidget);
+      expect(find.text('Krmení'), findsOneWidget);
+      expect(find.text('Spánek'), findsOneWidget);
+      expect(find.text('Přebalení'), findsOneWidget);
+      expect(find.text('Pláč'), findsOneWidget);
+      expect(find.text('Pulse dne'), findsNothing);
+      expect(find.text('Rodinné sdílení'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
