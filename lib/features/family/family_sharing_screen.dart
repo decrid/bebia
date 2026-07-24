@@ -407,15 +407,6 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
                                     onMarkConnected: _markConnected,
                                   ),
                                   const SizedBox(height: 16),
-                                  _AccountReadinessCard(
-                                    session: session,
-                                    onOpenSetup: _openAccountSetup,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const _SyncRealityCard(),
-                                  const SizedBox(height: 16),
-                                  const _InviteLifecycleCard(),
-                                  const SizedBox(height: 16),
                                   _WorkspacePreviewCard(
                                     workspace: workspace,
                                     onAssignChild: _assignChildToCurrentFamily,
@@ -423,17 +414,54 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
                                         _removeChildFromCurrentFamily,
                                   ),
                                   const SizedBox(height: 16),
-                                  _CloudSyncPreviewCard(payload: syncPayload),
-                                  const SizedBox(height: 16),
-                                  _SyncPlanPreviewCard(plan: syncPlan),
-                                  const SizedBox(height: 16),
-                                  _TestSyncCard(
-                                    report: _testSyncReport,
-                                    isRunning: _isRunningTestSync,
-                                    onRun: _runTestSync,
-                                    backendReport: _backendExecutionReport,
-                                    isRunningBackend: _isRunningBackendSync,
-                                    onRunBackend: _runBackendSyncTest,
+                                  Card(
+                                    child: ExpansionTile(
+                                      leading: const Icon(
+                                        Icons.settings_suggest_outlined,
+                                      ),
+                                      title: const Text(
+                                        'Podrobnosti synchronizace',
+                                      ),
+                                      subtitle: const Text(
+                                        'Stav cloudu, testy a technický plán',
+                                      ),
+                                      childrenPadding:
+                                          const EdgeInsets.fromLTRB(
+                                            16,
+                                            0,
+                                            16,
+                                            16,
+                                          ),
+                                      children: [
+                                        _AccountReadinessCard(
+                                          session: session,
+                                          onOpenSetup: _openAccountSetup,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const _SyncRealityCard(),
+                                        const SizedBox(height: 12),
+                                        const _InviteLifecycleCard(),
+                                        const SizedBox(height: 12),
+                                        _CloudSyncPreviewCard(
+                                          payload: syncPayload,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _SyncPlanPreviewCard(plan: syncPlan),
+                                        const SizedBox(height: 12),
+                                        _TestSyncCard(
+                                          report: _testSyncReport,
+                                          isRunning: _isRunningTestSync,
+                                          onRun: _runTestSync,
+                                          backendReport:
+                                              _backendExecutionReport,
+                                          isRunningBackend:
+                                              _isRunningBackendSync,
+                                          onRunBackend: _runBackendSyncTest,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const _SyncRoadmapCard(),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 16),
                                   ValueListenableBuilder<bool>(
@@ -488,8 +516,6 @@ class _FamilySharingScreenState extends State<FamilySharingScreen> {
                                       onRemove: controller.removeCaregiver,
                                     ),
                                   ],
-                                  const SizedBox(height: 16),
-                                  const _SyncRoadmapCard(),
                                   const SizedBox(height: 12),
                                   ValueListenableBuilder<String?>(
                                     valueListenable: controller.error,

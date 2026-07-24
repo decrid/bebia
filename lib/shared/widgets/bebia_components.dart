@@ -63,7 +63,7 @@ class BebiaScreenHeader extends StatelessWidget {
                 const SizedBox(height: BebiaSpace.xs),
                 Text(
                   subtitle!,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: context.bebia.mutedText,
                   ),
                 ),

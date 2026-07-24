@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 import '../settings/bebia_preferences.dart';
 
 abstract final class BebiaColors {
-  static const Color sage = Color(0xFF39735E);
-  static const Color sageBright = Color(0xFF65A88B);
-  static const Color rose = Color(0xFFB95E79);
-  static const Color sky = Color(0xFF3D7F9C);
-  static const Color feeding = Color(0xFFE27A62);
-  static const Color sleep = Color(0xFF6670B8);
-  static const Color diaper = Color(0xFF4C9475);
-  static const Color crying = Color(0xFFD49A42);
+  static const Color sage = Color(0xFF2F6B5A);
+  static const Color sageBright = Color(0xFF78B89F);
+  static const Color rose = Color(0xFFC36F87);
+  static const Color sky = Color(0xFF4E849A);
+  static const Color feeding = Color(0xFFD96F57);
+  static const Color sleep = Color(0xFF6571B5);
+  static const Color diaper = Color(0xFF43866B);
+  static const Color crying = Color(0xFFC98A32);
   static const Color danger = Color(0xFFB94747);
-  static const Color lightCanvas = Color(0xFFF5F5F0);
-  static const Color darkCanvas = Color(0xFF101815);
-  static const Color darkSurface = Color(0xFF18231F);
+  static const Color lightCanvas = Color(0xFFF7F4EE);
+  static const Color lightSurface = Color(0xFFFFFCF7);
+  static const Color darkCanvas = Color(0xFF101714);
+  static const Color darkSurface = Color(0xFF17211D);
 }
 
 abstract final class BebiaSpace {
@@ -172,15 +173,16 @@ abstract final class BebiaTheme {
     required BebiaPreferences preferences,
   }) {
     final isDark = brightness == Brightness.dark;
-    final seed = switch (profileSex) {
+    final profileAccent = switch (profileSex) {
       'boy' => BebiaColors.sky,
       'girl' => BebiaColors.rose,
-      _ => BebiaColors.sage,
+      _ => BebiaColors.sageBright,
     };
+    const seed = BebiaColors.sage;
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: brightness,
-      surface: isDark ? BebiaColors.darkSurface : const Color(0xFFFFFEFA),
+      surface: isDark ? BebiaColors.darkSurface : BebiaColors.lightSurface,
     );
     final typography = brightness == Brightness.dark
         ? Typography.material2021().white
@@ -229,14 +231,22 @@ abstract final class BebiaTheme {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: isDark
-            ? <Color>[seed.withValues(alpha: 0.5), BebiaColors.darkSurface]
-            : <Color>[seed.withValues(alpha: 0.24), const Color(0xFFFFF8EC)],
+            ? <Color>[
+                seed.withValues(alpha: 0.42),
+                profileAccent.withValues(alpha: 0.12),
+                BebiaColors.darkSurface,
+              ]
+            : <Color>[
+                seed.withValues(alpha: 0.18),
+                profileAccent.withValues(alpha: 0.09),
+                BebiaColors.lightSurface,
+              ],
       ),
       cardShadow: <BoxShadow>[
         BoxShadow(
-          color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.055),
-          blurRadius: isDark ? 22 : 26,
-          offset: const Offset(0, 10),
+          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.045),
+          blurRadius: isDark ? 20 : 24,
+          offset: const Offset(0, 8),
         ),
       ],
       reduceMotion: preferences.reduceMotion,
@@ -265,6 +275,26 @@ abstract final class BebiaTheme {
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(BebiaMetrics.minimumTouchTarget),
+          foregroundColor: scheme.onSurfaceVariant,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(BebiaRadius.small),
+          ),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: BebiaSpace.md,
+          vertical: BebiaSpace.xxs,
+        ),
+        minTileHeight: BebiaMetrics.minimumTouchTarget,
+        iconColor: scheme.onSurfaceVariant,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BebiaRadius.medium),
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,

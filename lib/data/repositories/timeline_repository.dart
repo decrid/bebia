@@ -8,8 +8,13 @@ class TimelineRepository {
   TimelineRepository(this._assignments);
 
   final EventAssignmentRepository _assignments;
+  Future<void> Function()? _mutationObserver;
 
   Isar get _isar => IsarService.instance;
+
+  void setMutationObserver(Future<void> Function() observer) {
+    _mutationObserver = observer;
+  }
 
   Future<List<TimelineItem>> getAll({String? childId}) async {
     final items = await _isar.timelineItems.where().sortByTimeDesc().findAll();
@@ -26,6 +31,7 @@ class TimelineRepository {
     } else {
       await _assignments.assignEvent(item.id, childId);
     }
+    await _notifyMutation();
   }
 
   Future<void> addItems(List<TimelineItem> items, {String? childId}) async {
@@ -40,6 +46,7 @@ class TimelineRepository {
         await _assignments.assignEvent(item.id, childId);
       }
     }
+    await _notifyMutation();
   }
 
   Future<void> deleteItem(int id) async {
@@ -47,6 +54,7 @@ class TimelineRepository {
       await _isar.timelineItems.delete(id);
     });
     await _assignments.unassignEvent(id);
+    await _notifyMutation();
   }
 
   Future<void> deleteItems(Iterable<int> ids) async {
@@ -55,6 +63,7 @@ class TimelineRepository {
       await _isar.timelineItems.deleteAll(idList);
     });
     await _assignments.removeEvents(idList);
+    await _notifyMutation();
   }
 
   Future<void> updateItem(TimelineItem item, {String? fallbackChildId}) async {
@@ -70,6 +79,7 @@ class TimelineRepository {
     } else {
       await _assignments.assignEvent(item.id, effectiveChildId);
     }
+    await _notifyMutation();
   }
 
   Future<void> clearAll() async {
@@ -77,6 +87,7 @@ class TimelineRepository {
       await _isar.timelineItems.clear();
     });
     await _assignments.clear();
+    await _notifyMutation();
   }
 
   Future<List<TimelineItem>> getByType(
@@ -111,6 +122,7 @@ class TimelineRepository {
 
   Future<void> unassignEventsForChild(String childId) async {
     await _assignments.unassignEventsForChild(childId);
+    await _notifyMutation();
   }
 
   Future<void> deleteEventsForChild(String childId) async {
@@ -132,5 +144,15 @@ class TimelineRepository {
       }
       return assignedChildId == childId;
     }).toList();
+  }
+
+  Future<void> _notifyMutation() async {
+    final observer = _mutationObserver;
+    if (observer == null) return;
+    try {
+      await observer();
+    } on Object {
+      // Widget data is derived and must never make a database write fail.
+    }
   }
 }

@@ -4,9 +4,18 @@
 
 Bebia je každodenní pomocník pro rodiče malých dětí. Vizuální jazyk proto
 spojuje klid, důvěryhodnost a rychlou čitelnost jednou rukou. Základ tvoří
-tlumená šalvějová barva, teplé neutrální plochy, měkké rohy a střídmé stíny.
-Profil dítěte může posunout hlavní akcent k modré nebo růžové, význam událostí
-se tím ale nemění.
+hluboká šalvějová barva, teplé neutrální plochy, měkké rohy a střídmé stíny.
+Primární značka zůstává stabilní napříč profily; profil dítěte se může jemně
+projevit jen v sekundárním gradientu. Význam událostí se tím nemění.
+
+Značkový symbol je abstraktní písmeno B tvořené otevřenou linií objetí a malým
+akcentním bodem. Neobsahuje text ani doslovný obrázek dítěte. Stejná geometrie
+je zdrojem pro Flutter komponentu, nativní splash, adaptive launcher ikonu a
+Android 13+ monochrome ikonu. Editovatelné mastery jsou v `assets/branding/`.
+Android používá vektorové resources přímo. iOS rasterizované AppIcon a
+LaunchImage soubory reprodukovatelně vytváří
+`tool/generate_ios_brand_assets.ps1`; skript se spouští ručně pouze při změně
+geometrie nebo barev značky.
 
 Na rozdíl od TimIQ nepoužívá Bebia chronografickou, technickou estetiku. Z jeho
 referenční implementace přebírá pouze principy: centralizované tokeny, vlastní
@@ -32,14 +41,16 @@ Všechny nové tokeny a theme jsou v `lib/core/design/bebia_theme.dart`:
 
 | Role | Světlý základ | Význam |
 | --- | --- | --- |
-| Primární | `#39735E` | navigace, hlavní akce, neutrální profil |
-| Krmení | `#E27A62` | krmení a množství |
-| Spánek | `#6670B8` | spánek a odpočinek |
-| Přebalení | `#4C9475` | přebalování a péče |
-| Pláč | `#D49A42` | pláč, upozornění a zvuková analýza |
+| Primární | `#2F6B5A` | značka, navigace a hlavní akce |
+| Krmení | `#D96F57` | krmení a množství |
+| Spánek | `#6571B5` | spánek a odpočinek |
+| Přebalení | `#43866B` | přebalování a péče |
+| Pláč | `#C98A32` | pláč, upozornění a zvuková analýza |
 | Chyba | `#B94747` | chyba a destruktivní akce |
-| Canvas | `#F5F5F0` | teplé světlé pozadí |
-| Dark canvas | `#101815` | noční pozadí bez čisté černé |
+| Canvas | `#F7F4EE` | teplé světlé pozadí |
+| Surface | `#FFFCF7` | čitelná obsahová plocha |
+| Dark canvas | `#101714` | noční pozadí bez čisté černé |
+| Dark surface | `#17211D` | zvýšená noční plocha |
 
 Tmavá varianta používá světlejší sémantické odstíny pro kontrast na tmavých
 plochách. Informace se nikdy nerozlišuje jen barvou: typ události má současně
@@ -85,6 +96,29 @@ jen u sekundárních metadat, nikdy u instrukce, chyby nebo primární akce.
 
 Globální theme dále sjednocuje app bary, karty, inputy, chipy, tlačítka,
 navigaci, dialogy, bottom sheety a snackbary i ve starších feature widgetech.
+
+`lib/shared/widgets/bebia_brand_mark.dart` vykresluje značku nativně pomocí
+`CustomPainter`; nepřidává runtime závislost ani bitmapu. Dashboard používá
+nejdřív čas od poslední události, potom stručné metadata. Dlouhé vysvětlení
+patří na detail, do empty/error stavu nebo na vyžádání.
+
+## Start aplikace a Android widgety
+
+- Nativní light/dark splash a Android 12+ SplashScreen API používají stejný
+  canvas a symbol jako první Flutter frame.
+- `BebiaBootstrap` spouští skutečnou inicializaci bez umělého časovače a při
+  chybě nabízí bezpečný retry; data nemaže ani nereinitializuje.
+- Android home-screen widget nikdy neotevírá Isar. `TimelineRepository`
+  centralizovaně vyvolá vytvoření minimálního snapshotu a nativní vrstva jej
+  uloží do privátních `SharedPreferences`.
+- Snapshot obsahuje jen časy a krátké typové údaje posledního krmení, spánku,
+  přebalení a pláče. Neobsahuje jméno dítěte ani poznámky.
+- Widget se obnoví po změně timeline, změně aktivního profilu, inicializaci
+  aplikace, restartu telefonu, aktualizaci balíčku a nejvýše jednou za 30 minut
+  kvůli relativnímu času.
+- Akce používají explicitní `PendingIntent` do `MainActivity`; schéma
+  `bebia://timeline/...` otevírá filtrovaný přehled a `bebia://add/...`
+  odpovídající formulář.
 
 ## Light a dark režim
 

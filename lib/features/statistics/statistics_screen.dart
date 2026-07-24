@@ -315,13 +315,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Vzorce a trendy',
+                        'Dnes v číslech',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Vyhodnocení dne. Surovou historii a úpravy najdeš v Přehledu.',
+                        'Rychlý souhrn péče podle dnešních záznamů.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 18),
@@ -352,8 +352,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 ),
                 const SizedBox(height: 20),
                 _SectionTitle(
-                  title: 'Dnes',
-                  subtitle: 'Souhrn hlavních metrik za dnešek.',
+                  title: 'Podrobnosti',
+                  subtitle: 'Množství, délka a průběh.',
                 ),
                 const SizedBox(height: 10),
                 _AdaptiveMetricGrid(

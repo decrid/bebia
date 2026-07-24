@@ -1,17 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../data/local/child_profile_store.dart';
 import '../data/local/event_assignment_store.dart';
 import '../data/local/family_connection_store.dart';
+import '../data/local/onboarding_store.dart';
 import '../data/remote/firestore/firestore_family_repository.dart';
 import '../data/remote/firestore/firestore_timeline_repository.dart';
-import '../data/local/onboarding_store.dart';
 import '../data/repositories/child_profile_repository.dart';
 import '../data/repositories/event_assignment_repository.dart';
 import '../data/repositories/family_connection_repository.dart';
 import '../data/repositories/remote_family_repository.dart';
 import '../data/repositories/remote_timeline_repository.dart';
 import '../data/repositories/timeline_repository.dart';
-import 'firebase/firebase_bootstrap_service.dart';
 import '../features/auth/app_account_controller.dart';
 import '../features/crying/audio_preprocessing_service.dart';
 import '../features/crying/crying_ai_service.dart';
@@ -33,6 +33,9 @@ import '../features/profile/child_profile_controller.dart';
 import '../features/recommendations/recommendation_service.dart';
 import '../features/timeline/timeline_controller.dart';
 import '../features/timeline/timeline_cloud_sync_service.dart';
+import '../features/widgets/bebia_widget_snapshot_service.dart';
+import 'firebase/firebase_bootstrap_service.dart';
+import 'platform/bebia_platform_bridge.dart';
 
 class AppServices {
   static const FirebaseBootstrapService firebaseBootstrapService =
@@ -57,6 +60,7 @@ class AppServices {
 
   static final AppAccountController appAccountController =
       AppAccountController();
+  static final BebiaPlatformBridge platformBridge = BebiaPlatformBridge();
   static final ChildProfileController childProfileController =
       ChildProfileController(childProfileRepository, timelineRepository);
   static final FamilyConnectionController familyConnectionController =
@@ -93,6 +97,12 @@ class AppServices {
     timelineRepository,
     childProfileController,
   );
+  static final BebiaWidgetSnapshotService widgetSnapshotService =
+      BebiaWidgetSnapshotService(
+        timelineRepository,
+        childProfileController,
+        platformBridge,
+      );
   static const TimelineCloudSyncService timelineCloudSyncService =
       TimelineCloudSyncService();
 

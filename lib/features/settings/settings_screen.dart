@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/app_version_provider.dart';
 import '../../core/design/bebia_theme.dart';
 import '../../core/settings/bebia_preferences.dart';
+import '../../shared/widgets/bebia_brand_mark.dart';
 import '../../shared/widgets/bebia_components.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -202,7 +203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: <Widget>[
               const BebiaScreenHeader(
                 title: 'Nastavení',
-                subtitle: 'Přizpůsobte si Bebia pro klidnější každodenní péči.',
+                subtitle: 'Vzhled, pohodlí a soukromí.',
               ),
               const SizedBox(height: BebiaSpace.lg),
               if (_controller.lastError != null) ...<Widget>[
@@ -261,11 +262,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const BebiaSectionHeader(title: 'Soukromí a data'),
               const BebiaInfoBanner(
                 icon: Icons.shield_outlined,
-                title: 'Vaše data zůstávají oddělená',
+                title: 'Data zůstávají v bezpečí',
                 message:
-                    'Reset nastavení nikdy nemaže profily ani záznamy. '
-                    'Rodinná synchronizace se řídí pouze vaším existujícím '
-                    'propojením účtu.',
+                    'Reset vzhledu nemaže profily, záznamy ani rodinné propojení.',
               ),
               const SizedBox(height: BebiaSpace.lg),
               const BebiaSectionHeader(title: 'Obnova'),
@@ -281,17 +280,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      'Bebia',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: BebiaSpace.xs),
-                    const Text(
-                      'Přehledný pomocník pro krmení, spánek, přebalování, '
-                      'pláč a společnou péči o dítě.',
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const BebiaBrandMark(size: 52),
+                        const SizedBox(width: BebiaSpace.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bebia',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              Text(
+                                'Klidný přehled každodenní péče',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: context.bebia.mutedText),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: BebiaSpace.sm),
                     FutureBuilder<BebiaAppVersion>(
@@ -301,7 +311,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (version == null) {
                           return const Text('Načítám verzi…');
                         }
-                        return Text(version.displayLabel);
+                        return Text(
+                          version.displayLabel,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        );
                       },
                     ),
                   ],

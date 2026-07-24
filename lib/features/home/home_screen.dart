@@ -1,7 +1,11 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
 import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
+import '../../shared/widgets/bebia_brand_mark.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../auth/app_account_session.dart';
@@ -79,13 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _futureOverview = Future<_HomeOverview>.value(
         const _HomeOverview(
           totalToday: 0,
-          feedingsToday: 0,
-          sleepsToday: 0,
-          diapersToday: 0,
-          cryingsToday: 0,
           lastEventTime: null,
+          lastFeeding: null,
+          lastSleep: null,
+          lastDiaper: null,
+          lastCrying: null,
           readinessTitle: 'Začni dnešním prvním záznamem',
-          readinessText: 'První zápisy odemknou hodnotu přehledu a doporučení.',
         ),
       );
       return;
@@ -110,39 +113,30 @@ class _HomeScreenState extends State<HomeScreen> {
         .toList();
 
     String readinessTitle;
-    String readinessText;
     if (todayItems.isEmpty) {
       readinessTitle = 'Začni dnešním prvním záznamem';
-      readinessText =
-          'První zápisy rychle odemknou hodnotu predikcí, doporučení i přehledu rytmu dne.';
     } else if (todayItems.length < 4) {
-      readinessTitle = 'Bebia se už chytá dnešního rytmu';
-      readinessText =
-          'Ještě pár zápisů a doporučení budou působit jistěji i konkrétněji.';
+      readinessTitle = 'Dnešní rytmus se začíná skládat';
     } else {
-      readinessTitle = 'Dnešní přehled je dobře rozběhnutý';
-      readinessText =
-          'Data už dávají smysluplný kontext pro další kroky i AI nápovědu.';
+      readinessTitle = 'Dnešní přehled je aktuální';
     }
 
     return _HomeOverview(
       totalToday: todayItems.length,
-      feedingsToday: todayItems
-          .where((item) => item.type == EventType.feeding)
-          .length,
-      sleepsToday: todayItems
-          .where((item) => item.type == EventType.sleep)
-          .length,
-      diapersToday: todayItems
-          .where((item) => item.type == EventType.diaper)
-          .length,
-      cryingsToday: todayItems
-          .where((item) => item.type == EventType.crying)
-          .length,
       lastEventTime: items.isEmpty ? null : items.first.time,
+      lastFeeding: _lastOfType(items, EventType.feeding),
+      lastSleep: _lastOfType(items, EventType.sleep),
+      lastDiaper: _lastOfType(items, EventType.diaper),
+      lastCrying: _lastOfType(items, EventType.crying),
       readinessTitle: readinessTitle,
-      readinessText: readinessText,
     );
+  }
+
+  TimelineItem? _lastOfType(List<TimelineItem> items, EventType type) {
+    for (final item in items) {
+      if (item.type == type) return item;
+    }
+    return null;
   }
 
   Future<void> _refresh() async {
@@ -260,6 +254,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final hour = value.hour.toString().padLeft(2, '0');
     final minute = value.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  String _relativeTime(DateTime? value) {
+    if (value == null) return '—';
+    final difference = DateTime.now().difference(value);
+    if (difference.isNegative || difference.inMinutes < 1) return 'právě teď';
+    if (difference.inMinutes < 60) return 'před ${difference.inMinutes} min';
+    if (difference.inHours < 24) return 'před ${difference.inHours} h';
+    if (difference.inDays == 1) return 'včera';
+    return 'před ${difference.inDays} d';
   }
 
   String _ageLabel(DateTime dateOfBirth) {
@@ -414,10 +418,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _HeroPanel(
               eyebrow: profile == null ? 'Dnes' : profile.name,
-              title: 'Co je teď důležité',
+              title: 'Péče v klidu a přehledně',
               subtitle: profile == null
-                  ? 'AI pohled na poslední pláč a nejbližší očekávání.'
-                  : 'Věk ${_ageLabel(profile.dateOfBirth)} • aktivní profil dítěte.',
+                  ? 'Začněte prvním záznamem dne.'
+                  : '${_ageLabel(profile.dateOfBirth)} · dnešní přehled',
             ),
             const SizedBox(height: 14),
             _FamilyStatusBanner(
@@ -449,15 +453,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? null
                       : _ageLabel(profile.dateOfBirth),
                   formatTime: _formatTime,
+                  relativeTime: _relativeTime,
                 );
               },
             ),
             const SizedBox(height: 22),
             _SectionHeader(
-              title: 'AI přehled',
+              title: 'Co může pomoci',
               subtitle: profile == null
-                  ? 'Funguje i bez profilu, ale s profilem budou odhady přesnější.'
-                  : 'Poslední AI signály a doporučený další krok.',
+                  ? 'Po prvních záznamech se objeví jemné doporučení.'
+                  : 'Nejdůležitější signál z posledního pláče.',
             ),
             const SizedBox(height: 10),
             FutureBuilder<CryingAnalysisResult?>(
@@ -513,7 +518,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Pravděpodobná příčina: ${_cryingCauseLabel(analysis.probableCause)}',
+                                    _cryingCauseLabel(
+                                      analysis.probableCause,
+                                    ).toUpperCase(),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 16,
@@ -521,29 +528,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Jistota ${(analysis.confidence * 100).round()} % • ${_confidenceLabel(analysis.confidence)}',
+                                    '${(analysis.confidence * 100).round()} % · ${_confidenceLabel(analysis.confidence)}',
                                   ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        if (analysis.signals.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Rozhodující signály',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: analysis.signals
-                                .take(4)
-                                .map((signal) => InfoLabel(label: signal))
-                                .toList(),
-                          ),
-                        ],
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,
@@ -571,7 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onPressed: () =>
                                     _handleAnalysisNextStep(analysis),
                                 icon: const Icon(Icons.arrow_forward_rounded),
-                                label: const Text('Provést krok'),
+                                label: const Text('Otevřít'),
                               ),
                             ],
                           ),
@@ -589,8 +580,8 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Expanded(
                   child: _SectionHeader(
-                    title: 'Asistent dne',
-                    subtitle: 'Doporučení a nejbližší odhady pro dnešek.',
+                    title: 'Další krok',
+                    subtitle: 'Nejbližší odhad a jedno praktické doporučení.',
                   ),
                 ),
                 TextButton(
@@ -638,7 +629,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     final items = <_AssistantAgendaItem>[
                       ...(predictionSnapshot.data ?? [])
-                          .take(2)
+                          .take(1)
                           .map(
                             (prediction) => _AssistantAgendaItem(
                               icon: Icons.schedule_outlined,
@@ -654,7 +645,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                       ...(recommendationSnapshot.data ?? [])
-                          .take(2)
+                          .take(1)
                           .map(
                             (recommendation) => _AssistantAgendaItem(
                               icon: Icons.lightbulb_outline,
@@ -722,23 +713,21 @@ class _HomeScreenState extends State<HomeScreen> {
 class _HomeOverview {
   const _HomeOverview({
     required this.totalToday,
-    required this.feedingsToday,
-    required this.sleepsToday,
-    required this.diapersToday,
-    required this.cryingsToday,
     required this.lastEventTime,
+    required this.lastFeeding,
+    required this.lastSleep,
+    required this.lastDiaper,
+    required this.lastCrying,
     required this.readinessTitle,
-    required this.readinessText,
   });
 
   final int totalToday;
-  final int feedingsToday;
-  final int sleepsToday;
-  final int diapersToday;
-  final int cryingsToday;
   final DateTime? lastEventTime;
+  final TimelineItem? lastFeeding;
+  final TimelineItem? lastSleep;
+  final TimelineItem? lastDiaper;
+  final TimelineItem? lastCrying;
   final String readinessTitle;
-  final String readinessText;
 }
 
 class _FamilyStatusBanner extends StatelessWidget {
@@ -759,29 +748,23 @@ class _FamilyStatusBanner extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     final title = !session.isSignedIn
-        ? 'Připrav účet pro rodinné sdílení'
+        ? 'Rodinné sdílení'
         : switch (familyState.inviteStatus) {
-            FamilyInviteStatus.none => 'Založ rodinu a první pozvánku',
-            FamilyInviteStatus.draft => 'Pozvánka čeká na odeslání',
-            FamilyInviteStatus.waitingForAcceptance =>
-              'Čeká se na přijetí pozvánky',
-            FamilyInviteStatus.accepted => 'Pozvánka je přijatá',
-            FamilyInviteStatus.connected => 'Rodinné sdílení je připravené',
+            FamilyInviteStatus.none => 'Rodina čeká na založení',
+            FamilyInviteStatus.draft => 'Pozvánka je připravená',
+            FamilyInviteStatus.waitingForAcceptance => 'Čeká na přijetí',
+            FamilyInviteStatus.accepted => 'Pozvánka přijata',
+            FamilyInviteStatus.connected => 'Rodina je propojená',
           };
 
     final subtitle = !session.isSignedIn
-        ? 'Každý rodič bude mít vlastní účet. Teprve potom má smysl zakládat sdílenou rodinu.'
+        ? 'Připojte druhého rodiče, až budete připraveni.'
         : switch (familyState.inviteStatus) {
-            FamilyInviteStatus.none =>
-              'Účet už je připravený. Teď vytvoř rodinu a pozvánku pro druhého rodiče.',
-            FamilyInviteStatus.draft =>
-              'Pozvánka už existuje, ale ještě nebyla označená jako odeslaná druhému rodiči.',
-            FamilyInviteStatus.waitingForAcceptance =>
-              'Kód už byl sdílený. Teď se čeká, až druhý rodič pozvánku přijme.',
-            FamilyInviteStatus.accepted =>
-              'Pozvánka byla přijatá. Zbývá aktivovat společnou rodinu.',
-            FamilyInviteStatus.connected =>
-              'Rodina, pečující osoby i pozvánkový tok jsou připravené pro další krok s cloudovou synchronizací.',
+            FamilyInviteStatus.none => 'Vytvořte rodinu a pozvánku.',
+            FamilyInviteStatus.draft => 'Odešlete kód druhému rodiči.',
+            FamilyInviteStatus.waitingForAcceptance => 'Kód byl sdílen.',
+            FamilyInviteStatus.accepted => 'Dokončete propojení.',
+            FamilyInviteStatus.connected => 'Péči můžete spravovat společně.',
           };
 
     final label = !session.isSignedIn
@@ -794,15 +777,8 @@ class _FamilyStatusBanner extends StatelessWidget {
             FamilyInviteStatus.connected => 'Připraveno',
           };
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: colorScheme.surface,
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-        ),
-      ),
+    return BebiaCard(
+      padding: const EdgeInsets.all(BebiaSpace.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -827,26 +803,6 @@ class _FamilyStatusBanner extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(subtitle),
-          if (session.isSignedIn) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Aktivní rodič: ${session.user!.displayName}',
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-          if (familyState.hasInvite) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Pozvánka: ${familyState.inviteCode} • ${_inviteStatusLabel(familyState.inviteStatus)}',
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
           const SizedBox(height: 14),
           if (!session.isSignedIn)
             FilledButton.tonalIcon(
@@ -872,21 +828,6 @@ class _FamilyStatusBanner extends StatelessWidget {
       ),
     );
   }
-
-  String _inviteStatusLabel(FamilyInviteStatus status) {
-    switch (status) {
-      case FamilyInviteStatus.none:
-        return 'bez pozvánky';
-      case FamilyInviteStatus.draft:
-        return 'návrh';
-      case FamilyInviteStatus.waitingForAcceptance:
-        return 'čeká na přijetí';
-      case FamilyInviteStatus.accepted:
-        return 'přijatá';
-      case FamilyInviteStatus.connected:
-        return 'aktivní';
-    }
-  }
 }
 
 class _TodayOverviewCard extends StatelessWidget {
@@ -894,80 +835,128 @@ class _TodayOverviewCard extends StatelessWidget {
     required this.overview,
     required this.ageLabel,
     required this.formatTime,
+    required this.relativeTime,
   });
 
   final _HomeOverview overview;
   final String? ageLabel;
   final String Function(DateTime?) formatTime;
+  final String Function(DateTime?) relativeTime;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pulse dne',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              overview.readinessTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(overview.readinessText),
-            const SizedBox(height: 14),
+    return BebiaCard(
+      padding: const EdgeInsets.all(BebiaSpace.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Pulse dne',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              InfoLabel(label: '${overview.totalToday} dnes'),
+            ],
+          ),
+          const SizedBox(height: BebiaSpace.xs),
+          Text(
+            overview.readinessTitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: context.bebia.mutedText),
+          ),
+          const SizedBox(height: BebiaSpace.md),
+          _HomeMetricGrid(
+            children: [
+              _MiniMetricCard(
+                icon: Icons.local_drink_outlined,
+                label: 'Krmení',
+                value: relativeTime(overview.lastFeeding?.time),
+                meta: _feedingMeta(overview.lastFeeding),
+                color: context.bebia.feeding,
+              ),
+              _MiniMetricCard(
+                icon: Icons.bedtime_outlined,
+                label: 'Spánek',
+                value: relativeTime(
+                  overview.lastSleep?.sleepStart ?? overview.lastSleep?.time,
+                ),
+                meta: _sleepMeta(overview.lastSleep),
+                color: context.bebia.sleep,
+              ),
+              _MiniMetricCard(
+                icon: Icons.baby_changing_station_outlined,
+                label: 'Přebalení',
+                value: relativeTime(overview.lastDiaper?.time),
+                meta: _diaperMeta(overview.lastDiaper),
+                color: context.bebia.diaper,
+              ),
+              _MiniMetricCard(
+                icon: Icons.graphic_eq_rounded,
+                label: 'Pláč',
+                value: relativeTime(overview.lastCrying?.time),
+                meta: _cryingMeta(overview.lastCrying),
+                color: context.bebia.crying,
+              ),
+            ],
+          ),
+          if (ageLabel != null || overview.lastEventTime != null) ...[
+            const SizedBox(height: BebiaSpace.md),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: BebiaSpace.xs,
+              runSpacing: BebiaSpace.xs,
               children: [
-                if (ageLabel != null) InfoLabel(label: 'Věk $ageLabel'),
-                InfoLabel(label: 'Dnes ${overview.totalToday} záznamů'),
-                InfoLabel(
-                  label: 'Poslední zápis ${formatTime(overview.lastEventTime)}',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _HomeMetricGrid(
-              children: [
-                _MiniMetricCard(
-                  icon: Icons.local_drink_outlined,
-                  label: 'Krmení',
-                  value: overview.feedingsToday,
-                  tint: context.bebia.feeding.withValues(alpha: .14),
-                ),
-                _MiniMetricCard(
-                  icon: Icons.bedtime_outlined,
-                  label: 'Spánek',
-                  value: overview.sleepsToday,
-                  tint: context.bebia.sleep.withValues(alpha: .14),
-                ),
-                _MiniMetricCard(
-                  icon: Icons.baby_changing_station_outlined,
-                  label: 'Přebalení',
-                  value: overview.diapersToday,
-                  tint: context.bebia.diaper.withValues(alpha: .14),
-                ),
-                _MiniMetricCard(
-                  icon: Icons.campaign_outlined,
-                  label: 'Pláč',
-                  value: overview.cryingsToday,
-                  tint: context.bebia.crying.withValues(alpha: .14),
-                ),
+                if (ageLabel != null) InfoLabel(label: ageLabel!),
+                if (overview.lastEventTime != null)
+                  InfoLabel(
+                    label:
+                        'Poslední zápis ${formatTime(overview.lastEventTime)}',
+                  ),
               ],
             ),
           ],
-        ),
+        ],
       ),
     );
+  }
+
+  String _feedingMeta(TimelineItem? item) {
+    if (item == null) return 'Bez záznamu';
+    final type = item.feedingType == 'breast'
+        ? 'Kojení'
+        : item.feedingType == 'bottle'
+        ? 'Láhev'
+        : 'Zaznamenáno';
+    return item.feedingAmountMl == null
+        ? type
+        : '$type · ${item.feedingAmountMl} ml';
+  }
+
+  String _sleepMeta(TimelineItem? item) {
+    if (item == null) return 'Bez záznamu';
+    if (item.sleepEnd == null) return 'Právě probíhá';
+    final minutes = item.sleepDurationMinutes;
+    return minutes == null ? 'Ukončeno' : '$minutes min';
+  }
+
+  String _diaperMeta(TimelineItem? item) {
+    return switch (item?.diaperType) {
+      'wet' => 'Mokrá plena',
+      'poop' => 'Stolice',
+      'both' => 'Mokrá i stolice',
+      _ => item == null ? 'Bez záznamu' : 'Zaznamenáno',
+    };
+  }
+
+  String _cryingMeta(TimelineItem? item) {
+    if (item == null) return 'Bez záznamu';
+    final minutes = item.cryingDurationMinutes;
+    return minutes == null ? 'Zaznamenáno' : '$minutes min';
   }
 }
 
@@ -1004,37 +993,60 @@ class _MiniMetricCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    required this.tint,
+    required this.meta,
+    required this.color,
   });
 
   final IconData icon;
   final String label;
-  final int value;
-  final Color tint;
+  final String value;
+  final String meta;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
-      constraints: const BoxConstraints(minHeight: 112),
+      constraints: const BoxConstraints(minHeight: 118),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: tint,
+        borderRadius: BorderRadius.circular(BebiaRadius.medium),
+        color: color.withValues(alpha: .1),
+        border: Border.all(color: color.withValues(alpha: .2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Row(
+            children: [
+              Icon(icon, color: color, size: BebiaIconSize.small),
+              const SizedBox(width: BebiaSpace.xs),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: BebiaSpace.sm),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
-            '$value',
+            meta,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ).textTheme.bodySmall?.copyWith(color: context.bebia.mutedText),
           ),
         ],
       ),
@@ -1073,22 +1085,38 @@ class _HeroPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            eyebrow,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colorScheme.primary,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const BebiaBrandMark(size: 48),
+              const SizedBox(width: BebiaSpace.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      eyebrow,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            title,
+            subtitle,
             style: Theme.of(
               context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            ).textTheme.bodyMedium?.copyWith(color: context.bebia.mutedText),
           ),
-          const SizedBox(height: 8),
-          Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
         ],
       ),
     );

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bebia</string>
+    <string name="widget_feeding_description">Poslední krmení a rychlé přidání záznamu</string>
+    <string name="widget_care_description">Poslední krmení, spánek a přebalení</string>
+    <string name="widget_feeding_title">Poslední krmení</string>
+    <string name="widget_care_title">Péče v kostce</string>
+    <string name="widget_feeding_label">Krmení</string>
+    <string name="widget_sleep_label">Spánek</string>
+    <string name="widget_diaper_label">Přebalení</string>
+    <string name="widget_empty_value">—</string>
+    <string name="widget_empty_short">Bez záznamu</string>
+    <string name="widget_empty_feeding">Přidejte první krmení</string>
+    <string name="widget_add_feeding">+ Přidat krmení</string>
+    <string name="widget_action_feeding">+ Krmení</string>
+    <string name="widget_action_sleep">+ Spánek</string>
+    <string name="widget_action_diaper">+ Plena</string>
+</resources>

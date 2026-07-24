@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_services.dart';
 import '../../core/design/bebia_theme.dart';
+import '../../core/platform/bebia_platform_bridge.dart';
 import '../../core/settings/bebia_preferences.dart';
 import '../../features/crying/crying_form_screen.dart';
 import '../../features/diaper/diaper_form_screen.dart';
@@ -11,7 +14,9 @@ import '../../features/home/home_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/sleep/sleep_form_screen.dart';
 import '../../features/statistics/statistics_screen.dart';
+import '../../features/timeline/timeline_item.dart';
 import '../../features/timeline/timeline_screen.dart';
+import 'bebia_brand_mark.dart';
 import 'bebia_components.dart';
 
 class AppShell extends StatefulWidget {
@@ -63,6 +68,19 @@ class _AppShellState extends State<AppShell> {
         SettingsScreen(controller: _settingsController),
       ];
 
+  @override
+  void initState() {
+    super.initState();
+    AppServices.platformBridge.launchTarget.addListener(_handleLaunchTarget);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleLaunchTarget());
+  }
+
+  @override
+  void dispose() {
+    AppServices.platformBridge.launchTarget.removeListener(_handleLaunchTarget);
+    super.dispose();
+  }
+
   Future<void> _feedback() async {
     if (_settingsController.preferences.hapticsEnabled) {
       await HapticFeedback.selectionClick();
@@ -93,6 +111,10 @@ class _AppShellState extends State<AppShell> {
     );
 
     if (!mounted || screen == null) return;
+    await _openScreen(screen);
+  }
+
+  Future<void> _openScreen(Widget screen) async {
     final reduceMotion = context.bebia.reduceMotion;
     await Navigator.of(context).push<void>(
       PageRouteBuilder<void>(
@@ -133,6 +155,54 @@ class _AppShellState extends State<AppShell> {
     if (!mounted) return;
     await AppServices.timelineController.reloadCurrent();
     if (mounted) setState(() {});
+  }
+
+  void _handleLaunchTarget() {
+    if (!mounted) return;
+    final target = AppServices.platformBridge.consumeLaunchTarget();
+    if (target == null) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+
+    switch (target.section) {
+      case BebiaLaunchSection.home:
+        setState(() {
+          _visitedSections.add(0);
+          _currentIndex = 0;
+        });
+        return;
+      case BebiaLaunchSection.timeline:
+        final type = _eventType(target.eventType);
+        setState(() {
+          _visitedSections.add(1);
+          _currentIndex = 1;
+        });
+        unawaited(AppServices.timelineController.load(type));
+        return;
+      case BebiaLaunchSection.add:
+        final screen = _formFor(target.eventType);
+        if (screen != null) unawaited(_openScreen(screen));
+        return;
+    }
+  }
+
+  EventType? _eventType(String? value) {
+    return switch (value) {
+      'feeding' => EventType.feeding,
+      'sleep' => EventType.sleep,
+      'diaper' => EventType.diaper,
+      'crying' => EventType.crying,
+      _ => null,
+    };
+  }
+
+  Widget? _formFor(String? value) {
+    return switch (value) {
+      'feeding' => const FeedingFormScreen(),
+      'sleep' => const SleepFormScreen(),
+      'diaper' => const DiaperFormScreen(),
+      'crying' => const CryingFormScreen(),
+      _ => null,
+    };
   }
 
   @override
@@ -190,7 +260,7 @@ class _AppShellState extends State<AppShell> {
                             padding: const EdgeInsets.symmetric(
                               vertical: BebiaSpace.md,
                             ),
-                            child: _BrandMark(color: scheme.primary),
+                            child: const BebiaBrandMark(),
                           ),
                           destinations: _destinations
                               .map(
@@ -272,30 +342,6 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-class _BrandMark extends StatelessWidget {
-  const _BrandMark({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Bebia',
-      image: true,
-      child: Container(
-        width: 48,
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .14),
-          borderRadius: BorderRadius.circular(BebiaRadius.medium),
-        ),
-        child: Icon(Icons.child_friendly_rounded, color: color),
-      ),
-    );
-  }
-}
-
 class _QuickAddSheet extends StatelessWidget {
   const _QuickAddSheet();
 
@@ -321,7 +367,7 @@ class _QuickAddSheet extends StatelessWidget {
           icon: Icons.local_drink_outlined,
           color: context.bebia.feeding,
           title: 'Krmení',
-          subtitle: 'Čas, způsob a případně množství',
+          subtitle: 'Čas, způsob, množství',
           onTap: () => _select(context, const FeedingFormScreen()),
         ),
         const SizedBox(height: BebiaSpace.xs),
@@ -329,7 +375,7 @@ class _QuickAddSheet extends StatelessWidget {
           icon: Icons.bedtime_outlined,
           color: context.bebia.sleep,
           title: 'Spánek',
-          subtitle: 'Začátek, konec a kvalita odpočinku',
+          subtitle: 'Začátek a konec',
           onTap: () => _select(context, const SleepFormScreen()),
         ),
         const SizedBox(height: BebiaSpace.xs),
@@ -337,7 +383,7 @@ class _QuickAddSheet extends StatelessWidget {
           icon: Icons.baby_changing_station_outlined,
           color: context.bebia.diaper,
           title: 'Přebalení',
-          subtitle: 'Typ pleny a poznámka k péči',
+          subtitle: 'Typ pleny',
           onTap: () => _select(context, const DiaperFormScreen()),
         ),
         const SizedBox(height: BebiaSpace.xs),
@@ -345,7 +391,7 @@ class _QuickAddSheet extends StatelessWidget {
           icon: Icons.graphic_eq_rounded,
           color: context.bebia.crying,
           title: 'Pláč',
-          subtitle: 'Kontext, délka a volitelná analýza zvuku',
+          subtitle: 'Délka a volitelný zvuk',
           onTap: () => _select(context, const CryingFormScreen()),
         ),
       ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_services.dart';
+import '../../core/design/bebia_theme.dart';
+import '../../shared/widgets/bebia_components.dart';
 import '../../shared/widgets/info_label.dart';
 import '../../shared/widgets/profile_switcher.dart';
 import '../auth/app_account_session.dart';
@@ -37,7 +39,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (widget.loadOnInit) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        AppServices.timelineController.load();
+        AppServices.timelineController.load(
+          AppServices.timelineController.selectedFilter.value,
+        );
       });
     }
   }
@@ -511,7 +515,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Historie událostí',
+                                    'Přehled',
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w700,
@@ -519,7 +523,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                   ),
                                   SizedBox(height: 6),
                                   Text(
-                                    'Surová data, filtry a editace. Tady se díváš na to, co se přesně stalo a kdy.',
+                                    'Události podle času. Klepnutím záznam upravíte.',
                                   ),
                                 ],
                               ),
@@ -539,20 +543,37 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                            child: Column(
-                              children: [
-                                _TimelineShareReadinessCard(
-                                  session: accountSession,
-                                  familyState: familyState,
-                                  activeProfile: activeProfile,
-                                  payload: syncPayload,
+                            child: BebiaCard(
+                              padding: EdgeInsets.zero,
+                              child: ExpansionTile(
+                                tilePadding: const EdgeInsets.symmetric(
+                                  horizontal: BebiaSpace.md,
                                 ),
-                                const SizedBox(height: 12),
-                                _TimelineCloudPreviewCard(
-                                  payload: syncPayload,
-                                  plan: syncPlan,
+                                childrenPadding: const EdgeInsets.fromLTRB(
+                                  BebiaSpace.md,
+                                  0,
+                                  BebiaSpace.md,
+                                  BebiaSpace.md,
                                 ),
-                              ],
+                                leading: const Icon(Icons.cloud_outlined),
+                                title: const Text('Synchronizace'),
+                                subtitle: const Text(
+                                  'Stav rodinného sdílení a cloudový plán',
+                                ),
+                                children: [
+                                  _TimelineShareReadinessCard(
+                                    session: accountSession,
+                                    familyState: familyState,
+                                    activeProfile: activeProfile,
+                                    payload: syncPayload,
+                                  ),
+                                  const SizedBox(height: BebiaSpace.sm),
+                                  _TimelineCloudPreviewCard(
+                                    payload: syncPayload,
+                                    plan: syncPlan,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

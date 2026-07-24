@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>Bebia – master ikona</title>
+  <rect width="1024" height="1024" rx="232" fill="#2F6B5A"/>
+  <g transform="translate(0 4) scale(9.48148)" fill="none" stroke="#FFF8ED" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+    <path d="M37 24v60"/>
+    <path d="M38 31c26-10 40 0 38 14-1 9-11 13-34 11"/>
+    <path d="M42 56c30-3 40 9 34 22-6 13-26 10-38 2"/>
+  </g>
+  <circle cx="559.4" cy="658.3" r="52.1" fill="#F09A82"/>
+</svg>
